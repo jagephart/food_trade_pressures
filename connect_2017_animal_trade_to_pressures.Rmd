@@ -1,0 +1,470 @@
+---
+title: "2017_traded_animal_products_to_pressures"
+author: "Haley Epperly"
+date: "2022-08-30"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Use the 2017 trade matrix previously created in calc-trade-matrix-2017.Rmd (using FAO data and Kastner's script) to calculate the environmental pressures from traded animal products. We should have associated pressures for each product between each pair of trading partners.
+
+Steps:
+- read in trade matrix by country of origin
+- subset to animal products
+- merge with item code names to make it easier to follow/check
+- check: make sure animal products are in the following groups: chicken meat, chicken eggs, cattle meat, cattle milk, sheep meat, sheep dairy, goat meat, goat dairy, pig meat, buffalo milk - these are the categories for which we have pressures data grouped by country
+- combine milk products together in the trade matrix (more reasoning for this below)
+- for each animal producing country, calculate the proportion of each animal product group that they trade with each consuming country (e.g., trade 5% of chicken meat with country B, 7% with country C, etc.)
+- check: make sure sum of the proportion of each animal product exported from a country is 1 (this includes product produced but not exported and consumed within the producing country)
+- read in the pressures df (https://github.com/OHI-Science/food_systems/blob/master/_analysis/rgn_raw_summary.csv)
+- subset to animal groups (not fish), remove feed components (only keep farm)
+- calculate the sum of pressures for each animal product (milk grouped) for each country
+- check: make sure sum of pressures matches after calculations
+- calculate cumulative pressures for each animal product (milk grouped) for each country by dividing each pressure by the global pressure and then sum for the food type for each country: https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv
+- join the animal trade matrix with the pressures per animal product per country df 
+- multiply the proportion of animal product group traded between each pair of countries  by the animal producing country's total pressures for that animal group
+- check: check that the sum of pressures for each animal product per country from original food_systems csv matches the sum of traded pressures for each animal product per producing country.
+
+Notes from Mel:
+This has the pressure for each category of food production: https://github.com/OHI-Science/food_systems/blob/master/_analysis/rgn_raw_summary.csv
+To get to cumulative pressure, you would divide each pressure by the global pressure and then sum for the food type: https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv
+The mixed/grazed/etc. categories for an animal/product would be summed.
+
+
+Load libraries
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+
+Read in 2017 trade matrix by country of origin
+```{r}
+# trade matrix
+trade_matrix <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/results_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+```
+
+Subset to animal products (866 == cattle, everything < 866 == non animal product, everything >885 to 1185 and 2736 == animal product). Whole animals were already removed.
+```{r}
+animal_trade_matrix <- trade_matrix %>% 
+  filter(Item_Code > 865)
+```
+
+Merge with item code names from FAO production data to make it easier to follow/check
+```{r}
+# read in item codes from FAO production data
+item_codes <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/FAOSTAT_production_item_codes_8-5-2022.csv")
+
+# format to match trade matrix
+item_codes <- item_codes %>% 
+  select(1:2) %>% 
+  rename('Item_Code' = 'Item Code')
+
+# left join with trade matrix to add relevant item codes
+animal_trade_item <- left_join(animal_trade_matrix, item_codes, by = "Item_Code")
+
+# check if any NAs
+length(which(is.na(animal_trade_item$Item)))
+```
+
+
+
+Check: make sure we don't need to convert any processed animal products to their primary product equivalents (e.g., dried meat)
+```{r}
+table(animal_trade_item$Item)
+```
+
+No processed products in this trade matrix (e.g., dried meat, cheese, etc.). There are some non-edible products (e.g., skins, wool, beeswax), which we won't use.
+
+NOTE: offals are not included in this trade matrix at all.
+
+
+For each pair of trading countries (including a country with itself), make sure animal products are combined into these groups. 
+These are the groups used in the food pressures data, so we need to make them match the trade matrix.
+- chicken meat
+- chicken eggs
+- cattle meat
+- cattle milk
+- buffalo milk 
+- sheep meat
+- sheep milk
+- pig meat
+- goat meat
+- goat milk (NOTE: we're not including this group b/c it is not in the Kastner trade matrix b/c it is not in the FAO trade matrix. Sheep, buffalo, and cow milk is included in the FAO trade matrix and Kastner trade matrix, so we are still including that.)
+
+
+Kastner has already converted processed products to primary products in the trade matrix script. Kastner has also already grouped animal products into the same groupings we want. For example, these processed products: ‘cattle, meat’, ‘fat, cattle’, ‘meat, cattle, boneless’, and ‘meat, beef, preparations’ have already been converted to primary product equivalents for 'cattle, meat'. However, Kastner removes all offals in the trade matrix script by giving them a conversion factor of 0, which turns them into 0 tonnes of primary product equivalents, and they are removed.
+
+
+Combine sheep, buffalo and cow milk into one category.
+FAO definition of milk, whole fresh cow (item 882) = Production data refer to raw milk containing all its constituents. Trade data normally cover milk from any animal, and refer to milk that is not concentrated, pasteurized, sterilized or other-wise preserved, homogenized or peptonized.
+For all other milk (sheep, goat, camel, buffalo), in the FAO item code descriptions, it says to "see item 882". 
+In the FAO trade matrix and the Kastner trade matrix, goat/camel milk aren't included at all, only sheep, buffalo and cow milk. 
+In the pressure data, there is goat, sheep, and cow milk. Given these discrepancies and how FAO includes milk by grouping it with cow milk often, it makes sense to combine milk (pressures and tonnes traded).
+```{r}
+# create a new variable that groups all milk items into "Milk"
+animal_trade_item_milk <- animal_trade_item %>% 
+  mutate(item_milk = case_when(Item == "Milk, whole fresh cow" ~ "Milk",
+                               Item == "Milk, whole fresh sheep" ~ "Milk",
+                               Item == "Milk, whole fresh buffalo" ~ "Milk",
+                               TRUE ~ as.character(Item)))
+
+# sum milk categories into one value
+animal_trade_item_milk_sum <- animal_trade_item_milk %>% 
+  group_by(Consumer_Country_Code, Producer_Country_Code, item_milk) %>% 
+  summarise(value_milk_sum = sum(Value))
+
+# there is not much sheep or buffalo milk traded, so only aggregates ~500 rows of data to combine milk
+length(which(animal_trade_item_milk$Item == "Milk, whole fresh buffalo")) #23 cases
+length(which(animal_trade_item_milk$Item == "Milk, whole fresh sheep")) #457 cases
+
+#check: make sure milk tonnes add up
+sum(animal_trade_item_milk$Value) #1251755094
+sum(animal_trade_item_milk_sum$value_milk_sum) #1251755094
+```
+
+
+There are additional animal products included in the Kastner trade matrix (e.g., duck meat, horse meat, turkey meat, etc.). After talking to Mel, we have decided to ignore these animals and eventually make note that they were excluded.
+```{r}
+table(animal_trade_item_milk_sum$item_milk)
+```
+
+
+For each animal producing country, calculate the proportion of each animal product group that they trade with each consuming country (e.g., trade 5% of chicken meat with country B, 7% with country C, etc.)
+```{r}
+# sum total amount of each product a country produces
+animal_trade_sum <- animal_trade_item_milk_sum %>% 
+  group_by(Producer_Country_Code, item_milk) %>% 
+  mutate(sum_value = sum(value_milk_sum))
+
+# calculate proportion they trade to each country (including consuming themselves)
+animal_trade_prop <- animal_trade_sum %>% 
+  mutate(prop_traded = value_milk_sum/sum_value)
+
+# check that proportions sum to 1 for each animal product in each producing country
+check_props <- animal_trade_prop %>% 
+  group_by(Producer_Country_Code, item_milk) %>% 
+  summarise(sum = sum(prop_traded))
+
+table(animal_trade_prop$item_milk)
+
+# only keep animal products that are included in aforementioned groups
+# removing beeswax, hides, skins, silk-worms, honey, other bird eggs, and meats (nes, ass, camel, duck, game, goose, horse, rabbit, turkey)
+animal_trade_prop_clean <- animal_trade_prop %>% 
+  filter(item_milk == "Eggs, hen, in shell" | item_milk == "Meat, cattle" | item_milk == "Meat, chicken" | item_milk == "Meat, goat" | item_milk == "Meat, pig" | item_milk == "Meat, sheep" | item_milk == "Milk")
+```
+
+
+
+
+Calculate the sum of pressures for each animal product for each country using this dataset: https://github.com/OHI-Science/food_systems/blob/master/_analysis/rgn_raw_summary.csv
+```{r}
+# read in data - need to go to github link above, select "view raw", and then copy url. 
+# It will change each time, so you have to redo this every time you want to read it in.
+rgn_raw_summary <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/_analysis/rgn_raw_summary.csv?token=GHSAT0AAAAAABXM6CBMUAIX2MZYJG555YZUYZ5Z6FQ")
+head(rgn_raw_summary)
+table(rgn_raw_summary$product)
+
+# there is one product that combines eggs and meat "eggs&meat". 
+# This only includes backyard chickens, which we are ignoring as they are not likely a big part of the global trade system.
+eggsmilk <- rgn_raw_summary %>% 
+  filter(product == "eggs&meat")
+
+# filter to only include products that we are interested in (including only category = farm to remove feed components)
+animal_summary <- rgn_raw_summary %>% 
+  filter(product == "eggs" | product == "meat" | product == "milk") %>% 
+  filter(organism == "chickens" | organism == "cows" | organism == "sheep" | organism == "goats" | organism == "pigs" | organism == "buffaloes") %>% 
+  filter(category == "farm")
+
+# combine milk products (cows, goats, sheep, buffalo) together
+animal_milk_combo <- animal_summary %>% 
+    mutate(item_combo = paste0(organism, "_", product)) %>% 
+  mutate(item_combo_m = case_when(product == "milk" ~ "milk",
+                                   TRUE ~ as.character(item_combo)))
+
+# sum pressures by country, organism, and product to get sum pressures for each animal product in a country (this is summing up the different types of animals - mixed, grassland, industrial, etc.)
+sum_pressures <- animal_milk_combo %>% 
+  group_by(country, iso3c, item_combo_m, pressure) %>% 
+  summarise(sum_pressure = sum(sum))
+
+# check to make sure sum of pressures matches after calculations
+sum(animal_summary$sum) # 50404335897
+sum(sum_pressures$sum_pressure) # 50404335897
+```
+
+
+
+To get to cumulative pressure, divide each pressure by the global pressure (to standardize) and then sum the four pressures for each animal product
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv
+- go to this github link, click "Raw", then copy url and paste below to read in csv. This needs to be updated each time!
+```{r}
+# read in data on total global pressures
+total_global_pressure <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/_analysis/rescale_values.csv?token=GHSAT0AAAAAABXM6CBN2NEFK5BHKRVHPIOGYZ52BCA")
+
+# join the animal product pressures with the total global pressures
+sum_pressures_1 <- left_join(sum_pressures, total_global_pressure, by = "pressure")
+
+# divide each pressure by the global total pressure to standardize - this includes total pressures from all crops and animal products
+sum_pressures_2 <- sum_pressures_1 %>% 
+  mutate(prop_global_pressure = sum_pressure/global_total)
+
+# sum the four pressures for each animal product
+sum_pressures_and_cumu <- sum_pressures_2 %>% 
+  group_by(country, item_combo_m) %>% 
+  mutate(cumu_pressure = sum(prop_global_pressure))
+
+# check: make sure cumulative pressures looks right (should have only one cumu pressure value for each animal product in each country)
+test1 <- sum_pressures_and_cumu %>% 
+  filter(country == "Afghanistan")
+test2 <- sum_pressures_and_cumu %>% 
+  filter(country == "Australia")
+
+# change formatting so all in wide format (right now only cumulative pressure is in wide format and other pressures are in long format)
+sum_pressures_and_cumu_wide <- sum_pressures_and_cumu %>% 
+  select(!c(global_total, prop_global_pressure)) %>% 
+  pivot_wider(names_from = pressure, values_from = sum_pressure)
+```
+
+
+Convert trade dataframe item group names to match pressure dataframe item group names
+```{r}
+# look at names of animal product groups in both dfs
+table(animal_trade_prop_clean$item_milk)
+table(sum_pressures_and_cumu_wide$item_combo_m)
+
+# update animal product names in trade matrix so that they match the pressures df
+animal_trade_prop_rename <- animal_trade_prop_clean %>% 
+  mutate(item_combo = case_when(item_milk == "Eggs, hen, in shell" ~ "chickens_eggs",
+                                 item_milk == "Meat, chicken" ~ "chickens_meat",
+                                 item_milk == "Meat, cattle" ~ "cows_meat",
+                                 item_milk == "Meat, goat" ~ "goats_meat",
+                                 item_milk == "Milk" ~ "milk",
+                                 item_milk == "Meat, pig" ~ "pigs_meat",
+                                 item_milk == "Meat, sheep" ~ "sheep_meat",
+                                 TRUE ~ "error"))
+
+# make sure it worked
+table(animal_trade_prop_rename$item_combo)
+```
+
+
+Add country names to the trade matrix so we can merge these dfs
+```{r}
+# read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
+country_codes <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/FAOSTAT_country_codes_8-10-2022.csv")
+
+# format to match trade matrix variables names
+countries <- country_codes %>% 
+  select(`Partner Country Code`, `Partner Countries`, `ISO3 Code`) %>% 
+  rename('Country_Code' = 'Partner Country Code') %>% 
+  rename('Country' = 'Partner Countries') %>% 
+  rename('ISO3' = 'ISO3 Code') %>% 
+  unique()
+
+# "China, mainland" on the FAO website has the ISO3 code F41.
+# China, the aggregated country, has the ISO3 code CHN.
+# In the pressures data, they assign China mainland the ISO3 code CHN, so we need to be aware
+# of this in the gravity model if we match using ISO3 code. 
+# we will keep in line with the pressures data here, and give China mainland the ISO3 code CHN.
+countries <- countries %>% mutate(ISO3 = ifelse(Country == "China, mainland", "CHN", ISO3))
+
+# join with trade matrix by producer country code
+animal_trade_country <- right_join(countries, animal_trade_prop_rename,  by = c("Country_Code" = "Producer_Country_Code")) %>% 
+  rename("Producer_Country_Code" = "Country_Code") %>% 
+  rename("Producer_Country" = "Country") %>% 
+  rename("Producer_ISO3" = "ISO3")
+
+# no NAs are introduced
+length(which(is.na(animal_trade_country$Producer_ISO3)))
+
+# join with trade matrix by consumer country code
+animal_trade_country_2 <- right_join(countries, animal_trade_country,  by = c("Country_Code" = "Consumer_Country_Code")) %>% 
+  rename("Consumer_Country_Code" = "Country_Code") %>% 
+  rename("Consumer_Country" = "Country") %>% 
+  rename("Consumer_ISO3" = "ISO3")
+
+# no NAs are introduced
+length(which(is.na(animal_trade_country_2$Consumer_ISO3)))
+
+
+
+# now we can join the trade matrix with the pressures df by country iso3 codes
+
+# note: there are 324 rows of data that are included in the sum_pressures_and_cumu_wide, but not in the animal_trade_country_2
+# this means that we have 2017 pressures data for these items in these countries, but they are not in the FAO trade matrix
+animal_trade_pressures_w_missing <- full_join(animal_trade_country_2, sum_pressures_and_cumu_wide, by = c("Producer_ISO3" = "iso3c", "item_combo" = "item_combo_m"))
+
+# check missing
+missing_values <- animal_trade_pressures_w_missing %>% 
+  filter(is.na(prop_traded))
+
+# sum of pressures from missing values - we can use this as a check later
+summary_missing_pressures <- missing_values %>% 
+  summarise_at(vars(cumu_pressure:water), sum, na.rm = TRUE)
+
+# save df and go through countries/products to see what's going on
+write_csv(missing_values, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/pressure_data_missing_in_trade_matrix.csv")
+
+# these are mostly all very small countries/islands - need to figure out how to deal with these
+# these countries are not included in the FAO trade matrix
+
+# this issue is discussed in more detail here: https://github.com/OHI-Science/social_justice_issues/issues/41
+# At the comment labelled "Exploring instances of pressure data for animal/country but not trade data"
+# We (Mel, Haley, Jessica) discussed what to do about these instances, and decided to ignore them
+# so where we have pressures data in a country but no production/import data for that country
+# we are going to ignore the pressures data
+
+# left_join instead so we don't include those rows where we only have pressures data, but no trade
+animal_trade_pressures <- left_join(animal_trade_country_2, sum_pressures_and_cumu_wide, by = c("Producer_ISO3" = "iso3c", "item_combo" = "item_combo_m"))
+```
+
+
+Multiply proportion traded between each country with the total amount of pressures for that product produced in that country. Then you can get the value of pressures (4 individual plus cumulative) for each animal product trade between 2 countries.
+```{r}
+animal_trade_pressures <- animal_trade_pressures %>% 
+  mutate(trade_cumu_pressure = prop_traded*cumu_pressure) %>% 
+  mutate(trade_ghg = prop_traded*ghg) %>% 
+  mutate(trade_water = prop_traded*water) %>% 
+  mutate(trade_nutrient = prop_traded*nutrient) %>% 
+  mutate(trade_disturbance = prop_traded*disturbance)
+
+# subset to remove extra variables
+animal_trade_pressures_cut <- animal_trade_pressures %>% 
+  rename(item_FAO = item_milk, tonnes_traded = value_milk_sum, tonnes_produced = sum_value) %>% 
+  select(-c(12:17))
+
+# save df
+write_csv(animal_trade_pressures_cut, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_products_trade_matrix_w_pressures.csv")
+
+# check to see if it looks right with Afghanistan as a test country
+afg_test <- animal_trade_pressures %>% 
+  filter(`Producer_ISO3` == "AFG") %>% 
+  filter(item_milk == "Milk")
+sum(afg_test$value_milk_sum) #1978076
+sum(afg_test$prop_traded) #1
+
+# make sure total value of milk produced in Afghanistan still matches original data
+afg_check <- animal_trade_country_2 %>% 
+  filter(`Producer_ISO3` == "AFG") %>% 
+  filter(item_milk == "Milk")
+sum(afg_check$value_milk_sum) #1978076
+
+# these values should match the rows labeled cumu_pressure, disturbance, ghg, nutrient, and water in afg_test
+sum(afg_test$trade_cumu_pressure)
+sum(afg_test$trade_disturbance)
+sum(afg_test$trade_ghg)
+sum(afg_test$trade_nutrient)
+sum(afg_test$trade_water)
+```
+
+
+Check: check to see if total sum of pressures in trade matrix matches the sum of pressures from raw_rgn_summary minus the missing values pressures (country/products that we have pressures data for but are not included in the FAO trade matrix so we are excluding them).
+```{r}
+# summary of pressures in tm
+summary_pressures_tm <- animal_trade_pressures_cut %>% 
+  summarise_at(vars(trade_cumu_pressure:trade_disturbance), sum, na.rm = TRUE)
+
+# summary of pressures in pressures df (raw_rgn_summary subset to animals and farm)
+animal_summary_wide <- animal_summary %>% 
+  pivot_wider(names_from = pressure, values_from = sum)
+summary_pressures_raw_rgn <- animal_summary_wide %>% 
+  summarise_at(vars(disturbance:water), sum, na.rm = TRUE)
+
+# multiply the missing values by -1
+summary_missing_pressures_cut <- summary_missing_pressures %>% 
+  select(-1) %>% 
+  mutate(disturbance = (disturbance*(-1)), ghg = (ghg*(-1)), nutrient = (nutrient*(-1)), water = (water*(-1)))
+
+# bind the missing values (turned negative) to the raw_rgn_summary pressures values
+raw_rgn_minus_missing <- rbind(summary_pressures_raw_rgn, summary_missing_pressures_cut)
+
+# create a new column to identify the all pressures data and the missing pressures data
+# this is necessary for using "adorn_totals" function
+test3 <- raw_rgn_minus_missing %>% 
+  mutate(data = c("all_data", "missing_data"))
+
+# rearrange column order so the data column is first
+# this is necessary for using "adorn_totals" function 
+test3 <- test3[, c(5, 1, 2, 3, 4)]
+
+# calculate row totals (all pressures - missing pressures) for each pressure
+# compare final row in test4 to summary_pressures_tm
+test4 <- test3 %>% 
+  adorn_totals("row")
+
+
+
+# that gets at making sure individual pressures match, but what about cumulative pressures
+
+# sum of cumulative pressures in final trade matrix connected to pressures
+summary_pressures_tm$trade_cumu_pressure # 1.351239
+
+# sum of missing pressures data (not in FAO)
+summary_missing_pressures$cumu_pressure # 0.004851717
+
+# sum of cumulative pressures from raw_rgn_summary (cannot use total_global_pressure b/c that's the sum of all pressures for all crops and animal products)
+# this is the earliest we calculate cumulative pressures from raw_rgn_summary
+sum(sum_pressures_and_cumu_wide$cumu_pressure) #1.356091
+
+# raw pressures minus missing pressures = trade matrix pressures
+1.356091 - 0.004851717
+```
+
+
+
+Check: check that the sum of pressures for each animal product per country from original food_systems csv matches the sum of traded pressures for each animal product per producing country
+```{r}
+# test with Afghanistan first
+afg_test_2 <- animal_trade_pressures %>% 
+  filter(`Producer_ISO3` == "AFG") 
+afg_press <- sum_pressures_and_cumu_wide %>% 
+  filter(iso3c == "AFG")
+
+# sum of cumulative pressure is very slightly different
+sum(afg_test_2$trade_cumu_pressure) #0.003646876
+sum(afg_press$cumu_pressure) #0.003646879
+
+# this is because there are no instances of AFG trading pig meat (or pig fat, sausages, 
+# preparations, offals, or whole pigs) in 2017 FAO trade matrix,
+# but there are enviro pressures data for AFG producing pig meat (see in missing_values df)
+afg_test_3 <- afg_test_2 %>% 
+  group_by(item_combo) %>% 
+  summarise(sum_pres = sum(trade_cumu_pressure))
+
+
+
+# first check total pressures
+sum(animal_trade_pressures$trade_cumu_pressure, na.rm = TRUE) # 1.351239
+sum(sum_pressures_and_cumu_wide$cumu_pressure) # 1.356091
+# there are some instances where we have pressure data for an item and country, but it is not included
+# in the trade matrix
+
+# can also see this discrepancy with the individual pressures
+sum(animal_trade_pressures$trade_ghg, na.rm=TRUE) # 3458130671
+sum(sum_pressures_and_cumu_wide$ghg) # 3460259039
+
+
+# check pressures by country - scatterplot
+# calculate sum of cumulative pressures for each country for all products combined
+# with pressures data
+cumu_pressure_by_country <- sum_pressures_and_cumu_wide %>% 
+  group_by(iso3c) %>% 
+  summarise(sum_pres = sum(cumu_pressure))
+# with trade matrix data combined with pressures
+cumu_pressure_by_country_tm <- animal_trade_pressures %>% 
+  group_by(Producer_ISO3) %>% 
+  summarise(sum_pres_tm = sum(trade_cumu_pressure))
+# there are more countries included in the pressures df than trade matrix df (see missing_values) 
+# these missing countries are not included in the FAO trade matrix (ex. Aruba, Anguilla)
+
+#join dfs by country
+cumu_press_combined <- full_join(cumu_pressure_by_country, cumu_pressure_by_country_tm, by = c("iso3c" = "Producer_ISO3"))
+
+# plot
+ggplot(cumu_press_combined, aes(x = sum_pres, y = sum_pres_tm)) +
+  geom_point() +
+  labs(x = "cumulative pressures by country from pressures df", y = "cumulative pressures by country in trade matrix") +
+  geom_abline(intercept = 0, slope = 1)
+```
+

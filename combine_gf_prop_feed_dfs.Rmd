@@ -1,0 +1,110 @@
+---
+title: "Combine proportion feed dfs"
+author: "Haley Epperly"
+date: "2022-11-07"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Combine gapfilled proportion feed dfs for grains, pulses, oilcrops, soy, and palm kernels
+
+Load libraries
+```{r}
+library(tidyverse)
+```
+
+Read in dfs
+```{r}
+grains <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_grains_used_as_feed_gapfilled.csv")
+pulses <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_pulses_used_as_feed_gapfilled.csv")
+oils <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_oilcrops_used_as_feed_gapfilled.csv")
+soy <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_soy_used_as_feed_gapfilled.csv")
+pk <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_palm_kernel_used_as_feed_gapfilled.csv")
+```
+
+Subset to only gapfilled percent feed and country variables (Area)
+```{r}
+# total_prop_feed is the gapfilled value for grains, prop_feed is the gapfilled value for pulses
+grains_1 <- grains %>% 
+  select(`Area Code (FAO)`, Area, iso3, region, total_prop_feed) %>% 
+  rename(grains_prop_feed = total_prop_feed)
+
+pulses_1 <- pulses %>% 
+  select(iso3, prop_feed) %>% 
+  rename(pulses_prop_feed = prop_feed)
+
+# rename prop feed variable, remove NAs for iso3 (region level rows)
+oils_1 <- oils %>% 
+  select(iso3, oil_prop_feed_gf) %>% 
+  rename(oil_prop_feed = oil_prop_feed_gf) %>% 
+  filter(!is.na(iso3))
+
+soy_1 <- soy %>% 
+  select(iso3, soy_prop_feed_gf) %>% 
+  rename(soy_prop_feed = soy_prop_feed_gf) %>% 
+  filter(!is.na(iso3))
+
+pk_1 <- pk %>% 
+  select(iso3, pk_prop_feed_gf_2) %>% 
+  rename(pk_prop_feed = pk_prop_feed_gf_2) %>% 
+  filter(!is.na(iso3))
+```
+
+
+Combine dfs
+```{r}
+feed <- grains_1 %>% 
+  full_join(pulses_1, by = "iso3") %>% 
+  full_join(oils_1, by = "iso3") %>% 
+  full_join(soy_1, by = "iso3") %>% 
+  full_join(pk_1, by = "iso3")
+```
+
+
+Gapfill Bermuda for grains, pulses, and palm kernels with regional values
+Get these values from calc_prop_feed_pulses_grains_2017_FAO_FB and gapfill_perc_feed_soy_palm_oilcrops_2013_CB_FB
+```{r}
+# which regions is Bermuda in?
+check <- feed %>% 
+  filter(iso3 == "BMU") %>% 
+  mutate(region = countrycode(iso3, "iso3c", "un.regionsub.name"))
+```
+
+Bermuda = Northern America
+Prop grains going to feed for Bermuda / Northern America = 0.4036402
+Prop pulses going to feed for Bermuda / Northern America = 0.2063728
+Prop palm kernels going to feed for Bermuda / Northern America = 0.4416878 (Northern America is NA for pk so have to use Americas value)
+
+Fill in missing country name and region
+```{r}
+feed_1 <- feed %>% 
+  select(-`Area Code (FAO)`) %>% 
+  rename(country = Area) %>% 
+  mutate(country = case_when(iso3 == "BMU" ~ "Bermuda", TRUE ~ country)) %>% 
+  mutate(region = case_when(iso3 == "BMU" ~ "Northern America", TRUE ~ region))
+```
+
+
+Fill in missing values for Bermuda 
+```{r}
+feed_2 <- feed_1 %>% 
+  mutate(grains_prop_feed = case_when(country == "Bermuda" ~ 0.4036402,
+                                      TRUE ~ grains_prop_feed)) %>% 
+  mutate(pulses_prop_feed = case_when(country == "Bermuda" ~ 0.2063728,
+                                      TRUE ~ pulses_prop_feed)) %>%
+  mutate(pk_prop_feed = case_when(country == "Bermuda" ~ 0.4416878,
+                                      TRUE ~ pk_prop_feed)) 
+
+# check for NAs
+summary(feed_2)
+
+# remove duplicates for China (only keep China mainland and only keep one row of it)
+feed_3 <- feed_2 %>% 
+  filter(!country == "China")
+feed_3 <- feed_3[-34,]
+
+# save csv
+write_csv(feed_3, "scripts/feed_in_trade_matrix/outputs/all_crops_perc_feed.csv")
+```
+

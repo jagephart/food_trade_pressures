@@ -1,0 +1,176 @@
+---
+title: "Incorporate live animal trade in trade matrix"
+author: "Haley Epperly"
+date: "2022-11-10"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Incorporate live animal trade in trade matrix.
+
+In Kastner trade matrix output: All animal fats were converted to animal meat to get to primary product equivalents. Offals were removed though, but they're a small part of the global diet.
+
+- Subset Kastner trade matrix to only animal meat (goats, sheep, pigs, cattle, chickens)
+- Convert to full animals using conversion metrics / animal / country
+- Subset 2017 FAO Production data to live animals produced
+
+- Run through Kastner script to get meat back to live animals to country of origin
+- Need to keep in intermediate trade partners to know who to divvy up production pressures with. We already know who is consuming the meat, and we don't want to change the final consumers. Jessica knows how to do this and keep in intermediate partners so talk with her.
+
+```{r}
+library(tidyverse)
+```
+
+
+Start with subsetting Kastner trade matrix to meat and converting to live animal tonnes
+```{r}
+# read in Kastner tm
+tm <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/results_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+```
+
+
+Subset to animal products (866 == cattle, everything < 866 == non animal product, everything >885 to 1185 and 2736 == animal product). Whole animals were already removed.
+```{r}
+animal_trade_matrix <- tm %>% 
+  filter(Item_Code > 865)
+```
+
+
+Merge with item code names from FAO production data to make it easier to follow/check
+```{r}
+# read in item codes from FAO production data
+item_codes <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/FAOSTAT_production_item_codes_8-5-2022.csv")
+
+# format to match trade matrix
+item_codes <- item_codes %>% 
+  select(1:2) %>% 
+  rename('Item_Code' = 'Item Code')
+
+# left join with trade matrix to add relevant item codes
+animal_trade_item <- left_join(animal_trade_matrix, item_codes, by = "Item_Code")
+
+# check if any NAs
+length(which(is.na(animal_trade_item$Item)))
+```
+
+
+Subset to cattle, pig, chicken, goat, and sheep meat
+```{r}
+animal_trade <- animal_trade_item %>% 
+  filter(Item == "Meat, cattle" | Item == "Meat, chicken" | Item == "Meat, goat" | 
+           Item == "Meat, sheep" | Item == "Meat, pig")
+```
+
+
+Add iso3 codes 
+```{r}
+animal_trade <- animal_trade %>% 
+  mutate(consumer_iso = countrycode(Consumer_Country_Code, "fao", "iso3c")) %>% 
+  mutate(producer_iso = countrycode(Producer_Country_Code, "fao", "iso3c"))
+
+# China, mainland and Palestine didn't work right so add these in manually
+# 41 = China, mainland iso3 = F41 (use CHN though because CHN isn't already in there and we keep using CHN to refer to China, mainland)
+# 299 = Palestine = Palestine iso3 = PSE
+animal_trade <- animal_trade %>% 
+  mutate(consumer_iso = case_when(Consumer_Country_Code == 41 ~ "CHN", TRUE ~ consumer_iso)) %>%
+  mutate(consumer_iso = case_when(Consumer_Country_Code == 299 ~ "PSE", TRUE ~ consumer_iso)) %>% 
+  mutate(producer_iso = case_when(Producer_Country_Code == 299 ~ "PSE", TRUE ~ producer_iso)) %>% 
+  mutate(producer_iso = case_when(Producer_Country_Code == 41 ~ "CHN", TRUE ~ producer_iso))
+
+# reorder columns
+animal_trade <- animal_trade[,c(1, 7, 2, 8, 3:6)]
+```
+
+
+Convert tonnes meat traded to live animal weight
+```{r}
+# read in live animal conversions per country
+conversion <- read_csv("scripts/comtrade_live_animal_trade_weight/outputs/animal_to_meat_conversion_rates.csv")
+
+# separate trade data into each animal
+cows <- animal_trade %>% 
+  filter(Item == "Meat, cattle")
+sheep <- animal_trade %>% 
+  filter(Item == "Meat, sheep")
+goats <- animal_trade %>% 
+  filter(Item == "Meat, goat")
+pigs <- animal_trade %>% 
+  filter(Item == "Meat, pig")
+chickens <- animal_trade %>% 
+  filter(Item == "Meat, chicken")
+
+# join with conversion metric by area code and multiply tonnes traded by the conversion metric to get to full animals
+cows_1 <- cows %>% 
+  left_join(conversion[,c(1,3)], by =c("Producer_Country_Code" = "Area Code")) %>% 
+  mutate(tonnes_full_animal = Value*yield_ton_per_cow) %>% 
+  select(-yield_ton_per_cow)
+
+pigs_1 <- pigs %>% 
+  left_join(conversion[,c(1,7)], by =c("Producer_Country_Code" = "Area Code")) %>% 
+  mutate(tonnes_full_animal = Value*yield_ton_per_pig) %>% 
+  select(-yield_ton_per_pig)
+
+goats_1 <- goats %>% 
+  left_join(conversion[,c(1,5)], by =c("Producer_Country_Code" = "Area Code")) %>% 
+  mutate(tonnes_full_animal = Value*yield_ton_per_goat) %>% 
+  select(-yield_ton_per_goat)
+
+chickens_1 <- chickens %>% 
+  left_join(conversion[,c(1,4)], by =c("Producer_Country_Code" = "Area Code")) %>% 
+  mutate(tonnes_full_animal = Value*yield_ton_per_chicken) %>% 
+  select(-yield_ton_per_chicken)
+
+sheep_1 <- sheep %>% 
+  left_join(conversion[,c(1,6)], by =c("Producer_Country_Code" = "Area Code")) %>% 
+  mutate(tonnes_full_animal = Value*yield_ton_per_sheep) %>% 
+  select(-yield_ton_per_sheep)
+```
+
+
+Combine individual animal trade dfs that have been converted to full animals
+```{r}
+animal_trade_2 <- cows_1 %>% 
+  rbind(pigs_1) %>% 
+  rbind(goats_1) %>% 
+  rbind(chickens_1) %>% 
+  rbind(sheep_1)
+
+# check to make sure the same number of rows are present
+nrow(animal_trade_2)
+nrow(animal_trade)
+
+# save csv
+write_csv(animal_trade_2, "scripts/comtrade_live_animal_trade_weight/outputs/animal_trade_converted_to_full_animals.csv")
+```
+
+
+Open 2017 FAO Production data and subset to live animals produced
+There are the same number of heads whether you're looking at cattle meat, fat, offals, or hides.
+So we'll just select meat and get heads from that row.
+```{r}
+fao <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2017/Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv")
+
+fao_2 <- fao %>% 
+  filter(Element == "Producing Animals/Slaughtered") %>% 
+  filter(Item == "Meat, cattle" | Item == "Meat, sheep" | Item == "Meat, goat" |
+           Item == "Meat, pig" | Item == "Meat, chicken")
+
+# chickens are in 1000 heads so convert to heads
+fao_3 <- fao_2 %>% 
+  mutate(num_heads = case_when(Unit == "1000 Head" ~ Value*1000, TRUE ~ Value))
+
+# 2 rows with no values for anything and 4 rows with 0 production so remove these
+fao_4 <- fao_3 %>% 
+  filter(!is.na(num_heads)) %>% 
+  filter(!num_heads == 0)
+
+# add a new unit variable that says head
+fao_5 <- fao_4 %>% 
+  mutate(Unit = "Head") %>% 
+  select(-c(Value, Flag, `Year Code`))
+
+# save csv
+write_csv(fao_5, "scripts/comtrade_live_animal_trade_weight/outputs/fao_animal_production_heads_2017.csv")
+```
+

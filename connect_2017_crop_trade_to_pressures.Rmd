@@ -1,0 +1,397 @@
+---
+title: "Connect 2017 trade matrix to crop pressures"
+author: "Haley Epperly"
+date: "2022-10-04"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Use the 2017 trade matrix previously created in calc-trade-matrix-2017.Rmd (using FAO data and Kastner's script) to calculate the environmental pressures from traded crop products. We should have associated pressures for each product between each pair of trading partners.
+
+
+Load libraries
+```{r}
+library(tidyverse)
+```
+
+
+Read in 2017 trade matrix by country of origin
+```{r}
+# trade matrix
+trade_matrix <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/results_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+```
+
+
+Merge with item code names from FAO production data to make it easier to follow/check
+```{r}
+# read in item codes from FAO production data
+item_codes <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/FAOSTAT_production_item_codes_8-5-2022.csv")
+
+# format to match trade matrix
+item_codes <- item_codes %>% 
+  select(1:2) %>% 
+  rename('Item_Code' = 'Item Code')
+
+# left join with trade matrix to add relevant item codes
+trade_item <- left_join(trade_matrix, item_codes, by = "Item_Code")
+
+# check if any NAs
+length(which(is.na(trade_item$Item)))
+```
+
+
+Subset to only crops (866 == cattle, everything < 866 == non animal product)
+```{r}
+crop_trade_matrix <- trade_item %>% 
+  filter(Item_Code < 866)
+
+# check to make sure no animal products are included
+table(crop_trade_matrix$Item)
+```
+
+
+Connect crops to MapSPAM categories
+
+Read in MapSPAM to FAO data - use to connect tm to pressures
+https://github.com/OHI-Science/food_systems/blob/master/feed/data/MapSPAM_to_FAO_v2.csv
+```{r}
+map_to_fao <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/feed/data/MapSPAM_to_FAO_v2.csv?token=GHSAT0AAAAAABXM6CBMZ2V3RDKBZFJGE254Y234VZA")
+```
+
+FAO Item Code are the same in map_to_fao and trade_item. 
+
+Connect trade matrix to map_to_fao df so we have spam super categories for crops
+```{r}
+# doing a left join because a full_join adds in unhelpful rows when the "production_description_FAOSTAT" 
+# categories are more detailed than what we have downloaded from the Kastner trade matrix
+crop_trade_w_mapspam <- left_join(crop_trade_matrix, map_to_fao, by = c("Item_Code" = "FAO_item_code"))
+
+# find which rows do not have a mapspam label
+missing_mapspam <- crop_trade_w_mapspam %>% 
+  filter(is.na(SPAM_super)) %>% 
+  select(Item)
+missing_mapspam <- unique(missing_mapspam)
+```
+
+
+The two items we do not have pressures data for are:
+- Chillies and peppers, green
+- mate
+```{r}
+# subset out chillies and mate from trade matrix into their own trade matrix
+missing_pressures <- crop_trade_w_mapspam %>% 
+  filter(Item == "Chillies and peppers, green" | Item == "Maté")
+```
+
+
+How many of our trade rows have negative values? 33,246 rows out of 662,089 = 5%.
+This is out of ALL trade (animals and crops), but not including fisheries.
+These values show up as a negative value in proportion traded, and that translates to a negative value in the pressures traded between two countries. Even when aggregating pressures across all trading partners, we still end up with some negative pressures, but it's only 3% of all trading partners so hopefully we can ignore it. This is looked into in the script combine_animal_crop_trade_pressures_df in this same pressures_trade folder.
+```{r}
+# all trade
+length(which(trade_matrix$Value < 0))
+
+# crops - 30574 less than 0
+length(which(crop_trade_w_mapspam$Value < 0))
+30574/572333 # 5.3% of crop product rows have negative values
+
+(33426-30574)/(662089-572333) # 3.2% of animal product rows have negative values
+
+# does the original trade matrix downloaded from FAO have negative values?
+# this takes a long time to read in, so don't need to do this again
+#og_tm <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2017/Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv")
+
+# no, there are no negative trade values in the FAO trade matrix
+#length(which(og_tm$Value < 0))
+```
+
+
+For each crop producing country, calculate the proportion of each crop (using MapSPAM categories) that they trade with each consuming country (e.g., trade 5% of xpul with country B, 7% with country C, etc.)
+```{r}
+# sum total amount of each product a country produces
+crop_trade_sum <- crop_trade_w_mapspam %>% 
+  group_by(Producer_Country_Code, SPAM_super) %>% 
+  mutate(sum_value = sum(Value))
+
+# calculate proportion they trade to each country (including consuming themselves)
+crop_trade_prop <- crop_trade_sum %>% 
+  mutate(prop_traded = Value/sum_value)
+
+# check that proportions sum to 1 for each animal product in each producing country
+check_props <- crop_trade_prop %>% 
+  group_by(Producer_Country_Code, SPAM_super) %>% 
+  summarise(sum = sum(prop_traded))
+
+# all sum to 1 so that looks good
+range(check_props$sum, na.rm=TRUE)
+length(which(is.na(check_props$sum))) #1 NA value
+```
+
+
+Some of the MapSPAM categories are missing from the pressures data
+Read in pressures data: 
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/rgn_raw_summary_haley.csv
+This data has the total production pressures per crop per country and was created using this script:
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/haley_data_extract.Rmd
+```{r}
+rgn_raw_summary <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/_analysis/rgn_raw_summary_haley.csv?token=GHSAT0AAAAAABXM6CBN35WOBHIEFGNYXXDWY234WSQ")
+
+# remove first row that is all NA
+rgn_raw_summary <- rgn_raw_summary[-1,]
+
+# look at crop categories - must match between FAO and pressure data to combine them
+table(rgn_raw_summary$spam_super)
+```
+
+Categories included in crop_trade_w_mapspam but not in rgn_raw_summary (pressures) are:
+- ofib
+- othr
+- teas
+- toba
+- xcof
+
+```{r}
+# ofib includes lots of fiber crops that are all considered not food
+missing_2 <- crop_trade_w_mapspam %>% 
+  filter(SPAM_super == "ofib")
+table(missing_2$Item)
+table(missing_2$non_food)
+
+# othr includes hops, pyrethrum, and rubber
+missing_3 <- crop_trade_w_mapspam %>% 
+  filter(SPAM_super == "othr")
+table(missing_3$Item)
+
+# teas includes tea, which are all considered not food
+missing_4 <- crop_trade_w_mapspam %>% 
+  filter(SPAM_super == "teas")
+table(missing_4$Item)
+table(missing_4$non_food)
+
+# toba includes tobacco, which are all considered not food
+missing_5 <- crop_trade_w_mapspam %>% 
+  filter(SPAM_super == "toba")
+table(missing_5$Item)
+table(missing_5$non_food)
+
+# xcof includes green coffee, which are all considered not food
+missing_6 <- crop_trade_w_mapspam %>% 
+  filter(SPAM_super == "xcof")
+table(missing_6$Item)
+table(missing_6$non_food)
+```
+
+
+I think we need to remove trade of these items above from our trade matrix 
+since we don't have any pressures data for them - double check with Mel.
+Same with mate and Chillies and peppers, green
+
+Assume we're taking those categories out from the trade matrix for now.
+```{r}
+crop_trade_prop_cut <- crop_trade_prop %>% 
+  filter(!SPAM_super == "ofib", !SPAM_super == "othr", !SPAM_super == "teas",
+            !SPAM_super == "toba", !SPAM_super == "xcof", 
+            !Item == "Chillies and peppers, green", !Item == "Maté")
+
+# cutting out these categories removes 9.7% of the data
+1-(nrow(crop_trade_prop_cut)/nrow(crop_trade_prop))
+```
+
+
+crop_rgn_summary is the sum of each pressure for a given crop in a given country
+
+To get to cumulative pressure, divide each pressure by the global pressure (to standardize) and then sum the four pressures for each animal product
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv
+- go to this github link, click "Raw", then copy url and paste below to read in csv. 
+This link needs to be updated each time we read it in to R!
+```{r}
+# read in data on total global pressures
+total_global_pressure <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/_analysis/rescale_values.csv?token=GHSAT0AAAAAABXM6CBME3OW72FRB6O6TR32Y234XHQ")
+
+# join the crop product pressures with the total global pressures
+sum_pressures_1 <- left_join(rgn_raw_summary, total_global_pressure, by = "pressure")
+
+# divide each pressure by the global total pressure to standardize - this includes total pressures from all crops and animal products
+sum_pressures_2 <- sum_pressures_1 %>% 
+  mutate(prop_global_pressure = sum/global_total)
+
+# sum the four pressures for each crop
+sum_pressures_and_cumu <- sum_pressures_2 %>% 
+  group_by(country, spam_super) %>% 
+  mutate(cumu_pressure = sum(prop_global_pressure))
+
+# check: make sure cumulative pressures looks right (should have only one cumu pressure value for each crop product in each country)
+test1 <- sum_pressures_and_cumu %>% 
+  filter(country == "Afghanistan")
+test2 <- sum_pressures_and_cumu %>% 
+  filter(country == "Australia")
+
+# change formatting so all in wide format (right now only cumulative pressure is in wide format and other pressures are in long format)
+sum_pressures_and_cumu_wide <- sum_pressures_and_cumu %>% 
+  select(!c(global_total, prop_global_pressure)) %>% 
+  pivot_wider(names_from = pressure, values_from = sum)
+```
+
+
+Add country names to the trade matrix so we can merge these dfs
+```{r}
+# read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
+country_codes <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/FAOSTAT_country_codes_8-10-2022.csv")
+
+# format to match trade matrix
+countries <- country_codes %>% 
+  select(`Partner Country Code`, `Partner Countries`, `ISO3 Code`) %>% 
+  rename('Country_Code' = 'Partner Country Code') %>% 
+  rename('Country' = 'Partner Countries') %>% 
+  rename('ISO3' = 'ISO3 Code') %>% 
+  unique()
+
+# "China, mainland" on the FAO website has the ISO3 code F41.
+# China, the aggregated country, has the ISO3 code CHN.
+# In the pressures data, they assign China mainland the ISO3 code CHN, so we need to be aware
+# of this in the gravity model if we match using ISO3 code. 
+# we will keep in line with the pressures data here, and give China mainland the ISO3 code CHN.
+countries <- countries %>% mutate(ISO3 = ifelse(Country == "China, mainland", "CHN", ISO3))
+
+# join with trade matrix by producer country code
+crop_trade_country <- right_join(countries, crop_trade_prop_cut,  by = c("Country_Code" = "Producer_Country_Code")) %>% 
+  rename("Producer_Country_Code" = "Country_Code") %>% 
+  rename("Producer_Country" = "Country") %>% 
+  rename("Producer_ISO3" = "ISO3")
+
+# no NAs are introduced
+length(which(is.na(crop_trade_country$Producer_ISO3)))
+
+# join with trade matrix by consumer country code
+crop_trade_country_2 <- right_join(countries, crop_trade_country,  by = c("Country_Code" = "Consumer_Country_Code")) %>% 
+  rename("Consumer_Country_Code" = "Country_Code") %>% 
+  rename("Consumer_Country" = "Country") %>% 
+  rename("Consumer_ISO3" = "ISO3")
+
+# no NAs are introduced
+length(which(is.na(crop_trade_country_2$Consumer_ISO3)))
+
+
+
+# now we can join the trade matrix with the pressures df by country iso3 codes
+
+# note: there are 3,732 rows of data that are included in the sum_pressures_and_cumu_wide, but not in the crop_trade_country_2
+# this means that we have 2017 pressures data for these items in these countries, but they are not in the FAO trade matrix.
+# However, only 487 rows where pressures > 0 for an item.
+crop_trade_pressures_w_missing <- full_join(crop_trade_country_2, sum_pressures_and_cumu_wide, by = c("Producer_ISO3" = "iso3c", "SPAM_super" = "spam_super"))
+
+# check missing
+missing_values <- crop_trade_pressures_w_missing %>% 
+  filter(is.na(prop_traded))
+
+# sum of pressures from missing values - we can use this as a check later
+summary_missing_pressures <- missing_values %>% 
+  summarise_at(vars(cumu_pressure:water), sum, na.rm = TRUE)
+
+# look at different crop categories that are missing - no one clear crop missing
+table(missing_values$SPAM_super)
+
+# for how many of these rows is the pressure for the crop greater than 0?
+length(which(missing_values$cumu_pressure > 0)) #487 cases where we have pressures
+# data for crops but no FAO production data. We had this same issue with the animal
+# data and decided to zero out those instances because those countries were either 
+# not included in FAO at all, or did not have any production data for that country
+# in the FAO data (and weren't in the FAO trade matrix or Food Balance sheets).
+
+# left_join instead so we don't include those rows where we only have pressures data, but no trade
+crop_trade_pressures <- left_join(crop_trade_country_2, sum_pressures_and_cumu_wide, by = c("Producer_ISO3" = "iso3c", "SPAM_super" = "spam_super"))
+```
+
+
+Multiply proportion traded between each country with the total amount of pressures for that product produced in that country. Then you can get the value of pressures (4 individual plus cumulative) for each crop trade between 2 countries.
+```{r}
+crop_trade_pressures <- crop_trade_pressures %>% 
+  mutate(trade_cumu_pressure = prop_traded*cumu_pressure) %>% 
+  mutate(trade_ghg = prop_traded*ghg) %>% 
+  mutate(trade_water = prop_traded*water) %>% 
+  mutate(trade_nutrient = prop_traded*nutrient) %>% 
+  mutate(trade_disturbance = prop_traded*disturbance)
+
+# subset to remove extra variables
+crop_trade_pressures_cut <- crop_trade_pressures %>% 
+  rename(tonnes_fao_item_traded = Value, tonnes_spam_super_produced = sum_value) %>% 
+  select(-c(19, 22:27))
+
+# save df
+write_csv(crop_trade_pressures_cut, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/crop_products_trade_matrix_w_pressures.csv")
+
+# check to see if it looks right
+afg_test <- crop_trade_pressures %>% 
+  filter(`Producer_ISO3` == "AFG") %>% 
+  filter(SPAM_super == "xfru")
+sum(afg_test$Value) #2870795
+sum(afg_test$prop_traded) #1
+
+# make sure total value of fruits produced in Afghanistan still matches original data
+afg_check <- crop_trade_country_2 %>% 
+  filter(`Producer_ISO3` == "AFG") %>% 
+  filter(SPAM_super == "xfru")
+sum(afg_check$Value) #2870795
+
+# these values should match the rows labeled cumu_pressure, disturbance, ghg, nutrient, and water in afg_test
+sum(afg_test$trade_cumu_pressure)
+sum(afg_test$trade_disturbance)
+sum(afg_test$trade_ghg)
+sum(afg_test$trade_nutrient)
+sum(afg_test$trade_water)
+```
+
+
+Check: check to see if total sum of pressures in trade matrix matches the sum of pressures from raw_rgn_summary minus the missing values pressures (country/products that we have pressures data for but are not included in the FAO trade matrix so we are excluding them).
+```{r}
+# summary of pressures in tm
+summary_pressures_tm <- crop_trade_pressures %>% 
+  summarise_at(vars(trade_cumu_pressure:trade_disturbance), sum, na.rm = TRUE)
+
+# summary of pressures in pressures df (raw_rgn_summary)
+crop_summary_wide <- rgn_raw_summary %>% 
+  pivot_wider(names_from = pressure, values_from = sum)
+summary_pressures_raw_rgn <- crop_summary_wide %>% 
+  summarise_at(vars(disturbance:water), sum, na.rm = TRUE)
+
+# multiply the missing values by -1
+summary_missing_pressures_cut <- summary_missing_pressures %>% 
+  select(-1) %>% 
+  mutate(disturbance = (disturbance*(-1)), ghg = (ghg*(-1)), nutrient = (nutrient*(-1)), water = (water*(-1)))
+
+# bind the missing values (turned negative) to the raw_rgn_summary pressures values
+raw_rgn_minus_missing <- rbind(summary_pressures_raw_rgn, summary_missing_pressures_cut)
+
+# create a new column to identify the all pressures data and the missing pressures data
+# this is necessary for using "adorn_totals" function
+test3 <- raw_rgn_minus_missing %>% 
+  mutate(data = c("all_data", "missing_data"))
+
+# rearrange column order so the data column is first
+# this is necessary for using "adorn_totals" function 
+test3 <- test3[, c(5, 1, 2, 3, 4)]
+
+# calculate row totals (all pressures - missing pressures) for each pressure
+# compare final row in test4 to summary_pressures_tm
+test4 <- test3 %>% 
+  adorn_totals("row")
+summary_pressures_tm
+
+
+
+# that gets at making sure individual pressures match, but what about cumulative pressures
+
+# sum of cumulative pressures in final trade matrix connected to pressures
+summary_pressures_tm$trade_cumu_pressure # 2.27178
+
+# sum of missing pressures data (not in FAO)
+summary_missing_pressures$cumu_pressure # 0.0296532
+
+# sum of cumulative pressures from raw_rgn_summary (cannot use total_global_pressure b/c that's the sum of all pressures for all crops and animal products)
+# this is the earliest we calculate cumulative pressures from raw_rgn_summary
+sum(sum_pressures_and_cumu_wide$cumu_pressure) #2.301434
+
+# raw pressures minus missing pressures = trade matrix pressures
+2.301434 - 0.0296532
+```

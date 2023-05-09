@@ -1,0 +1,333 @@
+---
+title: "Combine crop, fish, inland aquaculture, and livestock trade matrices linked to pressures"
+author: "Haley Epperly"
+date: "2022-10-06"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Combine the livestock, fish (capture and mariculture), inland aquaculture, and crop trade matrices that were previously linked to pressures.
+See scripts connect_2017_fw_aquaculture_trade_to_pressures, connect_2017_fish_trade_to_pressures, connect_2017_crop_trade_to_pressures, and connect_2017_animal_trade_to_pressures.
+Located in here: https://github.com/jagephart/food_trade_ej/tree/main/scripts/pressures_trade
+
+Add a column that denotes food group (livestock, fish, fw_aquaculture, or crops). Create df with each food group kept separate (e.g., BRZ as origin and USA as destination would have a row for livestock, fish, and crops).
+
+Cumulative pressure was previously calculated by first dividing the traded individual pressures by the sum of that pressure globally, and then summing the four individual pressures. To convert this to a percentage in this script, this sum is then divided by 4 (because the 4 pressures should sum to 4), and multiplied by 100.
+
+For example, if the amount of water pressure traded from China to USA is 100 and the total water-related pressures for all food (crops, livestock, and fisheries/aquaculture) is 1,000,000, then the proportion of water pressure traded from China to USA is 100/1,000,000 = 0.0001. We repeat this calculation for the other pressures, disturbance, ghg, and nutrient. Then we sum those 4 values (0.0001 with the values we get from the other pressures). This was all completed in the previous scripts: connect_2017_fish_trade_to_pressures, connect_2017_crop_trade_to_pressures, and connect_2017_animal_trade_to_pressures. In this script, we then divide the sum of those 4 values for each trade by 4 and multiply it by 100 to get the percentage of cumulative pressures produced/consumed for each trade.
+
+
+Load libraries
+```{r}
+library(tidyverse)
+```
+
+
+Read in crops trade matrix with pressures
+```{r}
+crops <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/crop_products_trade_matrix_w_pressures.csv")
+```
+
+Read in animal trade matrix with pressures
+```{r}
+animals <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_products_trade_matrix_w_pressures.csv")
+```
+
+Read in fish trade matrix with pressures - capture and mariculture
+```{r}
+fish_capture <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/capture_fish_products_trade_matrix_w_pressures.csv")
+
+mariculture <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/mariculture_fish_products_trade_matrix_w_pressures.csv")
+```
+
+Read in inland aquaculture trade matrix with pressures
+```{r}
+fw_aqua <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/inland_aquaculture_products_trade_matrix_w_pressures.csv")
+```
+
+Subset dfs to only trading pairs and pressures
+```{r}
+## crops
+# subset
+crops_cut <- crops %>% 
+  select(c(3, 6, 21:25))
+
+# check NAs
+length(which(is.na(crops_cut$trade_cumu_pressure))) #1 NA
+
+# where is this NA?
+na_value <- crops %>% 
+  filter(is.na(trade_cumu_pressure))
+
+# this NA value is for yams in Grenada and it has no associated pressures data so remove it
+crops_cut <- crops_cut %>% 
+  filter(!is.na(trade_cumu_pressure))
+
+
+## livestock
+# subset
+animals_cut <- animals %>% 
+  select(c(3, 6, 12:16))
+
+# check NAs
+length(which(is.na(animals_cut$trade_cumu_pressure))) #0 NA
+
+
+
+## capture fisheries
+# subset
+fish_capture_cut <- fish_capture %>% 
+  select(c(1, 4, 9:13)) %>% 
+  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+
+# check NAs
+length(which(is.na(fish_capture_cut$trade_cumu_pressure))) #1 NA
+
+# where is this NA?
+na_value <- fish_capture %>% 
+  filter(is.na(trade_cumu_pressure))
+
+# this NA value is for large pelagics in NEI (inner Mongolia) and it has no associated pressures data so remove it
+fish_capture_cut <- fish_capture_cut %>% 
+  filter(!is.na(trade_cumu_pressure))
+
+
+## mariculture
+# subset
+mariculture_cut <- mariculture %>% 
+  select(c(1, 3, 8:12)) %>% 
+  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+
+# check NAs
+length(which(is.na(mariculture_cut$trade_cumu_pressure))) #0 NA
+
+
+## inland aquaculture
+# subset
+aqua_cut <- fw_aqua %>% 
+  select(c(1, 3, 8:12)) %>% 
+  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+
+# check NAs
+length(which(is.na(aqua_cut$trade_cumu_pressure))) #3129 NAs
+
+# where are these NA?
+na_value <- fw_aqua %>% 
+  filter(is.na(trade_cumu_pressure))
+table(na_value$nceas_group)
+# there are rows for Miscellaneous diadromous fishes and for Tilapias and other cichlids that are traded which we don't have pressures data for
+
+# we don't have this pressures data so remove these rows
+aqua_cut <- aqua_cut %>% 
+  filter(!is.na(trade_cumu_pressure))
+```
+
+
+Sum rows within food group dfs so there is only one row per trading partners
+```{r}
+# crops
+crops_agg <- crops_cut %>% 
+  group_by(Consumer_ISO3, Producer_ISO3) %>% 
+  summarise(cumu_sum = sum(trade_cumu_pressure), ghg_sum = sum(trade_ghg),
+            water_sum = sum(trade_water), nutrient_sum = sum(trade_nutrient),
+            disturbance_sum = sum(trade_disturbance)) %>% 
+  ungroup()
+
+# check sum of pressures
+sum(crops_agg$cumu_sum)
+sum(crops$trade_cumu_pressure, na.rm = TRUE)
+sum(crops_agg$ghg_sum)
+sum(crops$trade_ghg, na.rm = TRUE)
+sum(crops_agg$water_sum)
+sum(crops$trade_water, na.rm = TRUE)
+sum(crops_agg$nutrient_sum)
+sum(crops$trade_nutrient, na.rm = TRUE)
+sum(crops_agg$disturbance_sum)
+sum(crops$trade_disturbance, na.rm = TRUE)
+
+
+# livestock
+animals_agg <- animals_cut %>% 
+  group_by(Consumer_ISO3, Producer_ISO3) %>% 
+  summarise(cumu_sum = sum(trade_cumu_pressure), ghg_sum = sum(trade_ghg),
+            water_sum = sum(trade_water), nutrient_sum = sum(trade_nutrient),
+            disturbance_sum = sum(trade_disturbance)) %>% 
+  ungroup()
+
+# check sum of pressures
+sum(animals_agg$cumu_sum)
+sum(animals$trade_cumu_pressure, na.rm = TRUE)
+sum(animals_agg$ghg_sum)
+sum(animals$trade_ghg, na.rm = TRUE)
+sum(animals_agg$water_sum)
+sum(animals$trade_water, na.rm = TRUE)
+sum(animals_agg$nutrient_sum)
+sum(animals$trade_nutrient, na.rm = TRUE)
+sum(animals_agg$disturbance_sum)
+sum(animals$trade_disturbance, na.rm = TRUE)
+
+# capture fisheries
+fish_capture_agg <- fish_capture_cut %>% 
+  group_by(Consumer_ISO3, Producer_ISO3) %>% 
+  summarise(cumu_sum = sum(trade_cumu_pressure), ghg_sum = sum(trade_ghg),
+            water_sum = sum(trade_water), nutrient_sum = sum(trade_nutrient),
+            disturbance_sum = sum(trade_disturbance)) %>% 
+  ungroup()
+
+# check sum of pressures
+sum(fish_capture_agg$cumu_sum)
+sum(fish_capture$trade_cumu_pressure, na.rm = TRUE)
+sum(fish_capture_agg$ghg_sum)
+sum(fish_capture$trade_ghg, na.rm = TRUE)
+sum(fish_capture_agg$water_sum)
+sum(fish_capture$trade_water, na.rm = TRUE)
+sum(fish_capture_agg$nutrient_sum)
+sum(fish_capture$trade_nutrient, na.rm = TRUE)
+sum(fish_capture_agg$disturbance_sum)
+sum(fish_capture$trade_disturbance, na.rm = TRUE)
+
+# mariculture
+mariculture_agg <- mariculture_cut %>% 
+  group_by(Consumer_ISO3, Producer_ISO3) %>% 
+  summarise(cumu_sum = sum(trade_cumu_pressure), ghg_sum = sum(trade_ghg),
+            water_sum = sum(trade_water), nutrient_sum = sum(trade_nutrient),
+            disturbance_sum = sum(trade_disturbance)) %>% 
+  ungroup()
+
+# check sum of pressures
+sum(mariculture_agg$cumu_sum)
+sum(mariculture_cut$trade_cumu_pressure, na.rm = TRUE)
+sum(mariculture_agg$ghg_sum)
+sum(mariculture_cut$trade_ghg, na.rm = TRUE)
+sum(mariculture_agg$water_sum)
+sum(mariculture_cut$trade_water, na.rm = TRUE)
+sum(mariculture_agg$nutrient_sum)
+sum(mariculture_cut$trade_nutrient, na.rm = TRUE)
+sum(mariculture_agg$disturbance_sum)
+sum(mariculture_cut$trade_disturbance, na.rm = TRUE)
+
+#aquaculture
+aqua_agg <- aqua_cut %>% 
+  group_by(Consumer_ISO3, Producer_ISO3) %>% 
+  summarise(cumu_sum = sum(trade_cumu_pressure), ghg_sum = sum(trade_ghg),
+            water_sum = sum(trade_water), nutrient_sum = sum(trade_nutrient),
+            disturbance_sum = sum(trade_disturbance)) %>% 
+  ungroup()
+
+# check sum of pressures
+sum(aqua_agg$cumu_sum)
+sum(fw_aqua$trade_cumu_pressure, na.rm = TRUE)
+sum(aqua_agg$ghg_sum)
+sum(fw_aqua$trade_ghg, na.rm = TRUE)
+sum(aqua_agg$water_sum)
+sum(fw_aqua$trade_water, na.rm = TRUE)
+sum(aqua_agg$nutrient_sum)
+sum(fw_aqua$trade_nutrient, na.rm = TRUE)
+sum(aqua_agg$disturbance_sum)
+sum(fw_aqua$trade_disturbance, na.rm = TRUE)
+```
+
+
+Add new column with food group to each df
+```{r}
+crops_agg <- crops_agg %>% 
+  mutate(food_group = "crop")
+
+animals_agg <- animals_agg %>% 
+  mutate(food_group = "livestock")
+
+fish_capture_agg <- fish_capture_agg %>% 
+  mutate(food_group = "capture_fisheries")
+
+mariculture_agg <- mariculture_agg %>% 
+  mutate(food_group = "mariculture")
+
+aqua_agg <- aqua_agg %>% 
+  mutate(food_group = "fw_aquaculture")
+```
+
+
+Combine pressures dfs
+```{r}
+# bind dfs
+trade_pressures_a <- rbind(crops_agg, animals_agg)
+trade_pressures_b <- rbind(trade_pressures_a, fish_capture_agg)
+trade_pressures_c <- rbind(trade_pressures_b, mariculture_agg)
+trade_pressures <- rbind(trade_pressures_c, aqua_agg)
+
+# check sum of pressures is the same (these are slightly higher than expected because Jessica zeroed out trade that was negative for the fisheries trade matrix)
+sum(crops_cut$trade_cumu_pressure) + sum(animals_cut$trade_cumu_pressure) + sum(fish_capture_cut$trade_cumu_pressure) + sum(mariculture_cut$trade_cumu_pressure) + sum(aqua_cut$trade_cumu_pressure) #4.014692
+sum(trade_pressures$cumu_sum) #4.014692
+
+sum(crops_cut$trade_ghg) + sum(animals_cut$trade_ghg) + sum(fish_capture_cut$trade_ghg) + sum(mariculture_cut$trade_ghg) + sum(aqua_cut$trade_ghg) #6290938978
+sum(trade_pressures$ghg_sum) #6290938978
+
+sum(crops_cut$trade_water) + sum(animals_cut$trade_water) + sum(fish_capture_cut$trade_water) + sum(mariculture$trade_water) + sum(aqua_cut$trade_water) #1.49493e+12
+sum(trade_pressures$water_sum) #1.49493e+12
+
+sum(crops_cut$trade_nutrient) + sum(animals_cut$trade_nutrient) + sum(fish_capture_cut$trade_nutrient) + sum(mariculture$trade_nutrient) + sum(aqua_cut$trade_nutrient) #142361736
+sum(trade_pressures$nutrient_sum) #142361736
+
+sum(crops_cut$trade_disturbance) + sum(animals_cut$trade_disturbance) + sum(fish_capture_cut$trade_disturbance) + sum(mariculture$trade_disturbance) + sum(aqua_cut$trade_disturbance) #16310695
+sum(trade_pressures$disturbance_sum) #16310695
+```
+
+
+Are there any negative values in aggregate pressures?
+Yes - about 1.7% of rows have negative pressure values for some pressures.
+Jessica was coming up with negative values for her fisheries trade matrix, but she zeroed them out - we'll need to revisit this.
+```{r}
+length(which(trade_pressures$cumu_sum < 0)) #1319
+length(which(trade_pressures$ghg_sum < 0)) #1292
+length(which(trade_pressures$water_sum < 0)) #1468
+length(which(trade_pressures$nutrient_sum < 0)) #1341
+length(which(trade_pressures$disturbance_sum < 0)) #1347
+```
+
+
+Zero out values that are negative
+```{r}
+trade_pressures_positive <- trade_pressures %>% 
+  mutate(cumulative = case_when(cumu_sum < 0 ~ 0,
+                                TRUE ~ cumu_sum)) %>% 
+  mutate(ghg = case_when(ghg_sum < 0 ~ 0,
+                         TRUE ~ ghg_sum)) %>% 
+  mutate(water = case_when(water_sum < 0 ~ 0,
+                           TRUE ~ water_sum)) %>% 
+  mutate(nutrient = case_when(nutrient_sum < 0 ~ 0,
+                              TRUE ~ nutrient_sum)) %>% 
+  mutate(disturbance = case_when(disturbance_sum < 0 ~ 0,
+                                 TRUE ~ disturbance_sum))
+```
+
+
+Remove old columns with negative values
+```{r}
+trade_pressures_positive <- trade_pressures_positive %>% 
+  select(-c(3:7))
+```
+
+
+Convert cumulative pressures to percentage
+```{r}
+sum(trade_pressures_positive$cumulative) #4.015746
+# this is higher than 4 because the trade data is balanced using negative trade between some countries and then higher trade between other countries.
+# If we allowed negative trade values to stay in, then this would probably cap out at 4 like it's supposed to.
+# Given that the error is so small, I think this is fine as is.
+
+# divide by 4.015746
+# multiply by 100
+trade_pressures_2 <- trade_pressures_positive %>% 
+  mutate(cumulative_perc = ((cumulative/4.015746)*100))
+
+# check that this adds up to 100
+sum(trade_pressures_2$cumulative_perc)
+```
+
+
+Save csv
+```{r}
+write_csv(trade_pressures_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/aggregated_trade_matrix_w_pressures.csv")
+```
+

@@ -1,0 +1,648 @@
+reporter,reporter_iso,partner,partner_iso,commodity_code,commodity,qty,netweight_kg,avg_weight
+Bosnia Herzegovina,BIH,World,WLD,010221,"Cattle; live, pure-bred breeding animals",438,260177,594.0114155251141
+Rep. of Korea,KOR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",495,4320,8.727272727272727
+United Kingdom,GBR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1840,1056565,574.2201086956521
+Bosnia Herzegovina,BIH,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",39022,16120733,413.1190866690585
+United Kingdom,GBR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",12937,3987420,308.21828862951224
+United Kingdom,GBR,World,WLD,010310,"Swine; live, pure-bred breeding animals",499,28040,56.192384769539075
+Bosnia Herzegovina,BIH,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",27073,744227,27.48963912385033
+United Kingdom,GBR,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",65357,1534455,23.478051318144956
+Bosnia Herzegovina,BIH,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",3334,410483,123.12027594481104
+Rep. of Korea,KOR,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1157,10255,8.86343993085566
+United Kingdom,GBR,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",441496,40174162,90.99552883831338
+Bosnia Herzegovina,BIH,World,WLD,010410,Sheep; live,50782,2300017,45.291973533929344
+United Kingdom,GBR,World,WLD,010410,Sheep; live,23,1668,72.52173913043478
+Bosnia Herzegovina,BIH,World,WLD,010420,Goats; live,101,600,5.9405940594059405
+United Kingdom,GBR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",46758078,2558071,0.05470864307125712
+Bosnia Herzegovina,BIH,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",159523,822517,5.156102881716116
+United Kingdom,GBR,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",2332009,5910520,2.534518520297306
+State of Palestine,PSE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",4336,2040654,470.63053505535055
+Rep. of Moldova,MDA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",95,52240,549.8947368421053
+State of Palestine,PSE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",81311,24200793,297.63246055269275
+Rep. of Moldova,MDA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1,150,150
+Rep. of Moldova,MDA,World,WLD,010310,"Swine; live, pure-bred breeding animals",2904,338920,116.70798898071625
+Rep. of Moldova,MDA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",30155,690980,22.914276239429615
+Rep. of Moldova,MDA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1080,111620,103.35185185185185
+State of Palestine,PSE,World,WLD,010410,Sheep; live,156118,5098372,32.65716957685853
+Rep. of Moldova,MDA,World,WLD,010410,Sheep; live,2,60,30
+State of Palestine,PSE,World,WLD,010420,Goats; live,7278,304646,41.85847760373729
+Rep. of Moldova,MDA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",3745470,157220,0.041976040390124605
+Lao People's Dem. Rep.,LAO,World,WLD,010221,"Cattle; live, pure-bred breeding animals",59,28163,477.33898305084745
+United Rep. of Tanzania,TZA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",16,5000,312.5
+Dominican Rep.,DOM,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",181,48318,266.9502762430939
+Lao People's Dem. Rep.,LAO,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",9596,2856307,297.6560025010421
+United Rep. of Tanzania,TZA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",17,2851,167.7058823529412
+Lao People's Dem. Rep.,LAO,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",19617,516037,26.305602283733496
+Lao People's Dem. Rep.,LAO,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",9578,1084265,113.20369596993109
+Dem. Rep. of the Congo,COD,World,WLD,010221,"Cattle; live, pure-bred breeding animals",86,9000,104.65116279069767
+Dem. Rep. of the Congo,COD,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",73,16700,228.76712328767124
+Dem. Rep. of the Congo,COD,World,WLD,010310,"Swine; live, pure-bred breeding animals",47,223,4.74468085106383
+Dem. Rep. of the Congo,COD,World,WLD,010410,Sheep; live,49,500,10.204081632653061
+Dem. Rep. of the Congo,COD,World,WLD,010420,Goats; live,49,888,18.122448979591837
+Russian Federation,RUS,World,WLD,010221,"Cattle; live, pure-bred breeding animals",62907,31177543,495.61325448678207
+North Macedonia,MKD,World,WLD,010221,"Cattle; live, pure-bred breeding animals",822,457338,556.3722627737226
+Russian Federation,RUS,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",2101,651098,309.89909566872916
+Russian Federation,RUS,World,WLD,010310,"Swine; live, pure-bred breeding animals",5600,537601,96.00017857142858
+North Macedonia,MKD,World,WLD,010310,"Swine; live, pure-bred breeding animals",173,18712,108.16184971098266
+North Macedonia,MKD,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",1454,42000,28.88583218707015
+Russian Federation,RUS,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",8,880,110
+North Macedonia,MKD,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",3,330,110
+New Zealand,NZL,World,WLD,010410,Sheep; live,21,32111,1529.095238095238
+Russian Federation,RUS,World,WLD,010410,Sheep; live,578,25079,43.38927335640138
+North Macedonia,MKD,World,WLD,010410,Sheep; live,56,2715,48.482142857142854
+Russian Federation,RUS,World,WLD,010420,Goats; live,353,16524,46.81019830028329
+North Macedonia,MKD,World,WLD,010420,Goats; live,102,3840,37.64705882352941
+Russian Federation,RUS,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",7557387,456437,0.060396139565169815
+North Macedonia,MKD,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",775250,108760,0.14029022895840051
+Russian Federation,RUS,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",4600,5980,1.3
+North Macedonia,MKD,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",54400,73430,1.3498161764705883
+Saudi Arabia,SAU,World,WLD,010410,Sheep; live,6530565,177779605,27.222698954837753
+Saudi Arabia,SAU,World,WLD,010420,Goats; live,617564,32411590,52.482965328289865
+Saudi Arabia,SAU,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",6782686,183003,0.026980904025337454
+Bolivia (Plurinational State of),BOL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",4,1600,400
+South Africa,ZAF,World,WLD,010221,"Cattle; live, pure-bred breeding animals",133,14427,108.47368421052632
+Bolivia (Plurinational State of),BOL,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",162,64800,400
+South Africa,ZAF,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",328764,46050862,140.07270260734143
+Bolivia (Plurinational State of),BOL,World,WLD,010310,"Swine; live, pure-bred breeding animals",107,6000,56.074766355140184
+South Africa,ZAF,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",2,5,2.5
+Bolivia (Plurinational State of),BOL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",7482,115193,15.396017107725207
+Bolivia (Plurinational State of),BOL,World,WLD,010410,Sheep; live,10,650,65
+South Africa,ZAF,World,WLD,010410,Sheep; live,406800,11023303,27.09759832841691
+Bolivia (Plurinational State of),BOL,World,WLD,010420,Goats; live,2,80,40
+South Africa,ZAF,World,WLD,010420,Goats; live,147098,2376490,16.155828087397516
+Bolivia (Plurinational State of),BOL,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",938555,46477,0.04951974045207793
+Viet Nam,VNM,World,WLD,010221,"Cattle; live, pure-bred breeding animals",10047,4728570,470.6449686473574
+United Arab Emirates,ARE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",963,298407,309.8722741433022
+Viet Nam,VNM,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",296362,88206342,297.63040470775604
+United Arab Emirates,ARE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",2293,754195,328.91190580026165
+Viet Nam,VNM,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",411,10828,26.34549878345499
+United Arab Emirates,ARE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",23,10,0.43478260869565216
+Viet Nam,VNM,World,WLD,010420,Goats; live,35668,1492926,41.85617360098688
+United Arab Emirates,ARE,World,WLD,010420,Goats; live,242097,11445047,47.2746337211944
+United Arab Emirates,ARE,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",411542,35708,0.08676635677525016
+El Salvador,SLV,World,WLD,010221,"Cattle; live, pure-bred breeding animals",90,88723,985.8111111111111
+El Salvador,SLV,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",227,116460,513.0396475770925
+Burkina Faso,BFA,World,WLD,010410,Sheep; live,223,57665,258.58744394618833
+Burkina Faso,BFA,World,WLD,010420,Goats; live,4,1390,347.5
+Côte d'Ivoire,CIV,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",11,11858,1078
+Côte d'Ivoire,CIV,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",9,39,4.333333333333333
+Côte d'Ivoire,CIV,World,WLD,010410,Sheep; live,111,8324,74.990990990991
+Trinidad and Tobago,TTO,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",492243,29933,0.06080939698482254
+Antigua and Barbuda,ATG,World,WLD,010420,Live goats,3,87,29
+Antigua and Barbuda,ATG,World,WLD,010511,"Live fowls of species Gallus domesticus, weighing not >185g",9112,1272,0.1395961369622476
+Sri Lanka,LKA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",5030,4646194,923.69662027833
+Costa Rica,CRI,World,WLD,010221,"Cattle; live, pure-bred breeding animals",46,21613,469.8478260869565
+Costa Rica,CRI,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",3343,1423543,425.82799880346994
+Sao Tome and Principe,STP,World,WLD,010391,"Live swine other than pure-bred breeding animals, weighing < 50kg",7,70,10
+Brunei Darussalam,BRN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",125,39597,316.776
+Brunei Darussalam,BRN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",8046,2039806,253.51802137708177
+"China, Hong Kong SAR",HKG,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",7021,7184043,1023.2221905711438
+"China, Hong Kong SAR",HKG,World,WLD,010310,"Swine; live, pure-bred breeding animals",350,2555,7.3
+"China, Hong Kong SAR",HKG,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",17093,1412342,82.62692330193647
+"China, Hong Kong SAR",HKG,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1439210,264448005,183.74525260385906
+Brunei Darussalam,BRN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",172162,230171,1.3369442734168981
+French Polynesia,PYF,World,WLD,010221,"Cattle; live, pure-bred breeding animals",2,1075,537.5
+French Polynesia,PYF,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",209083,8995,0.043021192540761324
+Saint Lucia,LCA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",8219,809,0.09843046599342986
+"China, Macao SAR",MAC,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",4963,947500,190.91275438243
+"China, Macao SAR",MAC,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",174902,10952100,62.61849492858858
+"China, Macao SAR",MAC,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",902584,543800,0.6024923995993725
+Honduras,HND,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",8350,3281761,393.02526946107787
+Honduras,HND,World,WLD,010310,"Swine; live, pure-bred breeding animals",235,12380,52.680851063829785
+Honduras,HND,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",1,50,50
+Honduras,HND,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1462805,90418,0.06181138292527028
+Honduras,HND,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",2242,7076,3.1561106155218557
+Philippines,PHL,World,WLD,010310,"Swine; live, pure-bred breeding animals",1128,90700,80.40780141843972
+Philippines,PHL,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1427,1361530,954.1205325858444
+Bahrain,BHR,World,WLD,010410,Sheep; live,60120,1762573,29.317581503659348
+Bahrain,BHR,World,WLD,010420,Goats; live,21157,800517,37.83698066833672
+Bahrain,BHR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",18855,1147935,60.88225934765314
+Bahrain,BHR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",30,15000,500
+Bahrain,BHR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",230312,12424,0.05394421480426552
+Bahrain,BHR,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",40,195,4.875
+Madagascar,MDG,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",320049,16274,0.05084846382897619
+Madagascar,MDG,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",2322,131,0.056416881998277345
+Ecuador,ECU,World,WLD,010221,"Cattle; live, pure-bred breeding animals",840,218400,260
+Ecuador,ECU,World,WLD,010310,"Swine; live, pure-bred breeding animals",169,22854,135.23076923076923
+Ecuador,ECU,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",3044884,148936,0.048913521828746184
+Ecuador,ECU,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",231,509,2.2034632034632033
+Colombia,COL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",109,38868,356.58715596330273
+Colombia,COL,World,WLD,010310,"Swine; live, pure-bred breeding animals",120,6300,52.5
+Colombia,COL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",179,36199,202.2290502793296
+Colombia,COL,World,WLD,010410,Sheep; live,19,1040,54.73684210526316
+Colombia,COL,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",819594,37568,0.0458373292142207
+Paraguay,PRY,World,WLD,010221,"Cattle; live, pure-bred breeding animals",572,165566,289.45104895104896
+Paraguay,PRY,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",219,48656,222.17351598173516
+Paraguay,PRY,World,WLD,010410,Sheep; live,2612,31917,12.21937212863706
+Paraguay,PRY,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",546,21701,39.74542124542125
+Guatemala,GTM,World,WLD,010221,"Cattle; live, pure-bred breeding animals",81,34225,422.5308641975309
+Guatemala,GTM,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",447,155876,348.7158836689038
+Guatemala,GTM,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",9,51,5.666666666666667
+Guatemala,GTM,World,WLD,010410,Sheep; live,29,42,1.4482758620689655
+Guatemala,GTM,World,WLD,010420,Goats; live,105,811,7.723809523809524
+Zimbabwe,ZWE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",213,98000,460.09389671361504
+Zimbabwe,ZWE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",358,148300,414.24581005586595
+Zimbabwe,ZWE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",36,25,0.6944444444444444
+Zimbabwe,ZWE,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",25,165,6.6
+Zimbabwe,ZWE,World,WLD,010410,Sheep; live,79,850,10.759493670886076
+Zimbabwe,ZWE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",453098,24305,0.053641817002061366
+Zimbabwe,ZWE,World,WLD,010420,Goats; live,1168,8800,7.534246575342466
+Netherlands,NLD,World,WLD,010221,"Cattle; live, pure-bred breeding animals",226632,93754311,413.68522979985175
+Netherlands,NLD,World,WLD,010310,"Swine; live, pure-bred breeding animals",316032,27895489,88.2679253999595
+Netherlands,NLD,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1322765,122067892,92.28237215227195
+Netherlands,NLD,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",888868,22221748,25.00005400126903
+Netherlands,NLD,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",725155,72643675,100.17675531438107
+Netherlands,NLD,World,WLD,010410,Sheep; live,29277,1354172,46.25378283294053
+Netherlands,NLD,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",109627528,4788008,0.043675234563347994
+Netherlands,NLD,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",363878964,815453138,2.241001043412886
+Netherlands,NLD,World,WLD,010420,Goats; live,790,20207,25.578481012658226
+Kuwait,KWT,World,WLD,010410,Sheep; live,1325795,49526544,37.356110107520394
+Kuwait,KWT,World,WLD,010420,Goats; live,19166,915332,47.758113325680895
+Kuwait,KWT,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",99455,4932,0.049590266954904226
+Kuwait,KWT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1225768,152041,0.12403733822387271
+Kuwait,KWT,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",2401,1263116,526.079133694294
+Montenegro,MNE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",596,327046,548.7348993288591
+Montenegro,MNE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",46548,7930280,170.36779238635387
+Montenegro,MNE,World,WLD,010310,"Swine; live, pure-bred breeding animals",588,54939,93.43367346938776
+Montenegro,MNE,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",3002,253461,84.43071285809461
+Montenegro,MNE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",30836,689053,22.345732260993643
+Montenegro,MNE,World,WLD,010410,Sheep; live,30851,850666,27.573368772487115
+Montenegro,MNE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1789693,220994,0.12348151330982464
+Montenegro,MNE,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",69248,101760,1.4695009242144177
+Montenegro,MNE,World,WLD,010420,Goats; live,428,15159,35.41822429906542
+Albania,ALB,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",36258,4033012,111.23095592696784
+Albania,ALB,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",99859,9975507,99.89592325178502
+Albania,ALB,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",4125282,191090,0.04632168176624046
+Albania,ALB,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",446972,868260,1.9425377876019079
+Luxembourg,LUX,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1191,619815,520.4156171284635
+Luxembourg,LUX,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1867,905452,484.9769683985003
+Luxembourg,LUX,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",84353,2835692,33.616966794304886
+Luxembourg,LUX,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",11927,1249469,104.75970487130041
+Luxembourg,LUX,World,WLD,010310,"Swine; live, pure-bred breeding animals",87,8976,103.17241379310344
+Luxembourg,LUX,World,WLD,010410,Sheep; live,190,15603,82.12105263157895
+Luxembourg,LUX,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",41716,4788,0.11477610509157157
+Luxembourg,LUX,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",46919,210012,4.476054476864383
+Belgium,BEL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",710,94807,133.53098591549295
+Belgium,BEL,World,WLD,010310,"Swine; live, pure-bred breeding animals",23477,1876350,79.92290326702731
+Belgium,BEL,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",431230,10494912,24.337156505808967
+Belgium,BEL,World,WLD,010410,Sheep; live,82148,3273931,39.854056093879336
+Belgium,BEL,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",23521801,1204444,0.051205432781273846
+Belgium,BEL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",369141,37182069,100.72592586572611
+Belgium,BEL,World,WLD,010420,Goats; live,3142,63420,20.184595798854232
+Belgium,BEL,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",118139955,215625648,1.8251712386381052
+Uruguay,URY,World,WLD,010221,"Cattle; live, pure-bred breeding animals",23,11500,500
+Uruguay,URY,World,WLD,010410,Sheep; live,5,650,130
+Uruguay,URY,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",29,2999,103.41379310344827
+Uruguay,URY,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",446032,22181,0.0497296158123184
+Ukraine,UKR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1407,718601,510.7327647476901
+Ukraine,UKR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",33,11805,357.72727272727275
+Ukraine,UKR,World,WLD,010310,"Swine; live, pure-bred breeding animals",2419,201749,83.40181893344356
+Ukraine,UKR,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",998,38875,38.952905811623246
+Ukraine,UKR,World,WLD,010410,Sheep; live,2463,118061,47.93382054405197
+Ukraine,UKR,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",4673,387678,82.96126685212926
+Ukraine,UKR,World,WLD,010420,Goats; live,502,17100,34.06374501992032
+Ukraine,UKR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",62642821,2713439,0.04331604095543526
+Tunisia,TUN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",197,103590,525.8375634517766
+Tunisia,TUN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",93,38128,409.97849462365593
+Tunisia,TUN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1030611,45663,0.044306726786343245
+Tunisia,TUN,World,WLD,010410,Sheep; live,20,800,40
+Tunisia,TUN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",559,312,0.5581395348837209
+Thailand,THA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",419,191690,457.4940334128878
+Thailand,THA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",119176,29663600,248.9058199637511
+Thailand,THA,World,WLD,010310,"Swine; live, pure-bred breeding animals",1902,79469,41.78180862250263
+Thailand,THA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1417030,67996,0.04798486976281377
+Thailand,THA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",96388,5174,0.05367888118852969
+Thailand,THA,World,WLD,010410,Sheep; live,1720,83500,48.54651162790697
+Thailand,THA,World,WLD,010420,Goats; live,64634,2243245,34.70688801559551
+Tajikistan,TJK,World,WLD,010410,Sheep; live,199,5736,28.824120603015075
+Tajikistan,TJK,World,WLD,010420,Goats; live,147,3033,20.632653061224488
+Spain,ESP,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",665282,78502052,117.99816017869114
+Spain,ESP,World,WLD,010221,"Cattle; live, pure-bred breeding animals",39633,12101920,305.3495824186915
+Spain,ESP,World,WLD,010310,"Swine; live, pure-bred breeding animals",37131,2808750,75.64434030863698
+Spain,ESP,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",830665,10452390,12.583159276001757
+Spain,ESP,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",174713,14637086,83.7778871635196
+Spain,ESP,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",62988555,6200125,0.09843256445555863
+Spain,ESP,World,WLD,010420,Goats; live,5225,6118,1.170909090909091
+Spain,ESP,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",948083,3205425,3.380953988205674
+Slovakia,SVK,World,WLD,010221,"Cattle; live, pure-bred breeding animals",751,403299,537.0159786950733
+Slovakia,SVK,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",14208,3237948,227.89611486486487
+Slovakia,SVK,World,WLD,010310,"Swine; live, pure-bred breeding animals",3358,151213,45.03067301965456
+Slovakia,SVK,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",173230,4378458,25.275402643883854
+Slovakia,SVK,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",249983,27377610,109.5178872163307
+Slovakia,SVK,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",53035082,2278435,0.04296090274735504
+Slovakia,SVK,World,WLD,010410,Sheep; live,1,78,78
+Slovakia,SVK,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",6961550,13724665,1.9714955721067866
+Slovenia,SVN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",24121,6257401,259.4171468844575
+Slovenia,SVN,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",79385,2231925,28.115198085280596
+Slovenia,SVN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1,630,630
+Slovenia,SVN,World,WLD,010310,"Swine; live, pure-bred breeding animals",51,5250,102.94117647058823
+Slovenia,SVN,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1844,155262,84.19848156182212
+Slovenia,SVN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",6540527,322620,0.04932630046477906
+Slovenia,SVN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",909546,2109958,2.3197925118685587
+Romania,ROU,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",44925,4669590,103.94190317195326
+Romania,ROU,World,WLD,010221,"Cattle; live, pure-bred breeding animals",4259,1722067,404.3359943648744
+Romania,ROU,World,WLD,010310,"Swine; live, pure-bred breeding animals",11043,647221,58.60916417640134
+Romania,ROU,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",1053306,27297174,25.915711103895735
+Romania,ROU,World,WLD,010410,Sheep; live,7478,189233,25.305295533565126
+Romania,ROU,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",45476,4677863,102.86443398715807
+Romania,ROU,World,WLD,010420,Goats; live,3,450,150
+Romania,ROU,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",102069658,4796028,0.04698779337538292
+Romania,ROU,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1075308,285351,0.2653667600352643
+Portugal,PRT,World,WLD,010221,"Cattle; live, pure-bred breeding animals",498,147146,295.4738955823293
+Portugal,PRT,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",295,85233,288.92542372881354
+Portugal,PRT,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",96880,2294184,23.680677126341866
+Portugal,PRT,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",867770,98727809,113.77186235984189
+Portugal,PRT,World,WLD,010410,Sheep; live,129340,3041744,23.517426936755836
+Portugal,PRT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1350358,1674172,1.2397986311778062
+Portugal,PRT,World,WLD,010420,Goats; live,629,12500,19.87281399046105
+Peru,PER,World,WLD,010221,"Cattle; live, pure-bred breeding animals",569,249800,439.0158172231986
+Peru,PER,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",52,31695,609.5192307692307
+Peru,PER,World,WLD,010310,"Swine; live, pure-bred breeding animals",504,39739,78.84722222222223
+Peru,PER,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",959044,44123,0.04600727391026898
+Czechia,CZE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",233,38023,163.18884120171674
+Czechia,CZE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",6539,3133827,479.2517204465515
+Czechia,CZE,World,WLD,010310,"Swine; live, pure-bred breeding animals",3325,198642,59.74195488721804
+Czechia,CZE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",205330,5369060,26.148443968246237
+Czechia,CZE,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",12467,1647916,132.1822411165477
+Czechia,CZE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",18802010,815421,0.043368820673959856
+Czechia,CZE,World,WLD,010410,Sheep; live,1317,51072,38.77904328018223
+Czechia,CZE,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",3179212,6289428,1.9782977668680164
+Pakistan,PAK,World,WLD,010221,"Cattle; live, pure-bred breeding animals",6345,3214727,506.65516154452325
+Pakistan,PAK,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",4000,38664,9.666
+Namibia,"NAM",World,WLD,010221,"Cattle; live, pure-bred breeding animals",132,76446,579.1363636363636
+Namibia,"NAM",World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",461,112025,243.00433839479393
+Namibia,"NAM",World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",37,250,6.756756756756757
+Namibia,"NAM",World,WLD,010410,Sheep; live,5056,94460,18.682753164556964
+Namibia,"NAM",World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",77119,63573,0.8243493821237309
+Morocco,MAR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",23804,10535320,442.5861199798353
+Morocco,MAR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",7499,2257559,301.04800640085347
+Morocco,MAR,World,WLD,010420,Goats; live,101,600,5.9405940594059405
+Malta,MLT,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",13500,1688,0.12503703703703703
+Malta,MLT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",13904,569,0.0409234752589183
+Lebanon,LBN,World,WLD,010410,Sheep; live,164288,6186068,37.6538030775224
+Lebanon,LBN,World,WLD,010420,Goats; live,398,20108,50.52261306532663
+Lebanon,LBN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",3791,1190,0.31390134529147984
+Lebanon,LBN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",684,399109,583.4926900584795
+Kyrgyzstan,KGZ,World,WLD,010221,"Cattle; live, pure-bred breeding animals",33,4950,150
+Kyrgyzstan,KGZ,World,WLD,010310,"Swine; live, pure-bred breeding animals",105,13288,126.55238095238096
+Kyrgyzstan,KGZ,World,WLD,010410,Sheep; live,10,800,80
+Kyrgyzstan,KGZ,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",211976,101992,0.4811488092991659
+Jordan,JOR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1988821,9386394,4.719577076066675
+Jordan,JOR,World,WLD,010410,Sheep; live,442350,20561192,46.48172713914321
+Jordan,JOR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",5909,3563694,603.0959553223896
+Japan,JPN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",172,212036,1232.7674418604652
+Japan,JPN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",14540,11534861,793.3191884456671
+Japan,JPN,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",44,16728,380.1818181818182
+Japan,JPN,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1099,1430082,1301.2575068243857
+Japan,JPN,World,WLD,010410,Sheep; live,272,164146,603.4779411764706
+Kazakhstan,KAZ,World,WLD,010221,"Cattle; live, pure-bred breeding animals",6330,2450714,387.1586097946288
+Kazakhstan,KAZ,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",66,3500,53.03030303030303
+Kazakhstan,KAZ,World,WLD,010410,Sheep; live,534,13359,25.01685393258427
+Kazakhstan,KAZ,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",19,1800,94.73684210526316
+Kazakhstan,KAZ,World,WLD,010420,Goats; live,1962,12600,6.422018348623853
+Kazakhstan,KAZ,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",300643,167051,0.5556457326463613
+Italy,ITA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",109466,45627803,416.82168892624196
+Italy,ITA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1010128,339176264,335.77552943785344
+Italy,ITA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",1109290,29631753,26.71235925682193
+Italy,ITA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",419789,53632853,127.76145396854133
+Italy,ITA,World,WLD,010410,Sheep; live,1028912,25469406,24.753726266191862
+Italy,ITA,World,WLD,010310,"Swine; live, pure-bred breeding animals",25190,1402852,55.69082969432314
+Italy,ITA,World,WLD,010420,Goats; live,7520,160035,21.28125
+Italy,ITA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",11290359,521860,0.0462217366161696
+Italy,ITA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",327959,555612,1.6941507932393989
+Israel,ISR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",210442,58136286,276.2579998289315
+Israel,ISR,World,WLD,010410,Sheep; live,558654,11606480,20.77579324590892
+Israel,ISR,World,WLD,010310,"Swine; live, pure-bred breeding animals",6,682,113.66666666666667
+Israel,ISR,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",393,22021,56.033078880407125
+Hungary,HUN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",12791,6703660,524.0919396450629
+Hungary,HUN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",31273,7646143,244.49662648290857
+Hungary,HUN,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",830400,20763993,25.004808526011562
+Hungary,HUN,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",295006,29713564,100.72189718175224
+Hungary,HUN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",4844904,217150,0.04482028952482856
+Hungary,HUN,World,WLD,010410,Sheep; live,55752,1438939,25.80963911608552
+Hungary,HUN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",19816506,44409794,2.2410506675596595
+Hungary,HUN,World,WLD,010310,"Swine; live, pure-bred breeding animals",65869,5814040,88.26671119950204
+Greece,GRC,World,WLD,010221,"Cattle; live, pure-bred breeding animals",16988,2415680,142.1991994348952
+Greece,GRC,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",12951,4847801,374.3186626515327
+Greece,GRC,World,WLD,010310,"Swine; live, pure-bred breeding animals",1930,165421,85.71036269430051
+Greece,GRC,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",4785,97207,20.31494252873563
+Greece,GRC,World,WLD,010410,Sheep; live,355952,9362289,26.302110958780958
+Greece,GRC,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",433,53156,122.7621247113164
+Greece,GRC,World,WLD,010420,Goats; live,1129,34500,30.558015943312665
+Greece,GRC,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",3589185,243412,0.06781818156489565
+Greece,GRC,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",101851,128303,1.2597127175972744
+Germany,DEU,World,WLD,010221,"Cattle; live, pure-bred breeding animals",5358,2192325,409.16853303471447
+Germany,DEU,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",71055,20188747,284.1284497924143
+Germany,DEU,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",11198956,297853796,26.59656810867013
+Germany,DEU,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",134552347,5825216,0.04329330650768953
+Germany,DEU,World,WLD,010310,"Swine; live, pure-bred breeding animals",79135,4941581,62.444948505718074
+Germany,DEU,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",3913438,439627130,112.33782929485531
+Germany,DEU,World,WLD,010410,Sheep; live,125907,5129410,40.73967293319672
+Germany,DEU,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",51083290,98279865,1.923914160579712
+Germany,DEU,World,WLD,010420,Goats; live,866,15026,17.351039260969976
+Georgia,GEO,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1039,462841,445.4677574590953
+Georgia,GEO,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",4211,866253,205.71194490619806
+Georgia,GEO,World,WLD,010410,Sheep; live,18879,619804,32.830340590073625
+Georgia,GEO,World,WLD,010310,"Swine; live, pure-bred breeding animals",25,3057,122.28
+Georgia,GEO,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",6390,183760,28.757433489827857
+Georgia,GEO,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",31387,3184945,101.47338069901552
+Georgia,GEO,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1615160,64993,0.040239357091557494
+Georgia,GEO,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",160380,175315,1.0931225838633245
+France,FRA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1508,623965,413.76989389920425
+France,FRA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",29647,7682563,259.1345836003643
+France,FRA,World,WLD,010410,Sheep; live,275135,5957086,21.651501989932214
+France,FRA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",2610,150578,57.69272030651341
+France,FRA,World,WLD,010420,Goats; live,37,4272,115.45945945945945
+France,FRA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",3323438,2629737,0.7912700643129194
+Egypt,EGY,World,WLD,010221,"Cattle; live, pure-bred breeding animals",10128,3313625,327.1746642969984
+Azerbaijan,AZE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",3979,2222989,558.6803216888666
+Azerbaijan,AZE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",83954,17789470,211.8954427424542
+Azerbaijan,AZE,World,WLD,010410,Sheep; live,131867,4325314,32.80057937163961
+Azerbaijan,AZE,World,WLD,010420,Goats; live,540,23305,43.157407407407405
+Azerbaijan,AZE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",2179376,99138,0.04548916754153483
+Azerbaijan,AZE,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",30000,33000,1.1
+Cyprus,CYP,World,WLD,010221,"Cattle; live, pure-bred breeding animals",619,386371,624.1857835218094
+Cyprus,CYP,World,WLD,010310,"Swine; live, pure-bred breeding animals",116,10240,88.27586206896552
+Cyprus,CYP,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",203,5015,24.704433497536947
+Cyprus,CYP,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",117527,5493,0.04673819632935411
+Canada,CAN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",718538,31093623,43.27345665782464
+Brazil,BRA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",98,44160,450.61224489795916
+Brazil,BRA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",142,44350,312.32394366197184
+Brazil,BRA,World,WLD,010310,"Swine; live, pure-bred breeding animals",831,82855,99.70517448856799
+Brazil,BRA,World,WLD,010410,Sheep; live,4,420,105
+Brazil,BRA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",39930,1938,0.048534936138241926
+Austria,AUT,World,WLD,010221,"Cattle; live, pure-bred breeding animals",295,124896,423.3762711864407
+Austria,AUT,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",132919,47349920,356.2313890414463
+Austria,AUT,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",150789,4966488,32.936673099496645
+Austria,AUT,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",460118,44084266,95.81078332080031
+Austria,AUT,World,WLD,010410,Sheep; live,221,8955,40.52036199095023
+Austria,AUT,World,WLD,010420,Goats; live,880,17175,19.517045454545453
+Austria,AUT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",14539248,26391246,1.8151726966896775
+Argentina,ARG,World,WLD,010221,"Cattle; live, pure-bred breeding animals",14,7900,564.2857142857143
+Argentina,ARG,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",8,2000,250
+Argentina,ARG,World,WLD,010310,"Swine; live, pure-bred breeding animals",365,35331,96.7972602739726
+Argentina,ARG,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1692,189771,112.15780141843972
+Argentina,ARG,World,WLD,010410,Sheep; live,68,5433,79.8970588235294
+Argentina,ARG,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",670751,29308,0.04369430682921084
+Argentina,ARG,World,WLD,010420,Goats; live,18,556,30.88888888888889
+Algeria,DZA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",94748,26446390,279.1234643475324
+Afghanistan,AFG,World,WLD,010410,Live sheep,1719,34374,19.99650959860384
+Armenia,ARM,World,WLD,010221,"Cattle; live, pure-bred breeding animals",439,191710,436.69703872437356
+Armenia,ARM,World,WLD,010310,"Swine; live, pure-bred breeding animals",36,4639,128.86111111111111
+Armenia,ARM,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",460,49580,107.78260869565217
+Armenia,ARM,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",290,33911,116.93448275862069
+Armenia,ARM,World,WLD,010410,Sheep; live,23526,653280,27.768426421831165
+Armenia,ARM,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",6670022,287993,0.04317721890572475
+Armenia,ARM,World,WLD,010420,Goats; live,22,698,31.727272727272727
+Armenia,ARM,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",151400,149180,0.9853368560105681
+USA,USA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",2841,977360,344.0197113692362
+USA,USA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1803698,620201188,343.8497952539727
+USA,USA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",4767439,48549478,10.183555154035531
+USA,USA,World,WLD,010410,Sheep; live,5651,165236,29.24013448947089
+USA,USA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",829616,139735988,168.43453838884497
+USA,USA,World,WLD,010420,Goats; live,3178,59766,18.80616740088106
+USA,USA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",273093,67417,0.24686462120962457
+Turkey,TUR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",113545,50991714,449.08815007265844
+Turkey,TUR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",782265,238925559,305.42790358765893
+Turkey,TUR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1370463,59184,0.04318540522436578
+Turkey,TUR,World,WLD,010410,Sheep; live,280669,10816014,38.53654660828236
+Iran,IRN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",22985,24840246,1080.7155101152925
+Iran,IRN,World,WLD,010410,Sheep; live,19211,297514,15.486648274426111
+Iran,IRN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",816,423580,519.093137254902
+Iran,IRN,World,WLD,010420,Goats; live,11050,56040,5.071493212669683
+China,CHN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",69821,21020815,301.06722905716043
+China,CHN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",35954,12037498,334.8027479557212
+China,CHN,World,WLD,010310,"Swine; live, pure-bred breeding animals",11174,598540,53.56541972436012
+China,CHN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1018080,44015,0.04323334119126198
+China,CHN,World,WLD,010410,Sheep; live,2900,140070,48.3
+Suriname,SUR,World,WLD,010391,"Live swine other than pure-bred breeding animals, weighing < 50kg",526,1090,2.0722433460076046
+Suriname,SUR,World,WLD,010410,Live sheep,18,225,12.5
+Grenada,GRD,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",58,56502,974.1724137931035
+Grenada,GRD,World,WLD,010410,Sheep; live,6,150,25
+Grenada,GRD,World,WLD,010420,Goats; live,3,130,43.333333333333336
+Grenada,GRD,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1385,106,0.07653429602888087
+Gambia,GMB,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",50,685,13.7
+Gambia,GMB,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1500,1500,1
+Mauritius,MUS,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",10101,4324109,428.08721908721907
+Mauritius,MUS,World,WLD,010310,"Swine; live, pure-bred breeding animals",14,974,69.57142857142857
+Mauritius,MUS,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",6,895,149.16666666666666
+Mauritius,MUS,World,WLD,010410,Sheep; live,1458,103915,71.27229080932784
+Comoros,COM,World,WLD,010420,Goats; live,1211,92220,76.15194054500412
+Comoros,COM,World,WLD,010410,Sheep; live,5257,171530,32.62887578466806
+Comoros,COM,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1369,224,0.16362308254200147
+Panama,PAN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",292,141765,485.49657534246575
+Panama,PAN,World,WLD,010310,"Swine; live, pure-bred breeding animals",153,16737,109.3921568627451
+Panama,PAN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",3144,354,0.11259541984732824
+Nicaragua,NIC,World,WLD,010221,"Cattle; live, pure-bred breeding animals",196,160979,821.3214285714286
+Nicaragua,NIC,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",9,200,22.22222222222222
+Nicaragua,NIC,World,WLD,010410,Sheep; live,26,315,12.115384615384615
+Barbados,BRB,World,WLD,010392,"Live swine other than pure-bred breeding animals, weighing 50kg/more",28,175,6.25
+Bahamas,BHS,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1,8,8
+Senegal,SEN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",353,84705,239.95750708215297
+Senegal,SEN,World,WLD,010410,Sheep; live,1129,7475,6.620903454384411
+Jamaica,JAM,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",13,535,41.15384615384615
+Jamaica,JAM,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",2,217,108.5
+Jamaica,JAM,World,WLD,010410,Sheep; live,6,445,74.16666666666667
+Jamaica,JAM,World,WLD,010420,Goats; live,8,667,83.375
+Guyana,GUY,World,WLD,010391,"Live swine other than pure-bred breeding animals, weighing < 50kg",605,8500,14.049586776859504
+Guyana,GUY,World,WLD,010410,Live sheep,3,300,100
+Guyana,GUY,World,WLD,010420,Live goats,9,2214,246
+Guyana,GUY,World,WLD,010511,"Live fowls of species Gallus domesticus, weighing not >185g",42600,2794,0.0655868544600939
+Belize,BLZ,World,WLD,010221,"Cattle; live, pure-bred breeding animals",66,92188,1396.7878787878788
+Belize,BLZ,World,WLD,010410,Sheep; live,554,4133,7.46028880866426
+Botswana,BWA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",2482,244450,98.48912167606768
+Botswana,BWA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1002,47357,47.262475049900196
+Botswana,BWA,World,WLD,010310,"Swine; live, pure-bred breeding animals",137,16450,120.07299270072993
+Botswana,BWA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",2775,75000,27.027027027027028
+Botswana,BWA,World,WLD,010410,Sheep; live,961,64808,67.43808532778355
+Botswana,BWA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",9,1100,122.22222222222223
+Botswana,BWA,World,WLD,010420,Goats; live,3199,123849,38.71491090965927
+Botswana,BWA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",133554,20791,0.15567485810982823
+Botswana,BWA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",261781,460913,1.7606816384687964
+Ghana,GHA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",52,53122,1021.5769230769231
+Ghana,GHA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",2,359,179.5
+Ghana,GHA,World,WLD,010410,Sheep; live,4963,584180,117.70703203707436
+Ghana,GHA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",5481,799,0.1457763181901113
+Cambodia,KHM,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",36066,4082571,113.19722176010647
+Cambodia,KHM,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",5221,137350,26.307220838919747
+Indonesia,IDN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",2385,917421,384.662893081761
+Indonesia,IDN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",537238,167671159,312.0984721855118
+Indonesia,IDN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",504,35,0.06944444444444445
+Nigeria,NGA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",85,1828,21.505882352941178
+Nigeria,NGA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",27,2563,94.92592592592592
+Nigeria,NGA,World,WLD,010410,Sheep; live,20,620,31
+Lesotho,LSO,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",992,382065,385.1461693548387
+Lesotho,LSO,World,WLD,010221,"Cattle; live, pure-bred breeding animals",3406,590205,173.28391074574282
+Lesotho,LSO,World,WLD,010410,Sheep; live,14313,582954,40.72898763361979
+Lesotho,LSO,World,WLD,010420,Goats; live,485,41249,85.04948453608247
+Lesotho,LSO,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",426,33750,79.22535211267606
+Lesotho,LSO,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",248819,338000,1.3584171626764836
+Myanmar,MMR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",4317,86786,20.103312485522352
+Myanmar,MMR,World,WLD,010310,"Swine; live, pure-bred breeding animals",300,3073,10.243333333333334
+Myanmar,MMR,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",850,12958,15.24470588235294
+Myanmar,MMR,World,WLD,010410,Sheep; live,21150,639249,30.224539007092197
+Myanmar,MMR,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",428831,549345,1.281029123360951
+Angola,AGO,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1185,887713,749.1248945147679
+Angola,AGO,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1658,941935,568.1151990349819
+Angola,AGO,World,WLD,010310,"Swine; live, pure-bred breeding animals",427,26053,61.014051522248245
+Angola,AGO,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",40,190,4.75
+Angola,AGO,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",957917,42491,0.044357705312673225
+Angola,AGO,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",100650,3011,0.029915548931942374
+Angola,AGO,World,WLD,010420,Goats; live,1389,151837,109.31389488840892
+Burundi,BDI,World,WLD,010221,"Cattle; live, pure-bred breeding animals",3318,1173200,353.58649789029533
+Burundi,BDI,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",36001,2568,0.07133135190689148
+Zambia,ZMB,World,WLD,010221,"Cattle; live, pure-bred breeding animals",42,20000,476.1904761904762
+Zambia,ZMB,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",26,28000,1076.923076923077
+Zambia,ZMB,World,WLD,010410,Sheep; live,87,800,9.195402298850574
+Zambia,ZMB,World,WLD,010420,Goats; live,181,5660,31.2707182320442
+Sweden,SWE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",40,120,3
+Sweden,SWE,World,WLD,010310,"Swine; live, pure-bred breeding animals",137,22000,160.5839416058394
+Sweden,SWE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",30,11471,382.3666666666667
+Sweden,SWE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",391139,27982,0.07153978508918825
+Rwanda,RWA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",173,273000,1578.0346820809248
+Rwanda,RWA,World,WLD,010420,Goats; live,44,6000,136.36363636363637
+Poland,POL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",18500,9324019,504.001027027027
+Poland,POL,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",101423,22431995,221.1726630054327
+Poland,POL,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",5340003,156811795,29.365488184182666
+Poland,POL,World,WLD,010310,"Swine; live, pure-bred breeding animals",862842,27536591,31.91382779234205
+Poland,POL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",200540,21271137,106.06929789568166
+Poland,POL,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",29523231,1515548,0.051334083318997165
+Poland,POL,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",31721949,77214835,2.434113837078548
+Poland,POL,World,WLD,010410,Sheep; live,40,1035,25.875
+Norway,NOR,World,WLD,010310,"Swine; live, pure-bred breeding animals",12,160,13.333333333333334
+Norway,NOR,World,WLD,010410,Sheep; live,12,440,36.666666666666664
+Norway,NOR,World,WLD,010420,Goats; live,2,50,25
+Norway,NOR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",24525,994,0.04053007135575943
+Nepal,NPL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",22,1037,47.13636363636363
+Nepal,NPL,World,WLD,010310,"Swine; live, pure-bred breeding animals",515,2615,5.077669902912621
+Nepal,NPL,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",345,2873,8.327536231884057
+Nepal,NPL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",631,5896,9.343898573692552
+Nepal,NPL,World,WLD,010410,Sheep; live,1,9,9
+Mozambique,MOZ,World,WLD,010221,"Cattle; live, pure-bred breeding animals",27,7500,277.77777777777777
+Mozambique,MOZ,World,WLD,010410,Sheep; live,65,3736,57.47692307692308
+Mozambique,MOZ,World,WLD,010420,Goats; live,61,2480,40.65573770491803
+Mozambique,MOZ,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",114048,74029,0.6491038860830527
+Mozambique,MOZ,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",198836,255770,1.2863364783037277
+Mongolia,MNG,World,WLD,010221,"Cattle; live, pure-bred breeding animals",210,104317,496.747619047619
+Mongolia,MNG,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",160,84053,525.33125
+Mongolia,MNG,World,WLD,010410,Sheep; live,687,32142,46.786026200873366
+Mongolia,MNG,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",216000,7971,0.03690277777777778
+Latvia,LVA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",2615,1371986,524.6600382409177
+Latvia,LVA,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",2910,1164874,400.30034364261167
+Latvia,LVA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",187,7400,39.57219251336898
+Latvia,LVA,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",28281,3245032,114.74247728156713
+Latvia,LVA,World,WLD,010410,Sheep; live,35,1247,35.628571428571426
+Latvia,LVA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",2050640,70443,0.034351714586665624
+Latvia,LVA,World,WLD,010310,"Swine; live, pure-bred breeding animals",546,64095,117.39010989010988
+Ireland,IRL,World,WLD,010221,"Cattle; live, pure-bred breeding animals",151,65160,431.52317880794703
+Ireland,IRL,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",5709,288225,50.486074619022595
+Ireland,IRL,World,WLD,010310,"Swine; live, pure-bred breeding animals",52915,875867,16.552338656335632
+Ireland,IRL,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",45,2581,57.355555555555554
+Ireland,IRL,World,WLD,010410,Sheep; live,19135,504651,26.373190488633394
+Ireland,IRL,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",300,7151,23.836666666666666
+Ireland,IRL,World,WLD,010420,Goats; live,60,538,8.966666666666667
+Ireland,IRL,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",6024452,1175361,0.19509840895072283
+Ireland,IRL,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",25226,77054,3.054546896059621
+Finland,FIN,World,WLD,010310,"Swine; live, pure-bred breeding animals",114,12903,113.1842105263158
+Finland,FIN,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",186,19913,107.05913978494624
+Finland,FIN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",247840,12640,0.051000645577792124
+Estonia,EST,World,WLD,010221,"Cattle; live, pure-bred breeding animals",279,90800,325.44802867383515
+Estonia,EST,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",28,5040,180
+Estonia,EST,World,WLD,010310,"Swine; live, pure-bred breeding animals",56,7520,134.28571428571428
+Estonia,EST,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",40648,4784210,117.69853375319819
+Estonia,EST,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",2781697,118356,0.042548127995248944
+Denmark,DNK,World,WLD,010221,"Cattle; live, pure-bred breeding animals",34,18319,538.7941176470588
+Denmark,DNK,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",26,82,3.1538461538461537
+Denmark,DNK,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1718963,287332,0.1671542668457669
+Denmark,DNK,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1242050,2656538,2.1388333802986996
+Mali,MLI,World,WLD,010221,"Cattle; live, pure-bred breeding animals",20,10000,500
+Mali,MLI,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",9,16000,1777.7777777777778
+Mali,MLI,World,WLD,010410,Sheep; live,10,2000,200
+Benin,BEN,World,WLD,010410,Sheep; live,8,4045,505.625
+Niger,NER,World,WLD,010410,Sheep; live,1,562,562
+Niger,NER,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",162,1172,7.234567901234568
+Kenya,KEN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",267,70042,262.32958801498125
+Kenya,KEN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",22040,4119180,186.89564428312158
+Kenya,KEN,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",4086,4228,1.0347528144884972
+Kenya,KEN,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",269497,13957,0.05178907371881691
+Kenya,KEN,World,WLD,010410,Sheep; live,91,6985,76.75824175824175
+Kenya,KEN,World,WLD,010420,Goats; live,38392,214745,5.59348301729527
+Sudan,SDN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",6473,1952680,301.6653792677275
+Oman,OMN,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1048,867960,828.2061068702291
+Oman,OMN,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",46564,16772856,360.2108066317327
+Oman,OMN,World,WLD,010420,Goats; live,542811,11671585,21.502115837740945
+Oman,OMN,World,WLD,010410,Sheep; live,758685,15264105,20.119160125743885
+Oman,OMN,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1097388,71687,0.06532511746073404
+Qatar,QAT,World,WLD,010221,"Cattle; live, pure-bred breeding animals",625,935991,1497.5856
+Qatar,QAT,World,WLD,010410,Sheep; live,1111279,36896084,33.20145885956632
+Qatar,QAT,World,WLD,010420,Goats; live,10353,294303,28.426832802086352
+Qatar,QAT,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1130,391504,346.4637168141593
+Qatar,QAT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",17763,6053,0.3407645104993526
+Libya,LBY,World,WLD,010410,Live sheep,1954323,67239520,34.405530713193265
+Libya,LBY,World,WLD,010420,Live goats,10,363,36.3
+Uganda,UGA,World,WLD,010221,"Cattle; live, pure-bred breeding animals",634,51705,81.55362776025237
+Uganda,UGA,World,WLD,010310,"Swine; live, pure-bred breeding animals",150,8500,56.666666666666664
+Uganda,UGA,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",6,30,5
+Uganda,UGA,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1325545,62860,0.047422003779577455
+Uganda,UGA,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1839428,96535,0.05248098865516889
+Uganda,UGA,World,WLD,010420,Goats; live,65,3550,54.61538461538461
+Uganda,UGA,World,WLD,010410,Sheep; live,5,75,15
+Lithuania,LTU,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",9711,3903471,401.96385542168673
+Lithuania,LTU,World,WLD,010221,"Cattle; live, pure-bred breeding animals",367,147075,400.74931880108994
+Lithuania,LTU,World,WLD,010310,"Swine; live, pure-bred breeding animals",63,8874,140.85714285714286
+Lithuania,LTU,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",37289,1069412,28.679020622703746
+Lithuania,LTU,World,WLD,010410,Sheep; live,1276,48561,38.057210031347964
+Lithuania,LTU,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",77382,8343160,107.81783877387507
+Lithuania,LTU,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",2400494,138790,0.05781726594609276
+Lithuania,LTU,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",2741691,5081306,1.8533474414148057
+Mauritania,MRT,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1,300,300
+Mauritania,MRT,World,WLD,010410,Sheep; live,170,5923,34.84117647058824
+Mauritania,MRT,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",45472,23329,0.5130409922589726
+Cameroon,CMR,World,WLD,010410,Sheep; live,10,10700,1070
+Malawi,MWI,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",259850,12877,0.049555512795843755
+Malawi,MWI,World,WLD,010221,"Cattle; live, pure-bred breeding animals",30,10000,333.3333333333333
+Malawi,MWI,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",71,8000,112.67605633802818
+Malawi,MWI,World,WLD,010420,Goats; live,115,3800,33.04347826086956
+Ethiopia,ETH,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",1678,545000,324.79141835518476
+Ethiopia,ETH,World,WLD,010221,"Cattle; live, pure-bred breeding animals",65,18000,276.9230769230769
+Ethiopia,ETH,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",28341,1728,0.06097173705938393
+Serbia,SRB,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",418,121268,290.11483253588517
+Serbia,SRB,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",80194,7786852,97.10018205850812
+Serbia,SRB,World,WLD,010410,Sheep; live,7858,185800,23.64469330618478
+Serbia,SRB,World,WLD,010221,"Cattle; live, pure-bred breeding animals",738,327141,443.280487804878
+Serbia,SRB,World,WLD,010420,Goats; live,14,600,42.857142857142854
+Serbia,SRB,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",1035747,1668738,1.6111444204038246
+Uzbekistan,UZB,World,WLD,010221,"Cattle; live, pure-bred breeding animals",11500,7683004,668.087304347826
+Uzbekistan,UZB,World,WLD,010420,Goats; live,2148,340945,158.72672253258847
+Uzbekistan,UZB,World,WLD,010410,Sheep; live,32,17197,537.40625
+Switzerland,CHE,World,WLD,010221,"Cattle; live, pure-bred breeding animals",1529,828796,542.051013734467
+Switzerland,CHE,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",2927,1346135,459.902630679877
+Switzerland,CHE,World,WLD,010310,"Swine; live, pure-bred breeding animals",95,9939,104.62105263157895
+Switzerland,CHE,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",45,1396,31.022222222222222
+Switzerland,CHE,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1000,127885,127.885
+Switzerland,CHE,World,WLD,010410,Sheep; live,759,46565,61.35046113306983
+Switzerland,CHE,World,WLD,010420,Goats; live,39,1880,48.205128205128204
+Switzerland,CHE,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",521085,23947,0.045956034044349774
+Belarus,BLR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",678,378200,557.8171091445428
+Belarus,BLR,World,WLD,010310,"Swine; live, pure-bred breeding animals",3026,244891,80.92894910773298
+Belarus,BLR,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",2617,259402,99.12189529996179
+Belarus,BLR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",6544334,283082,0.0432560440833246
+Belarus,BLR,World,WLD,010410,Sheep; live,292,12770,43.73287671232877
+Belarus,BLR,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",188750,7811,0.04138278145695364
+Chile,CHL,World,WLD,010410,Sheep; live,153,25141,164.3202614379085
+Bulgaria,BGR,World,WLD,010221,"Cattle; live, pure-bred breeding animals",4466,2025097,453.4476041200179
+Bulgaria,BGR,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",7021,3764876,536.2307363623415
+Bulgaria,BGR,World,WLD,010310,"Swine; live, pure-bred breeding animals",5678,519354,91.4677703416696
+Bulgaria,BGR,World,WLD,010391,"Swine; live, other than pure-bred breeding animals, weighing less than 50kg",25952,652420,25.139488286066584
+Bulgaria,BGR,World,WLD,010392,"Swine; live, other than pure-bred breeding animals, weighing 50kg or more",1452,138935,95.68526170798899
+Bulgaria,BGR,World,WLD,010410,Sheep; live,157975,4508378,28.538553568602627
+Bulgaria,BGR,World,WLD,010511,"Poultry; live, fowls of the species Gallus domesticus, weighing not more than 185g",1926451,90330,0.04688933172969362
+Maldives,MDV,World,WLD,010420,Goats; live,450,500,1.1111111111111112
+Maldives,MDV,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",3986,5205,1.3058203712995484
+Malaysia,MYS,World,WLD,010221,"Cattle; live, pure-bred breeding animals",17651,1272810,72.10979547900969
+Malaysia,MYS,World,WLD,010229,"Cattle; live, other than pure-bred breeding animals",24987,6537491,261.63569055909073
+Malaysia,MYS,World,WLD,010410,Sheep; live,39252,2567278,65.40502394782432
+Malaysia,MYS,World,WLD,010420,Goats; live,9943,1028748,103.46454792316203
+Samoa,WSM,World,WLD,010594,"Poultry; live, fowls of the species Gallus domesticus, weighing more than 185g",46,19370,421.0869565217391
+Seychelles,SYC,World,WLD,010310,Live swine: pure-bred breeding animals,113,1000,8.849557522123893
+Seychelles,SYC,World,WLD,010511,"Live fowls of species Gallus domesticus, weighing not >185g",165361,10852,0.06562611498479085

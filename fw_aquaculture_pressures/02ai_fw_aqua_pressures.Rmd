@@ -1,5 +1,5 @@
 ---
-title: "Freshwater aquaculture pressures"
+title: "02ai_fw_aquaculture_pressures"
 output: html_document
 date: "2022-11-02"
 editor_options: 
@@ -13,6 +13,16 @@ library(here)
 library(countrycode)
 ```
 
+File Paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fao_aquaculture/"
+fw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fw_aquaculture/"
+pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+```
+
+
 # FAO production data
 
 Format these data to include only the years of interest
@@ -21,7 +31,7 @@ BW = brackishwater
 MA = marine
 Al = all environments
 ```{r}
-raw_production <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/fao_aquaculture/Aquaculture_Quantity.csv") %>%
+raw_production <- read_csv(paste0(fao_data_path, "Aquaculture_Quantity.csv")) %>%
   filter(ENVIRONMENT.ALPHA_2_CODE=="IN") %>%
   filter(PERIOD %in% 2017) %>%
   select(UN_Code = COUNTRY.UN_CODE, species_code = SPECIES.ALPHA_3_CODE, PERIOD, VALUE) %>%
@@ -29,12 +39,12 @@ raw_production <- read_csv("/home/shares/food-systems/social_justice_projects/_r
   summarize(tonnes_lw = mean(VALUE, na.rm=TRUE)) %>%
   ungroup()
 
-country <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/fao_aquaculture/CL_FI_COUNTRY_GROUPS.csv") %>%
+country <- read_csv(paste0(fao_data_path, "CL_FI_COUNTRY_GROUPS.csv")) %>%
   dplyr::select(UN_Code, UN_country_name = Name_En)
 
 sum(duplicated(country$UN_Code))
 
-species <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/fao_aquaculture/CL_FI_SPECIES_GROUPS.csv") %>%
+species <- read_csv(paste0(fao_data_path, "CL_FI_SPECIES_GROUPS.csv")) %>%
   dplyr::select(species_code = `3A_Code`, Taxonomic_Code, taxa_name = Name_En, Major_Group_En, ISSCAAP_Group_En, Scientific_Name) %>%
   unique
 sum(duplicated(species$species_code))
@@ -59,7 +69,7 @@ NOTE: Considered including the "Sturgeons, paddlefishes" as "Tilapias and other 
 - I suspect a lot of that production is for caviar and the pressures for tilapia probably doesn't apply well.
 - It also looks like there is quite a bit of production of juveniles for stocking recreational fisheries.
 ```{r}
-groups <- read_csv(here("scripts/fw_aquaculture_pressures/inputs/taxa_isscaap_groupings.csv")) %>%
+groups <- read_csv(paste0(fw_data_path, "taxa_isscaap_groupings.csv")) %>%
   filter(environment=="freshwater")
 unique(groups$isscaap_group)
 
@@ -118,7 +128,7 @@ tonnes_lw <- production_update %>%
 ## Join with on-farm stressors
 Units here are kg N/P per tonne, m3 water per tonne, kgC02eq per tonne, m2a. 
 ```{r}
-pressures <- read.csv("/home/shares/food-systems/social_justice_projects/_raw_data/fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv") %>%
+pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
   filter(weight=="live") %>%
   filter(production=="aquaculture") %>%
   filter(source == "on-farm") %>%
@@ -144,7 +154,7 @@ pressures_lw %>%
   summarize(stressor_value = sum(stressor_value)) %>%
   data.frame()
 
-write_csv(pressures_lw, here("scripts/fw_aquaculture_pressures/output/fw_aquaculture_pressures.csv"))
+write_csv(pressures_lw, paste0(save_path, "fw_aquaculture_pressures.csv"))
 ```
 
 ## Crop feed composition
@@ -169,10 +179,10 @@ For tilapia: https://www.fao.org/fishery/affris/species-profiles/nile-tilapia/fe
 ```{r}
 
 taxa_list <- unique(tonnes_lw$stressor_group)
-crop_cats <- read_csv(here("scripts/fw_aquaculture_pressures/inputs/crop_breakout.csv"))
-list.files("/home/shares/food-systems/social_justice_projects/_raw_data/fresh_water_aqua_pressures_Jessica/")
+crop_cats <- read_csv(paste0(fw_data_path, "crop_breakout.csv"))
+# list.files(paste0(pressure_data_path, "fresh_water_aqua_pressures_Jessica/")
 
-feed <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/fresh_water_aqua_pressures_Jessica/aquaculture_group_fcr_feed_averages.csv") %>%
+feed <- read_csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/aquaculture_group_fcr_feed_averages.csv")) %>%
   filter(taxa %in% taxa_list) %>%
   rowwise() %>%
   mutate(total = feed_soy + feed_crops + feed_fmfo + feed_animal) %>%
@@ -217,7 +227,7 @@ crop_feed_tonnes <- left_join(feed_tonnes_pre, crop_loss, by="feed_type") %>%
     mutate(feed_category = ifelse(feed_type == "tonnes_feed_oil", "oil", feed_category)) %>%
   select(iso3c, country_name, taxa=stressor_group, feed_category, tonnes=tonnes_product)
 
-write_csv(crop_feed_tonnes, here("scripts/fw_aquaculture_pressures/output/fw_aqua_crop_feed.csv"))
+write_csv(crop_feed_tonnes, paste0(save_path, "fw_aqua_crop_feed.csv"))
 ```
 
 ## fishoil fish meal consumption
@@ -226,7 +236,7 @@ I am going to use the values from Halley et al. and distribute by production.
 We will be using the values from Halley as the baseline, and then distribute consumption of fofm based on production.
 ```{r}
 
-fofm_reference <- read_csv(here("scripts/fw_aquaculture_pressures/inputs/msleckman.45.1_fofm_consumption.csv")) %>%
+fofm_reference <- read_csv(paste0(fw_data_path, "msleckman.45.1_fofm_consumption.csv")) %>%
   filter(!is.na(fw_aquaculture))
 
 ## need to make a few adjusments to divide categories and such
@@ -257,8 +267,8 @@ sum(hypoph_carp$tonnes_lw)/(sum(hypoph_carp$tonnes_lw)+sum(oth_carp$tonnes_lw)) 
 #4. need a salmon correction in main data 
 698684/sum(c(13930, 2101278, 698684)) # multiply marine salmon by 0.75, given that we only included marine, brackish salmon 
 
-# this also generaly matches production
-raw_production <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/fao_aquaculture/Aquaculture_Quantity.csv") %>%
+# this also generally matches production
+raw_production <- read_csv(paste0(fao_data_path, "Aquaculture_Quantity.csv")) %>%
   rename(species_code = "SPECIES.ALPHA_3_CODE") %>%
   left_join(species, by="species_code") %>%
   filter(ISSCAAP_Group_En == "Salmons, trouts, smelts") %>%
@@ -293,5 +303,5 @@ fofm_tonnes %>%
   group_by(taxa) %>%
   summarize(total=sum(tonnes_fofm))
   
-write_csv(fofm_tonnes, here("scripts/fw_aquaculture_pressures/output/fw_fofm_consumption.csv")) 
+write_csv(fofm_tonnes, paste0(save_path, "fw_fofm_consumption.csv")) 
 ```

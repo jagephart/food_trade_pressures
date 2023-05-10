@@ -1,5 +1,5 @@
 ---
-title: "01-format-fao-trade"
+title: "01a-format-fao-trade"
 author: "Haley Epperly"
 date: "2023-05-09"
 editor_options: 
@@ -21,7 +21,7 @@ library(data.table)
 raw_folder_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 kastner_data_path <- paste0(raw_folder_path, "kastner_2022/")
 fao_data_path <- paste0(raw_folder_path, "2017_FAO_data/")
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01-format-fao-trade/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01a_format_fao_trade/"
 ```
 
 ### Detailed trade matrix

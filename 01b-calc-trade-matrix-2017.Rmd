@@ -21,7 +21,8 @@ Step 1. Download FAO data for 2017:
 -  Commodity balances - livestock
 
 Data are located on server here:
-/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2017
+- /home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Code
+- /home/shares/food-systems/social_justice_projects/food_trade_pressures/ouput_data/01a_format_fao_trade
 
 
 Load in packages
@@ -66,8 +67,8 @@ if(!exists("included_years")){
 
 Create file paths to save methods and final trade matrix output into - all grouped into a new "results_2017" folder.
 ```{r}
-filename <-paste("results_2017/TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".csv", sep="")
-log.filename <- paste("results_2017/logfile_TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".txt", sep="")
+filename <-paste("output_data/01b_calc_trade_matrix_2017/TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".csv", sep="")
+log.filename <- paste("output_data/01b_calc_trade_matrix_2017/logfile_TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".txt", sep="")
 ```
 
 
@@ -75,7 +76,7 @@ Set working directory (if not previously specified in _Execute.R).
 We'll set our working directory as the server as that is where the data are located.
 ```{r}
 if (!exists("directory")) { 
-  directory <- "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code"
+  directory <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures"
 }
 setwd(directory)
 ```
@@ -84,7 +85,7 @@ setwd(directory)
 Create a new folder in the directory (on the server) called "results_2017".
 This is where we'll save methods and the final trade matrix output.
 ```{r}
-if(!dir.exists("results_2017")) dir.create("results_2017")
+if(!dir.exists("output_data/01b_calc_trade_matrix_2017")) dir.create("output_data/01b_calc_trade_matrix_2017")
 ```
 
 
@@ -104,7 +105,7 @@ For example - tonnes and $ of refined sugar traded between Algeria and Albania.
 ### Trade data
 # specify name of file and file path you want to read in (this path is stored in the text file output so we'll keep it like this
 # where we save the path and then read in the file)
-trade.data.file <- "Data_2017/Trade_2017_DetailedTradeMatrix_Gapfilled_7_14_22_formatted.csv"
+trade.data.file <- "output_data/01a_format_fao_trade/Trade_2017_DetailedTradeMatrix_Gapfilled_7_14_22_formatted.csv"
 
 # read in the file with fread (only includes import quantity in tonnes)
 trade <- fread(trade.data.file)
@@ -148,7 +149,7 @@ Information on when each country started and stopped reporting trade data.
 ```{r}
 ### Reporting Data
 # specify name of file and file path you want to read in
-reporting.data.file <- "Code/Reporting_Dates.xls"
+reporting.data.file <- "raw_data/Code/Reporting_Dates.xls"
 
 # read in the file
 reporting.date <- read_xls(reporting.data.file,1)
@@ -171,7 +172,7 @@ primary product name.
 ```{r}
 ### Primary item data
 # specify name of file and file path you want to read in
-item.map.file <- "Code/primary_item_map_feed.csv"
+item.map.file <- "raw_data/Code/primary_item_map_feed.csv"
 
 # read in data
 item.map <- fread(item.map.file, sep=",", header = T)
@@ -190,7 +191,7 @@ protein, calories, and some vitamins. This dataset does not indicate which prima
 ```{r}
 ##Conversion factors
 # specify name of file and file path you want to read in
-content.factors.file <- "Code/content_factors_per_100g.xlsx"
+content.factors.file <- "raw_data/Code/content_factors_per_100g.xlsx"
 
 # read in data
 # skip = 	Minimum number of rows to skip before reading anything, be it column names or data
@@ -219,7 +220,7 @@ for each crop for all years.
 ### Production data - crops
 
 # specify name of file and file path you want to read in
-production.crops.file <- "Data_2017/Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.crops.file <- "output_data/01a_format_fao_trade/Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
 
 # read in data
 production.crops <- fread(production.crops.file)
@@ -239,7 +240,7 @@ These data include: for each country, various measurements of production for liv
 ### Production data - animal products
 
 # specify name of file and file path you want to read in
-production.animals.file <- "Data_2017/Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.animals.file <- "output_data/01a_format_fao_trade/Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
 
 # read in data
 production.animals <- fread(production.animals.file)
@@ -259,7 +260,7 @@ Data includes production of edible offals in tons for each country.
 ### Production data - offals
 
 # specify name of file and file path you want to read in
-production.offals.file <- "Data_2017/CommodityBalances_LivestockFish_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.offals.file <- "output_data/01a_format_fao_trade/CommodityBalances_LivestockFish_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
 
 # read in data
 production.offals <- fread(production.offals.file)
@@ -274,15 +275,15 @@ names(production.offals) <- str_replace_all(names(production.offals), c(" " = "_
 # even in the old commodity balances methodology, it says 5511 is the production code.
 production.offals <- production.offals[production.offals$Element_Code==5511 & production.offals$Item_Code==2736,]
 
-# Remove first two columns
-production.offals <- production.offals %>% 
-  select(-c(Domain_Code, Domain))
+# Remove first two columns - these no longer exist but may have in Kastner data
+# production.offals <- production.offals %>% 
+#   select(-c(Domain_Code, Domain))
 
 # update text file
 cat(paste("Production offals from file:", production.offals.file, file.info(production.offals.file)$mtime,"\n"), file = log.filename, append = T)
 
 # see if it works for the Kastner data - yes it does.
-#test1 <- fread("Data/CommodityBalances_LivestockFish_E_All_Data_(Normalized).csv")
+#test1 <- fread("raw_data/kastner_2022/CommodityBalances_LivestockFish_E_All_Data_(Normalized).csv")
 #table(test1$`Element Code`)
 #test.offals <- test1[test1$`Element Code`==5510 & test1$`Item Code`==2736,]
 #test.offals <- test.offals %>% 
@@ -330,7 +331,7 @@ This is not subset to just sugar yet, we must do this later.
 ```{r}
 ### Data files for sugar conversion
 # specify name of file and file path you want to read in
-sugar.processing.file <- "Data_2017/CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+sugar.processing.file <- "output_data/01a_format_fao_trade/CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
 
 # read in data
 sugar.processing <- fread(sugar.processing.file)
@@ -1062,7 +1063,7 @@ transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.dat
 
 
 #### write file ####
-fwrite(transformed.data, "results_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by_country_of_origin_2017_import.csv")
 ```
 
 
@@ -1150,7 +1151,7 @@ table(nas$Item)
 # FAO data
 
 # check to see if Kastner included these processed crops when he downloaded FAO production data
-test <- fread("Data/Production_Crops_E_All_Data_(Normalized).csv")
+test <- fread("raw_data/kastner_2022/Production_Crops_E_All_Data_(Normalized).csv")
 table(test$Item)
 # NO - they did not include anything listed under "Crops Processed > (List)"
 # https://www.fao.org/faostat/en/#data/QCL

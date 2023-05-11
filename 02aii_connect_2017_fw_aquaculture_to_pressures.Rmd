@@ -187,8 +187,8 @@ missing_pressures <- fish_trade_pressures_w_missing %>%
 # note: there are 409 rows of data that are included in fw_trade_subset, but not in sum_pressures_and_cumu_wide
 # this means that we have 2017 trade data for these items in these countries, but we don't have pressures data for them
 
-# sum of pressures from missing values - we can use this as a check later
-summary_missing_pressures <- missing_values %>% 
+# sum of pressures from missing trade - we can use this as a check later
+summary_missing_pressures <- missing_trade %>% 
   summarise_at(vars(cumu_pressure:water), sum, na.rm = TRUE)
 
 # left_join instead so we don't include those rows where we only have pressures data, but no trade

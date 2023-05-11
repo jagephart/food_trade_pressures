@@ -1,5 +1,5 @@
 ---
-title: "connect_2017_fish_trade_to_pressures"
+title: "02b_connect_2017_fish_trade_to_pressures"
 author: "Haley Epperly"
 date: "2022-10-12"
 output: html_document
@@ -12,7 +12,7 @@ Objective: Use the 2017 seafood trade matrix created by Jessica to calculate the
 Notes from meeting with Mel, Jessica, and Haley 10/12/22:
 - We do not have pressure associated with inland aquaculture so exclude these rows
 - Primary products are represented as domestic exports while processed products (imported, processed, then exported again) are represented as foreign exports. This means that we will be double counting processed products. We need to deal with this later, but we are going to include both domestic and foreign products for now.
-- We are ignoring the intermediate countries for now, only grouping the source country (production pressures) and end country (consumption pressuers)
+- We are ignoring the intermediate countries for now, only grouping the source country (production pressures) and end country (consumption pressures)
 - We are ignoring rows that are classified as "error export" in the domestic source variable because we don't know the source country. These are values where a country exports more than it produces or imports of a product. We could later look into distributing these pressures using some sort of average pressure and proportions.
 - There are some differences in species group names in Jessica's trade matrix and the pressures df
 - Data are included for 2015 - 2019, we can consider averaging later, but for now we will just use 2017 data to match the crop and livestock data
@@ -25,12 +25,159 @@ salmon_aquaculture_meat
 shrimp_aquaculture_meat
 tuna_aquaculture_meat
 
+Updated notes as of 05/22/2023
+- Inland aquaculture is handled in a separate script for now.
+- Intermediate countries are ignored for this analysis so there is only production pressure and consumption pressure.
+
 Load libraries
 ```{r}
 library(tidyverse)
 ```
 
+File paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+aquatic_trade_data_path <- paste0(raw_data_path,"trade/aquatic_food_trade/")
+pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_connect_2017_fish_trade_to_pressures/"
+```
 
+### New workflow that incorporates the new data from Jessica's team - mimics Haley's workflow
+```{r}
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "20230420_nceas_consumption.csv")) # read in the updated data
+
+trade_matrix_clean <- trade_matrix_raw %>% 
+  filter(!c(habitat == "inland" & method == "aquaculture")) %>%  # inland capture fisheries are still included in this workflow
+  filter(!nceas_group == "jellyfish")                            # remove jellyfish - Gage says jellyfish were not included in pressures or mariculture or fisheries data
+
+trade_aquaculture <- trade_matrix_clean %>% 
+  filter(method == "aquaculture")           # separate aquaculture data
+
+trade_capture <- trade_matrix_clean %>% 
+  filter(method == "capture")               # separate capture data
+```
+
+### Run through script with capture fisheries
+
+For each fish producing/catching country, calculate the proportion of each organism (using nceas categories) that they trade with each consuming country (e.g., trade 5% of tuna with country B, 7% with country C, etc.)
+```{r}
+capture_trade_proportions <- trade_capture %>% 
+  group_by(source_country_iso3c, consumer_iso3c, nceas_group) %>% 
+  summarise(traded_tons = sum(consumption_live_weight_t, na.rm = TRUE)) %>%     # sum the total tons of nceas_group for each consumer country from the source
+  ungroup() %>%                                                                 # ungroup for further calcs
+  group_by(source_country_iso3c, nceas_group) %>% 
+  mutate(sum_caught = sum(traded_tons, na.rm = TRUE)) %>%                       # sum the total tons farmed by species for each source country
+  ungroup() %>%                                                                 # ungroup for further calcs
+  mutate(proportion_traded = traded_tons/sum_caught)                            # calculate proportions of catch from source country goes to consumer country
+
+# check data
+sum(trade_capture$consumption_live_weight_t)
+sum(capture_trade_proportions$traded_tons)
+
+# These checks passed but are here in case someone would like to check again
+# check that proportions sum to 1 for each animal product in each producing country
+# check_props <- capture_trade_proportions %>%
+#   group_by(source_country_iso3c, nceas_group) %>%
+#   summarise(sum = sum(proportion_traded))
+# 
+# unique(check_props$sum)                                                         # only 1s so the proportions are calculated correctly
+#length(which(is.na(check_props$sum))) # 0 NAs
+
+```
+
+Read in pressures data from Mel and subset to fisheries (capture and aquaculture and separate). fofm = species that are routinely caught to be used for the production of fish oil/meal.
+
+```{r}
+pressures <- read_csv(paste0(pressures_path, "rgn_raw_summary.csv"))
+
+# remove fofm because this has the fofm catch used for feed taken out - adding this in in next code chunk
+pressure_capture <- pressures %>% 
+  filter(system == "fisheries") %>% 
+  filter(category == "farm" | category == "wildcaught") %>% 
+  filter(!organism == "fofm")
+
+pressure_aquaculture <- pressures %>% 
+  filter(system == "aquaculture") %>% 
+  filter(category == "farm" | category == "wildcaught") %>% 
+  filter(!organism == "fofm")
+```
+
+
+```{r}
+# make sure crop feeds aren't included in here somehow, they are not when last checked so remove comments if want to check again
+# table(pressure_capture$product)
+# table(pressure_capture$category)
+# table(pressure_capture$consumed)
+# table(pressure_capture$organism)
+# table(pressure_capture$system)
+# 
+# table(pressure_aquaculture$product)
+# table(pressure_aquaculture$category)
+# table(pressure_aquaculture$consumed)
+# table(pressure_aquaculture$organism)
+# table(pressure_aquaculture$system)
+```
+
+replace the values for fofm marine fisheries in the rgn_raw_summary with values frm (saved in project folder on server).
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/rgn_raw_summary_fofm_haley.csv
+```{r}
+fofm_pressures <- read_csv(paste0(pressures_path, "rgn_raw_summary_fofm_haley.csv"))
+
+# remove first row - all NAs
+fofm_pressures <- fofm_pressures %>% 
+  slice(-1) %>% 
+  rename(organism = spam_super)
+sum(fofm_pressures$sum)
+
+# simplify fish capture pressures df to bind with fofm df
+# we're adding the fofm to the capture df because most fofm species are captured not farmed (although trimmings from some farmed fish can be used for fofm)
+capture_pres_cut <- pressure_capture %>% 
+  select(country, iso3c, organism, pressure, sum)
+
+# row bind fofm with rest of fisheries df
+all_capture_pressure <- rbind(fofm_pressures, capture_pres_cut)
+
+# make sure pressure sums match - uncomment to check
+#sum(capture_pres_cut$sum) + sum(fofm_pressures$sum)
+#sum(all_capture_pressure$sum)
+```
+
+Compare species groups
+```{r}
+table(trade_capture$nceas_group)
+table(all_capture_pressure$organism)
+```
+
+We need `all_capture_pressure` `organism` groups to match the `trade_capture` `nceas_groups`.
+Spelling changes:
+"large-pelagic" in pressures needs to change to "large-pelagics"
+"medium-pelagic" in pressures needs to change to "medium-pelagics"
+"small-pelagic" in pressures needs to change to "small-pelagics"
+"reef" in pressures needs to change to "reef associated"
+"fish" in pressures needs to change to "inland capture"
+
+
+"jellyfish" included in trade matrix but not in pressure (removed in earlier code chunk)
+
+
+Add new variable that matches organism groups in pressures data
+```{r}
+pressure_capture_rename <- all_capture_pressure %>% 
+  mutate(nceas_group = case_when(organism == "bivalve" ~ "bivalves",
+                                 organism == "large-pelagic" ~ "large pelagics",
+                                 organism == "medium-pelagic" ~ "medium pelagics",
+                                 organism == "small-pelagic" ~ "small pelagics",
+                                 organism == "reef" ~ "reef associated",
+                                 organism == "salmon" ~ "salmonids",
+                                 organism == "shrimp" ~ "shrimps_prawns",
+                                 organism == "fish" ~ "inland capture",
+                                 organism == "marine-fish-general" ~ "marine_fish_general",
+                                 TRUE ~ as.character(organism)))
+```
+### Stopped here, can move on to next steps in workflow
+######################################### 
+
+### Old workflow from Haley below
 Read in fisheries trade matrix from Jessica
 ```{r}
 tm <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/aquatic_food_trade/20221011_nceas_ARTIS_snet.csv")

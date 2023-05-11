@@ -40,14 +40,14 @@ fw_trade_proportions <- fw_trade_clean %>%
   mutate(proportion_traded = traded_tons/sum_caught)                            # calculate proportions of catch from source country goes to consumer country
 
 # check that proportions sum to 1 for each animal product in each producing country
-# check_props <- fw_trade_totals %>% 
+# check_props <- fw_trade_proportions %>% 
 #   group_by(source_country_iso3c, nceas_group) %>% 
 #   summarise(sum = sum(proportion_traded))
 # 
 # unique(check_props$sum)                                                         # only 1s so the proportions are calculated correctly
 ```
 
-Read in freshwater aquaculture pressures data from Mel
+Read in freshwater aquaculture pressures data from Mel - calculated in step 02ai
 
 ```{r}
 pressure <- read_csv(paste0(pressures_path, "fw_aquaculture_pressures.csv"))

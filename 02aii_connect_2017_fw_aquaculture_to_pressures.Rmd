@@ -7,6 +7,47 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r}
+library(tidyverse)
+```
+
+File paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+aquatic_trade_data_path <- paste0(raw_data_path,"trade/aquatic_food_trade/")
+```
+
+## Method update with new data
+```{r}
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "20230420_nceas_consumption.csv")) # read in the updated data
+
+fw_trade_clean <- trade_matrix_raw %>% 
+  filter(!source_country_iso3c == "unknown",              # filter out data with unknown source country
+         habitat == "inland" & method == "aquaculture")   # only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
+```
+
+For each fish producing/catching country, calculate the proportion of each organism (using nceas categories) that they trade with each consuming country (e.g., trade 5% of tuna with country B, 7% with country C, etc.)
+```{r}
+fw_trade_proportions <- fw_trade_clean %>% 
+  group_by(source_country_iso3c, consumer_iso3c, nceas_group) %>% 
+  summarise(traded_tons = sum(consumption_live_weight_t, na.rm = TRUE)) %>%     # sum the total tons of nceas_group for each consumer country from the source
+  ungroup() %>%                                                                 # ungroup for further calcs
+  group_by(source_country_iso3c, nceas_group) %>% 
+  mutate(sum_caught = sum(traded_tons, na.rm = TRUE)) %>%                       # sum the total tons farmed by species for each source country
+  ungroup() %>%                                                                 # ungroup for further calcs
+  mutate(proportion_traded = traded_tons/sum_caught)                            # calculate proportions of catch from source country goes to consumer country
+
+# check that proportions sum to 1 for each animal product in each producing country
+# check_props <- fw_trade_totals %>% 
+#   group_by(source_country_iso3c, nceas_group) %>% 
+#   summarise(sum = sum(proportion_traded))
+# 
+# unique(check_props$sum)                                                         # only 1s so the proportions are calculated correctly
+```
+
+
+
+## Haley Method with old data below
 Objective: Use the 2017 seafood trade matrix created by Jessica and the inland aquaculture pressures calculated by Mel to calculate the environmental pressures from traded freshwater aquaculture products. We should have associated pressures for each product between each pair of trading partners.
 
 Read in fisheries trade matrix from Jessica
@@ -27,7 +68,6 @@ table(tm_clean$year)
 tm_clean <- tm_clean %>% 
   filter(!nceas_group == "jellyfish")
 ```
-
 
 For each fish producing/catching country, calculate the proportion of each organism (using nceas categories) that they trade with each consuming country (e.g., trade 5% of tuna with country B, 7% with country C, etc.)
 ```{r}
@@ -67,6 +107,7 @@ range(check_props$sum, na.rm=TRUE)
 length(which(is.na(check_props$sum))) # 0 NAs
 ```
 
+## Below the new data is incorporated to the workflow
 
 Read in freshwater aquaculture pressures data from Mel
 https://github.com/jagephart/food_trade_ej/blob/main/scripts/fw_aquaculture_pressures/output/fw_aquaculture_pressures.csv

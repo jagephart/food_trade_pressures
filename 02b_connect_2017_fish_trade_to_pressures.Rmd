@@ -10,7 +10,6 @@ editor_options:
 Objective: Use the 2017 seafood trade matrix created by Jessica to calculate the environmental pressures from traded animal products. We should have associated pressures for each product between each pair of trading partners. Keep aquaculture products separate.
 
 Notes from meeting with Mel, Jessica, and Haley 10/12/22:
-- We do not have pressure associated with inland aquaculture so exclude these rows
 - Primary products are represented as domestic exports while processed products (imported, processed, then exported again) are represented as foreign exports. This means that we will be double counting processed products. We need to deal with this later, but we are going to include both domestic and foreign products for now.
 - We are ignoring the intermediate countries for now, only grouping the source country (production pressures) and end country (consumption pressures)
 - We are ignoring rows that are classified as "error export" in the domestic source variable because we don't know the source country. These are values where a country exports more than it produces or imports of a product. We could later look into distributing these pressures using some sort of average pressure and proportions.
@@ -37,14 +36,14 @@ library(tidyverse)
 File paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-aquatic_trade_data_path <- paste0(raw_data_path,"trade/aquatic_food_trade/")
+aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_connect_2017_fish_trade_to_pressures/"
 ```
 
 ### New workflow that incorporates the new data from Jessica's team - mimics Haley's workflow
 ```{r}
-trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "20230420_nceas_consumption.csv")) # read in the updated data
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_w_unknowns_allocated.csv")) # read in the updated data
 
 trade_matrix_clean <- trade_matrix_raw %>% 
   filter(!c(habitat == "inland" & method == "aquaculture")) %>%  # inland capture fisheries are still included in this workflow

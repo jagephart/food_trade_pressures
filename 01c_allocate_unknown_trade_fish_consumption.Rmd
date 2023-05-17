@@ -1,0 +1,110 @@
+---
+title: "01c_allocate_unknown_trade_fish_consumption"
+output: html_document
+date: "2023-05-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Objective: The fish trade matrix for human consumption has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
+
+## Setup
+```{r}
+library(tidyverse)
+```
+
+### File paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
+```
+
+### Read in data
+```{r}
+seafood_matrix <- read.csv(paste0(matrix_path, "20230420_nceas_consumption.csv"))
+```
+
+## Separate data into known, unknown with known habitat, and unknown with unknown habitat
+
+```{r}
+# Calculate proportions of known consumption
+seafood_known <- seafood_matrix %>%
+  filter(source_country_iso3c != "unknown") %>%   # Remove unknown source seafood
+  group_by(consumer_iso3c, habitat) %>%           # Calculate each consumer country's proportion of total consumption by habitat
+  mutate(consumer_prop_by_habitat = 
+           consumption_live_weight_t/
+           sum(consumption_live_weight_t)) %>%
+  ungroup() %>%
+  group_by(consumer_iso3c) %>%                    # Calculate each consumer country's proportion of total consumption across all fish
+  mutate(consumer_prop_overall = 
+           consumption_live_weight_t/
+           sum(consumption_live_weight_t)) %>% 
+  ungroup()
+
+# Separate volumes of unknown source seafood with habitat
+unknown_seafood_w_habitat <- seafood_matrix %>% 
+  filter(source_country_iso3c == "unknown", 
+         habitat != "unknown") %>%
+  select(consumer_iso3c, habitat, 
+         "unknown_w_habitat_consumption_live_weight_t" = "consumption_live_weight_t") # change name of consumption_live_weight_t column
+
+# Separate volumes of unknown source seafood with unknown habitat
+unknown_seafood_wout_habitat <- seafood_matrix %>% 
+  filter(source_country_iso3c == "unknown", 
+         habitat == "unknown") %>%
+  select(consumer_iso3c, 
+         "unknown_wout_habitat_consumption_live_weight_t" = "consumption_live_weight_t") # change name of consumption_live_weight_t column
+```
+
+## Join unknown data frames to known flow data with proportions
+
+```{r}
+# Join unknown data frames to known flow data with proportions
+seafood_known  <- seafood_known %>%
+  left_join(unknown_seafood_w_habitat,                                                   # join with unknown_seafood_w_habitat
+            by = c("consumer_iso3c", "habitat"), 
+            fill = NA) %>%
+  mutate(unknown_w_habitat_consumption_live_weight_t =                          
+           replace_na(unknown_w_habitat_consumption_live_weight_t, 0)) %>%               # make any NAs in unknown_w_habitat_consumption_live_weight_t zero
+  mutate(consumption_live_weight_t =                                                     # add to consumption_live_weight_t
+           consumption_live_weight_t + 
+           unknown_w_habitat_consumption_live_weight_t*consumer_prop_by_habitat) %>%     # by multiplying unknown_w_habitat_consumption_live_weight_t by the consumer_prop_by_habitat
+  left_join(unknown_seafood_wout_habitat,                                                # now join with unknown_seafood_wout_habitat
+            by = "consumer_iso3c",
+            fill = NA) %>% 
+  mutate(unknown_wout_habitat_consumption_live_weight_t = 
+           replace_na(unknown_wout_habitat_consumption_live_weight_t, 0)) %>%            # make any NAs in unknown_wout_habitat_consumption_live_weight_t zero
+  mutate(consumption_live_weight_t =                                                     # add to consumption_live_weight_t
+           consumption_live_weight_t + 
+           unknown_wout_habitat_consumption_live_weight_t*consumer_prop_overall)                  # by multiplying unknown_wout_habitat_consumption_live_weight_t by the consumer_prop_overall
+
+# Check total consumption aligns and unknowns are all resolved
+check_consumption <- seafood_matrix %>%                                             
+  group_by(consumer_iso3c) %>%
+  summarise(original_consumption_live_weight_t = sum(consumption_live_weight_t)) %>%     # take raw trade matrix and summarise each country's total consumption
+  left_join(seafood_known %>%                                                            # join with seafood_known data that has been altered to have has each country's total consumption
+              group_by(consumer_iso3c) %>%
+              summarise(new_consumption_live_weight_t = sum(consumption_live_weight_t)),
+            by = "consumer_iso3c") %>%
+  filter(abs(original_consumption_live_weight_t -                                        # filter the data by any row where the original total consumption minus thew new total consumption has an absolute value
+               new_consumption_live_weight_t) > 10^-6)                                   # greater than 10^-6 because proportions could have caused strange rounding
+check_consumption
+
+nrow(seafood_known %>%
+       filter(consumer_iso3c == "unknown" | habitat == "unknown"))
+```
+
+Only one country's total consumption is different by more than 10^-6 with the `new_consumption_live_weight_t` however, this difference is still less than 1 ton of difference. Therefore `check_consumption` currently passes the check. There should be no rows in `seafood_known` where the `consumer_iso3c` or `habitat` are equal to unknown. 
+
+## Select specific columns and save
+```{r}
+seafood_known <- seafood_known %>%
+  select(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group, consumption_live_weight_t)
+
+write_csv(seafood_known, paste0(save_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
+
+```
+

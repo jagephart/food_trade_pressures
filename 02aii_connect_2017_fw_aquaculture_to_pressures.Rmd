@@ -14,18 +14,17 @@ library(tidyverse)
 File paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-aquatic_trade_data_path <- paste0(raw_data_path,"trade/aquatic_food_trade/")
+aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
 ```
 
 ## Method update with new data
 ```{r}
-trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "20230420_nceas_consumption.csv")) # read in the updated data
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_w_unknowns_allocated.csv")) # read in the updated data
 
 fw_trade_clean <- trade_matrix_raw %>% 
-  filter(!source_country_iso3c == "unknown",              # filter out data with unknown source country
-         habitat == "inland" & method == "aquaculture")   # only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
+  filter(habitat == "inland" & method == "aquaculture")   # only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
 ```
 
 For each fish producing/catching country, calculate the proportion of each organism (using nceas categories) that they trade with each consuming country (e.g., trade 5% of tuna with country B, 7% with country C, etc.)

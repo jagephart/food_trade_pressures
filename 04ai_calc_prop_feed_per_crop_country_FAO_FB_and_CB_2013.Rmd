@@ -43,10 +43,17 @@ Load libraries
 library(tidyverse)
 ```
 
+Data Paths
+```{r}
+raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+FAO_path <- paste0(raw_path, "FAO/")
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04ai_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+```
+
 
 Read in FAO Food Balances data and subset to 2013
 ```{r}
-fb <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/FAO/FoodBalanceSheetsHistoric_E_All_Data_(Normalized)/FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv") %>% 
+fb <- read_csv(paste0(FAO_path, "FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv")) %>% 
   filter(Year == 2013)
 
 # subset to only Unit == 1,000 tonnes
@@ -65,7 +72,7 @@ fb <- fb %>%
 
 Read in FAO Commodity Balances data and subset to 2013
 ```{r}
-cb <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/FAO/CommodityBalances_(non-food)_E_All_Data_(Normalized)/CommodityBalances_(non-food)_E_All_Data_(Normalized).csv") %>% 
+cb <- read_csv(paste0(FAO_path, "CommodityBalances_(non-food)_E_All_Data_(Normalized).csv")) %>% 
   filter(Year == 2013)
 ```
 
@@ -174,7 +181,7 @@ soy_fb_cb_5 <- soy_fb_cb_4 %>%
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save soy df
-write_csv(soy_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_soy_used_as_feed.csv")
+write_csv(soy_fb_cb_5, paste0(save_path, "perc_dsq_soy_used_as_feed.csv"))
 ```
 
 
@@ -310,7 +317,7 @@ pk_3_clean <- pk_3 %>%
 # only 1 country includes feed (3 tonnes) for palm kernels
 
 # save df
-write_csv(pk_3_clean, "scripts/feed_in_trade_matrix/outputs/perc_dsq_palm_kernel_used_as_feed.csv")
+write_csv(pk_3_clean, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed.csv"))
 ```
 
 
@@ -414,7 +421,7 @@ cotton_fb_cb_5 <- cotton_fb_cb_4 %>%
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(cotton_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_cotton_used_as_feed.csv")
+write_csv(cotton_fb_cb_5, paste0(save_path,"perc_dsq_cotton_used_as_feed.csv"))
 ```
 
 
@@ -513,7 +520,7 @@ nut_fb_cb_5$prop_feed_total[nut_fb_cb_5$prop_feed_total > 100] <- 1
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(nut_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_groundnut_used_as_feed.csv")
+write_csv(nut_fb_cb_5, paste0(save_path, "perc_dsq_groundnut_used_as_feed.csv"))
 ```
 
 
@@ -614,7 +621,7 @@ other_oil_fb_cb_5$prop_feed_total[other_oil_fb_cb_5$prop_feed_total > 100] <- 1
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(other_oil_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_other_oil_used_as_feed.csv")
+write_csv(other_oil_fb_cb_5, paste0(save_path, "perc_dsq_other_oil_used_as_feed.csv"))
 ```
 
 
@@ -705,7 +712,7 @@ mustard_fb_cb_5 <- mustard_fb_cb_4 %>%
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(mustard_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_rapemustard_used_as_feed.csv")
+write_csv(mustard_fb_cb_5, paste0(save_path, "perc_dsq_rapemustard_used_as_feed.csv"))
 ```
 
 
@@ -799,7 +806,7 @@ sesame_fb_cb_5 <- sesame_fb_cb_4 %>%
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(sesame_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_sesame_used_as_feed.csv")
+write_csv(sesame_fb_cb_5, paste0(save_path, "perc_dsq_sesame_used_as_feed.csv"))
 ```
 
 
@@ -895,7 +902,7 @@ sunflower_fb_cb_5 <- sunflower_fb_cb_4 %>%
 # now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save df
-write_csv(sunflower_fb_cb_5, "scripts/feed_in_trade_matrix/outputs/perc_dsq_sunflower_used_as_feed.csv")
+write_csv(sunflower_fb_cb_5, paste0(save_path, "perc_dsq_sunflower_used_as_feed.csv"))
 ```
 
 
@@ -904,12 +911,12 @@ Combine all oilcrops (not soy or palm kernel) and calculate a total proportion f
 sum feed + sum cake / sum dsq
 ```{r}
 # read in oilcrops percent feed csvs
-sunflower <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_sunflower_used_as_feed.csv")
-sesame <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_sesame_used_as_feed.csv")
-rapemustard <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_rapemustard_used_as_feed.csv")
-other_oil <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_other_oil_used_as_feed.csv")
-groundnut <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_groundnut_used_as_feed.csv")
-cotton <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_cotton_used_as_feed.csv")
+sunflower <- read_csv(paste0(save_path, "perc_dsq_sunflower_used_as_feed.csv"))
+sesame <- read_csv(paste0(save_path, "perc_dsq_sesame_used_as_feed.csv"))
+rapemustard <- read_csv(paste0(save_path, "perc_dsq_rapemustard_used_as_feed.csv"))
+other_oil <- read_csv(paste0(save_path, "perc_dsq_other_oil_used_as_feed.csv"))
+groundnut <- read_csv(paste0(save_path, "perc_dsq_groundnut_used_as_feed.csv"))
+cotton <- read_csv(paste0(save_path, "perc_dsq_cotton_used_as_feed.csv"))
 
 # rename columns and subset to columns of interest
 rename_subset_oilcrops <- function(df, dsq_col_name, feed_col_name, cake_col_name, prop_feed_col_name){
@@ -952,7 +959,7 @@ oils <- oils %>%
 # we'll keep these as NaNs to be gapfilled later.
 
 # save csv
-write_csv(oils, "scripts/feed_in_trade_matrix/outputs/perc_dsq_oilcrops_used_as_feed.csv")
+write_csv(oils, paste0(save_path, "perc_dsq_oilcrops_used_as_feed.csv"))
 ```
 
 

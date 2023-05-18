@@ -407,24 +407,24 @@ write_csv(aquaculture_trade_pressures_cut, paste0(save_path, "mariculture_fish_p
 
 # check to see if it looks right - uncomment to do checks
 
-# chn_test <- aquaculture_trade_pressures %>%
-#   filter(source_country_iso3c == "CHN") %>%
-#   filter(nceas_group == "marine_fish_general_mariculture")
-# sum(chn_test$traded_tons) # 1732561 (matches sum_caught in df)
-# sum(chn_test$proportion_traded) #1
-# 
-# # make sure total value of marine_fish_general organisms caught in CHN still matches original data
-# chn_check <- aquaculture_trade_proportions %>%
-#   filter(source_country_iso3c == "CHN") %>%
-#   filter(nceas_group == "marine_fish_general")
-# sum(chn_check$traded_tons) # 1732561 (matches ago_test)
-# 
-# # these values should be 0 because the sum of trade_pressure columns should match the rows labeled cumu_pressure, disturbance, ghg, nutrient, and water in chn_test
-# chn_test$cumu_pressure[1] - sum(chn_test$trade_cumu_pressure)
-# chn_test$disturbance[1] - sum(chn_test$trade_disturbance)                       # technically not 0 but extremely close to the point where it is probably a rounding error
-# chn_test$ghg[1] - sum(chn_test$trade_ghg)                                       # technically not 0 but extremely close to the point where it is probably a rounding error
-# chn_test$nutrient[1] - sum(chn_test$trade_nutrient)
-# chn_test$water[1] - sum(chn_test$trade_water)
+chn_test <- aquaculture_trade_pressures %>%
+  filter(source_country_iso3c == "CHN") %>%
+  filter(nceas_group == "marine_fish_general_mariculture")
+sum(chn_test$traded_tons) # 1732561 (matches sum_caught in df)
+sum(chn_test$proportion_traded) #1
+
+# make sure total value of marine_fish_general organisms caught in CHN still matches original data
+chn_check <- aquaculture_trade_proportions %>%
+  filter(source_country_iso3c == "CHN") %>%
+  filter(nceas_group == "marine_fish_general")
+sum(chn_check$traded_tons) # 1732561 (matches ago_test)
+
+# these values should be 0 because the sum of trade_pressure columns should match the rows labeled cumu_pressure, disturbance, ghg, nutrient, and water in chn_test
+chn_test$cumu_pressure[1] - sum(chn_test$trade_cumu_pressure)
+chn_test$disturbance[1] - sum(chn_test$trade_disturbance)                       
+chn_test$ghg[1] - sum(chn_test$trade_ghg)                                       
+chn_test$nutrient[1] - sum(chn_test$trade_nutrient)
+chn_test$water[1] - sum(chn_test$trade_water)
 ```
 
 ### Combine capture df with aquaculture df

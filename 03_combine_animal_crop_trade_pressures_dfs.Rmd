@@ -82,7 +82,7 @@ fish_capture_cut <- fish_capture %>%
 # check NAs
 length(which(is.na(fish_capture_cut$trade_cumu_pressure))) #1 NA
 
-# where is this NA? # need to explore in the fish trade matrix update with unknown data to understand what is happening
+# where is this NA? 
 na_value <- fish_capture %>% 
   filter(is.na(trade_cumu_pressure))
 
@@ -94,8 +94,8 @@ fish_capture_cut <- fish_capture_cut %>%
 ## mariculture
 # subset
 mariculture_cut <- mariculture %>% 
-  select(c(1, 3, 8:12)) %>% 
-  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+  rename(Consumer_ISO3 = consumer_iso3c, Producer_ISO3 = source_country_iso3c) %>% 
+  select(Consumer_ISO3, Producer_ISO3, trade_cumu_pressure, trade_ghg, trade_water, trade_disturbance, trade_nutrient)
 
 # check NAs
 length(which(is.na(mariculture_cut$trade_cumu_pressure))) #0 NA
@@ -103,12 +103,12 @@ length(which(is.na(mariculture_cut$trade_cumu_pressure))) #0 NA
 
 ## inland aquaculture
 # subset
-aqua_cut <- fw_aqua %>% 
-  select(c(1, 3, 8:12)) %>% 
-  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+fw_aqua_cut <- fw_aqua %>% 
+  rename(Consumer_ISO3 = consumer_iso3c, Producer_ISO3 = source_country_iso3c) %>% 
+  select(Consumer_ISO3, Producer_ISO3, trade_cumu_pressure, trade_ghg, trade_water, trade_disturbance, trade_nutrient)
 
 # check NAs
-length(which(is.na(aqua_cut$trade_cumu_pressure))) #3129 NAs
+length(which(is.na(aqua_cut$trade_cumu_pressure))) #409 NAs
 
 # where are these NA?
 na_value <- fw_aqua %>% 
@@ -117,7 +117,7 @@ table(na_value$nceas_group)
 # there are rows for Miscellaneous diadromous fishes and for Tilapias and other cichlids that are traded which we don't have pressures data for
 
 # we don't have this pressures data so remove these rows
-aqua_cut <- aqua_cut %>% 
+fw_aqua_cut <- aqua_cut %>% 
   filter(!is.na(trade_cumu_pressure))
 ```
 

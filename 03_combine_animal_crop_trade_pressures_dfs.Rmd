@@ -23,35 +23,35 @@ Load libraries
 library(tidyverse)
 ```
 
-
-Read in crops trade matrix with pressures
 ```{r}
-crops <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/crop_products_trade_matrix_w_pressures.csv")
+crops_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02d_connect_2017_crop_trade_to_pressures/"
+animals_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02c_connect_2017_animal_trade_to_pressures/"
+fish_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_connect_2017_fish_trade_to_pressures/"
+fw_aquaculture_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
+``` 
+
+
+Read in trade matrices with pressures
+```{r}
+crops <- read_csv(paste0(crops_path, "crop_products_trade_matrix_w_pressures.csv"))
+
+animals <- read_csv(paste0(animals_path, "animal_products_trade_matrix_w_pressures.csv"))
+
+fish_capture <- read_csv(paste0(fish_path, "capture_fish_products_trade_matrix_w_pressures.csv"))
+
+mariculture <- read_csv(paste0(fish_path, "mariculture_fish_products_trade_matrix_w_pressures.csv"))
+
+fw_aqua <- read_csv(paste0(fw_aquaculture_path, "inland_aquaculture_products_trade_matrix_w_pressures.csv"))
+
 ```
 
-Read in animal trade matrix with pressures
-```{r}
-animals <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_products_trade_matrix_w_pressures.csv")
-```
-
-Read in fish trade matrix with pressures - capture and mariculture
-```{r}
-fish_capture <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/capture_fish_products_trade_matrix_w_pressures.csv")
-
-mariculture <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/mariculture_fish_products_trade_matrix_w_pressures.csv")
-```
-
-Read in inland aquaculture trade matrix with pressures
-```{r}
-fw_aqua <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/inland_aquaculture_products_trade_matrix_w_pressures.csv")
-```
 
 Subset dfs to only trading pairs and pressures
 ```{r}
 ## crops
 # subset
 crops_cut <- crops %>% 
-  select(c(3, 6, 21:25))
+  select(Consumer_ISO3, Producer_ISO3, trade_cumu_pressure, trade_ghg, trade_water, trade_disturbance, trade_nutrient)
 
 # check NAs
 length(which(is.na(crops_cut$trade_cumu_pressure))) #1 NA
@@ -68,23 +68,21 @@ crops_cut <- crops_cut %>%
 ## livestock
 # subset
 animals_cut <- animals %>% 
-  select(c(3, 6, 12:16))
+  select(Consumer_ISO3, Producer_ISO3, trade_cumu_pressure, trade_ghg, trade_water, trade_disturbance, trade_nutrient)
 
 # check NAs
 length(which(is.na(animals_cut$trade_cumu_pressure))) #0 NA
 
-
-
 ## capture fisheries
 # subset
 fish_capture_cut <- fish_capture %>% 
-  select(c(1, 4, 9:13)) %>% 
-  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c)
+  rename(Consumer_ISO3 = consumer_iso3c, Producer_ISO3 = source_country_iso3c) %>% 
+  select(Consumer_ISO3, Producer_ISO3, trade_cumu_pressure, trade_ghg, trade_water, trade_disturbance, trade_nutrient)
 
 # check NAs
 length(which(is.na(fish_capture_cut$trade_cumu_pressure))) #1 NA
 
-# where is this NA?
+# where is this NA? # need to explore in the fish trade matrix update with unknown data to understand what is happening
 na_value <- fish_capture %>% 
   filter(is.na(trade_cumu_pressure))
 

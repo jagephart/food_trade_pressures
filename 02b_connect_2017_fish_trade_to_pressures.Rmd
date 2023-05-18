@@ -9,11 +9,8 @@ editor_options:
 
 Objective: Use the 2017 seafood trade matrix created by Jessica to calculate the environmental pressures from traded animal products. We should have associated pressures for each product between each pair of trading partners. Keep aquaculture products separate.
 
-Notes from meeting with Mel, Jessica, and Haley 10/12/22:
-- Primary products are represented as domestic exports while processed products (imported, processed, then exported again) are represented as foreign exports. This means that we will be double counting processed products. We need to deal with this later, but we are going to include both domestic and foreign products for now.
-- We are ignoring the intermediate countries for now, only grouping the source country (production pressures) and end country (consumption pressures)
-- We are ignoring rows that are classified as "error export" in the domestic source variable because we don't know the source country. These are values where a country exports more than it produces or imports of a product. We could later look into distributing these pressures using some sort of average pressure and proportions.
-- There are some differences in species group names in Jessica's trade matrix and the pressures df
+Updated notes as of 05/10/2023:
+- Intermediate countries are ignored, only grouping the source country (production pressures) and end country (consumption pressures)
 - Data are included for 2015 - 2019, we can consider averaging later, but for now we will just use 2017 data to match the crop and livestock data
 
 We have tonnes consumption for these marine aquaculture categories

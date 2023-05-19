@@ -44,10 +44,20 @@ Load libraries
 library(tidyverse)
 ```
 
+Data Paths
+```{r}
+raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+crops_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02d_connect_2017_crop_trade_to_pressures/"
+feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04d_combine_gf_prop_feed_dfs/"
+animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
+fish_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+```
+
 
 Read in trade script by primary product country of origin (from Kastner) and connect to pressures (already completed in script connect_2017_crop_trade_to_pressures)
 ```{r}
-crops <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/crop_products_trade_matrix_w_pressures.csv")
+crops <- read_csv(paste0(crops_pressures_path, "crop_products_trade_matrix_w_pressures.csv"))
+
 ```
 
 
@@ -115,7 +125,7 @@ sum(feed_crops_agg$water_pressure_traded)
 Add column with proportion of each crop each consuming country uses for feed
 ```{r}
 # Read in proportion aggregated crops used as feed by country
-prop_feed <- read_csv("scripts/feed_in_trade_matrix/outputs/all_crops_perc_feed.csv")
+prop_feed <- read_csv(paste0(feed_prop_path, "all_crops_perc_feed.csv"))
 
 # convert to long format
 prop_feed_2 <- prop_feed %>% 
@@ -181,11 +191,9 @@ sum(feed_crops_w_prop_1$disturbance_pressure_feed) + sum(feed_crops_not_used_for
 
 Note: data are already grouped by consuming country, producing country, and crop and pressures and tonnes going to feed are summed across those categories
 
-Read in tonnes crop consumed per animal group per country data :
-https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
-- go to url, click "View Raw", copy url and paste it below. Need to re-do this every time because the url expires.
+Read in tonnes crop consumed per animal group per country data, the data used for this step can be found at the link provided, however it has been saved in the project folder on Aurora: https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
 ```{r}
-animal_consumption <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/feed/data/system_country_mapspam_tonnes_consumption.csv?token=GHSAT0AAAAAABXM6CBNSZ747HNMOHE667FUY337HKA")
+animal_consumption <- read_csv(paste0(animal_consumption_data_path, "system_country_mapspam_tonnes_consumption.csv"))
 ```
 
 
@@ -226,7 +234,7 @@ milk
 pigs_meat
 sheep_meat
 
-Mariculture (we have pressures data for bivalves but no feed data, maybe they don't need feed because they filter?):
+Mariculture (we have pressures data for bivalves but no feed data, becasue they don't need feed because they filter):
 crustaceans_aquaculture_meat = crustaceans_aquaculture
 marine-fish-general_aquaculture_meat = marine_fish_general_aquaculture
 salmon_aquaculture_meat = salmonids_aquaculture
@@ -268,10 +276,9 @@ table(animal_consumption_4$animal_agg)
 
 
 
-Read in inland aquaculture feed consumption 
-https://github.com/jagephart/food_trade_ej/blob/main/scripts/fw_aquaculture_pressures/output/fw_aqua_crop_feed.csv
+Read in inland aquaculture feed consumption data produced in script 02ai.
 ```{r}
-fw_aqua_consumption <- read_csv("https://raw.githubusercontent.com/jagephart/food_trade_ej/main/scripts/fw_aquaculture_pressures/output/fw_aqua_crop_feed.csv?token=GHSAT0AAAAAABXM6CBM2XEZRJQXH3AR5HC6Y337HVQ")
+fw_aqua_consumption <- read_csv(paste0(fish_consumption_path, "fw_aqua_crop_feed.csv"))
 ```
 
 
@@ -374,7 +381,7 @@ feed_pressures <- full_join(feed_crops_w_prop_2, tonnes_feed_consumed_4, by = c(
 # check NAs
 summary(feed_pressures)
 
-# 2396 NAs in pressures df means we have the proportion of crop that animal consumes in that country, but we don't have any pressures data so it's not included in the crops trade matrix 
+# 2352 NAs in pressures df means we have the proportion of crop that animal consumes in that country, but we don't have any pressures data so it's not included in the crops trade matrix 
 # look at NAs
 check_na <- feed_pressures %>% 
   filter(is.na(cumu_pressure_feed))
@@ -436,28 +443,28 @@ check_props_2 <- check_props_1 %>%
 # what percent of traded tonnes are we missing?
 sum(feed_pressures_3$tonnes_traded_system_feed)
 sum(feed_crops_w_prop_1$tonnes_feed)
-((1621789997 - 1613395685)/1621789997)*100 # 0.52% = less than one percent, ignore this discrepancy
+((sum(feed_crops_w_prop_1$tonnes_feed) - sum(feed_pressures_3$tonnes_traded_system_feed))/sum(feed_crops_w_prop_1$tonnes_feed))*100 # 0.52% = less than one percent, ignore this discrepancy
 
 # what percent of pressures are we missing?
 sum(feed_pressures_3$cumu_traded_system_feed)
 sum(feed_crops_w_prop_1$cumu_pressure_feed)
-((0.5579211 - 0.5575978)/0.5579211)*100 # 0.057% = very small percent, ignore this discrepancy
+((sum(feed_crops_w_prop_1$cumu_pressure_feed) - sum(feed_pressures_3$cumu_traded_system_feed))/sum(feed_crops_w_prop_1$cumu_pressure_feed))*100 # 0.057% = very small percent, ignore this discrepancy
 
 sum(feed_pressures_3$water_traded_system_feed)
 sum(feed_crops_w_prop_1$water_pressure_feed)
-((271976821274 - 271909174437)/271976821274)*100 # 0.025%
+((sum(feed_crops_w_prop_1$water_pressure_feed) - sum(feed_pressures_3$water_traded_system_feed))/sum(feed_crops_w_prop_1$water_pressure_feed))*100 # 0.025%
 
 sum(feed_pressures_3$ghg_traded_system_feed)
 sum(feed_crops_w_prop_1$ghg_pressure_feed)
-((670858182 - 670489218)/670858182)*100 # 0.055%
+((sum(feed_crops_w_prop_1$ghg_pressure_feed) - sum(feed_pressures_3$ghg_traded_system_feed))/sum(feed_crops_w_prop_1$ghg_pressure_feed))*100 # 0.055%
 
 sum(feed_pressures_3$nutrient_traded_system_feed)
 sum(feed_crops_w_prop_1$nutrient_pressure_feed)
-((8934749 - 8929893)/8934749)*100 # 0.054%
+((sum(feed_crops_w_prop_1$nutrient_pressure_feed) - sum(feed_pressures_3$nutrient_traded_system_feed))/sum(feed_crops_w_prop_1$nutrient_pressure_feed))*100 # 0.054%
 
 sum(feed_pressures_3$disturbance_traded_system_feed)
 sum(feed_crops_w_prop_1$disturbance_pressure_feed)
-((3371333 - 3368152)/3371333)*100 # 0.094%
+((sum(feed_crops_w_prop_1$disturbance_pressure_feed) - sum(feed_pressures_3$disturbance_traded_system_feed))/sum(feed_crops_w_prop_1$disturbance_pressure_feed))*100 # 0.094%
 ```
 
 
@@ -508,6 +515,7 @@ test_5 <- feed_crops_w_prop_1 %>%
 test_6 <- full_join(test_4, test_5, by = c("Consumer_ISO3", "feed_category"))
 ```
 
+############################## Stopped here on 5/19 will continue next week######################################
 
 Read in animal, fw aquaculture, and fish trade matrices and combine into one.
 These dfs already have the proportions of each animal a country trades with its trading partners.

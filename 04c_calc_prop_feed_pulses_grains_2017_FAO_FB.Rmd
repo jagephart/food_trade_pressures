@@ -44,10 +44,6 @@ Notes about other crops:
 
 MapSPAM to FAO - to compare categories you can look at this df
 https://github.com/OHI-Science/food_systems/blob/master/feed/data/MapSPAM_to_FAO_v2.csv
-```{r}
-# map_to_fao <- read_csv("https://raw.githubusercontent.com/OHI-Science/food_systems/master/feed/data/MapSPAM_to_FAO_v2.csv?token=GHSAT0AAAAAABXM6CBMWTFQFWOLIABJ3PU6Y3COH3Q")
-```
-
 
 Load libraries
 ```{r}
@@ -55,11 +51,21 @@ library(tidyverse)
 library(countrycode)
 ```
 
+Data Paths
+```{r}
+raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+FAO_path <- paste0(raw_path, "FAO/")
+kastner_path <- paste0(raw_path, "kastner_2022/")
+fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
+feed_4a_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04c_calc_prop_feed_pulses_grains_2017_FAO_FB/"
+```
+
 
 Read in FAO FB data (2010-)
 Regions are not included in this df, only countries. To gapfill, will also need to calculate these values for regions.
 ```{r}
-fb <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2017/CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv")
+fb <- read_csv(paste0(kastner_path, "CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
 
 # only 2017 data? - Yes
 range(fb$Year)
@@ -67,7 +73,7 @@ range(fb$Year)
 # clean up data
 # converting to tonnes (instead of 1000 tonnes) in case we want to see raw tonnes used for feed later
 fb_1 <- fb %>% 
-  select(-c(1:2, 5, 9:10, 13:14)) %>% 
+  select(`Area Code (FAO)`, Area, Element, `Item Code`, Item, Unit, Value) %>% 
   filter(Element == "Domestic supply quantity" | Element == "Feed") %>% 
   mutate(value_tonnes = Value*1000) %>% 
   select(-c(Unit, Value))
@@ -133,12 +139,12 @@ grains <- grains %>%
   mutate(total_prop_feed = total_feed/total_dsq)
 
 # save grains csv before gapfilling
-write_csv(grains, "scripts/feed_in_trade_matrix/outputs/perc_dsq_grains_used_as_feed.csv")
+write_csv(grains, paste0(save_path, "perc_dsq_grains_used_as_feed.csv"))
 ```
 
 Download FAO FB data for regions for 2017
 ```{r}
-region_fb <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/FAO/FAO_Food_Balances_2017_grains_pulses_feed_dl_11_2_22.csv")
+region_fb <- read_csv(paste0(FAO_path, "2017_FAO_data/FAO_Food_Balances_2017_grains_pulses_feed_dl_11_2_22.csv"))
 
 # all 2017? - yes
 range(region_fb$Year)
@@ -146,13 +152,13 @@ range(region_fb$Year)
 # convert from 1000 tonnes to tonnes
 region_fb_1 <- region_fb %>% 
   mutate(value_tonnes = Value*1000) %>% 
-  select(-c(3, 5, 7:10)) %>% 
+  select(-c(`Element Code`, `Item Code (CPC)`, `Year Code`, Year, Unit, Value)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
   mutate(prop_feed = Feed/`Domestic supply quantity`)
 
 # put in similar format to grains df
 region_fb_2 <- region_fb_1 %>% 
-  select(1:3, 6) %>% 
+  select(`Area Code (M49)`, Area, Item, prop_feed) %>% 
   pivot_wider(names_from = Item, values_from = prop_feed) %>% 
   rename(whea_prop_feed = `Wheat and products`) %>% 
   rename(barl_prop_feed = `Barley and products`) %>% 
@@ -168,7 +174,7 @@ region_fb_2 <- region_fb_1 %>%
 # if the continent has 0 for a crop, then keep it as 0
 # if the continent also has NA, then use world value (no continents with NAs in grains df)
 # read back in gapfilled csv (only really updated Polynesia, Micronesia, Caribbean, and a couple columns in African regions)
-grains_region <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/Feed/FAO_regional_grains_perc_feed_gapfilled.csv")
+grains_region <- read_csv(paste0(FAO_path, "FAO_regional_grains_perc_feed_gapfilled.csv"))
 
 
 # calculate aggregate grains per region (sum feed / sum dsq)
@@ -201,7 +207,7 @@ We won't need all of these countries, but it's good to include them all just in 
 ```{r}
 # rather than reading in the whole FAO country list, we'll just consider countries included in trade matrices output
 # read in FAO country list
-tm <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/results_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+tm <- read_csv(paste0(kastner_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
 tm_1 <- tm %>% 
   select(Consumer_Country_Code) %>% 
@@ -214,13 +220,13 @@ tm_2 <- tm_1 %>%
                              TRUE ~ country))
 
 # read in fisheries trade data 
-fish_tm <- read_csv("/home/shares/food-systems/social_justice_projects/_raw_data/aquatic_food_trade/20221011_nceas_ARTIS_snet.csv")
+fish_tm <- read_csv(paste0(fish_trade_path, "20230420_nceas_consumption.csv"))
 
 # add country names and subset
 fish_tm_1 <- fish_tm %>% 
-  select(importer_iso3c) %>% 
+  select(consumer_iso3c) %>% 
   unique() %>% 
-  mutate(country = countrycode(importer_iso3c, 'iso3c', 'country.name')) %>% 
+  mutate(country = countrycode(consumer_iso3c, 'iso3c', 'country.name')) %>% 
   filter(!is.na(country)) # remove one NA (iso3c = NEI, Netherlands East Indies, not in FAO data either)
 
 
@@ -343,7 +349,7 @@ grains_3$total_prop_feed <- ifelse(is.na(grains_3$total_prop_feed), grains_regio
 grains_3$total_prop_feed <- ifelse(grains_3$total_prop_feed == 0, grains_region$total_prop_feed[inds], grains_3$total_prop_feed)
 
 # save gapfilled grains df
-write_csv(grains_3, "scripts/feed_in_trade_matrix/outputs/perc_dsq_grains_used_as_feed_gapfilled.csv")
+write_csv(grains_3, paste0(save_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
 ```
 
 
@@ -356,7 +362,7 @@ For pulses, need to combine all tonnes and then calculate proportions to make su
 # format beans
 beans <- fb_1 %>% 
   filter(Item == "Beans") %>% 
-  select(-c(4:5)) %>% 
+  select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
   rename(beans_dsq = `Domestic supply quantity`,
          beans_feed = Feed)
@@ -364,7 +370,7 @@ beans <- fb_1 %>%
 # format peas
 peas <- fb_1 %>% 
   filter(Item == "Peas") %>% 
-  select(-c(4:5)) %>% 
+  select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
   rename(peas_dsq = `Domestic supply quantity`,
          peas_feed = Feed)
@@ -372,7 +378,7 @@ peas <- fb_1 %>%
 # format Pulses, Other and Products
 other_pulse <- fb_1 %>% 
   filter(Item == "Pulses, Other and products") %>% 
-  select(-c(4:5)) %>% 
+  select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
   rename(other_pulse_dsq = `Domestic supply quantity`,
          other_pulse_feed = Feed)
@@ -393,7 +399,7 @@ pulses <- pulses %>%
   mutate(prop_feed = pulse_feed/pulse_dsq)
 
 # save pulses df before gapfilling
-write_csv(pulses, "scripts/feed_in_trade_matrix/outputs/perc_dsq_pulses_used_as_feed.csv")
+write_csv(pulses, paste0(save_path, "perc_dsq_pulses_used_as_feed.csv"))
 ```
 
 
@@ -402,7 +408,8 @@ Merge pulses df with list of countries from trade matrices to ensure all countri
 # add iso3 to pulses
 pulses_a <- pulses %>% 
   mutate(iso3 = countrycode(Area, "country.name", "iso3c")) %>% 
-  mutate(iso3 = case_when(is.na(iso3) ~ "TUR", TRUE ~ iso3))
+  mutate(iso3 = case_when(is.na(iso3) ~ "TUR", 
+                          TRUE ~ iso3))
 
 # join with country list
 pulses_b <- pulses_a %>% 
@@ -410,7 +417,8 @@ pulses_b <- pulses_a %>%
 
 # fill in country name where NA
 pulses_c <- pulses_b %>% 
-  mutate(Area = case_when(is.na(Area) ~ country, TRUE ~ Area)) %>% 
+  mutate(Area = case_when(is.na(Area) ~ country, 
+                          TRUE ~ Area)) %>% 
   select(-country)
 
 # check iso3 codes for duplicates
@@ -517,6 +525,6 @@ pulses_3$prop_feed <- ifelse(pulses_3$prop_feed < 0, region_pulses$prop_feed[ind
 pulses_3$prop_feed <- ifelse(pulses_3$prop_feed > 1, 1, pulses_3$prop_feed)
 
 # save gapfilled pulses df
-write_csv(pulses_3, "scripts/feed_in_trade_matrix/outputs/perc_dsq_pulses_used_as_feed_gapfilled.csv")
+write_csv(pulses_3, paste0(save_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
 ```
 

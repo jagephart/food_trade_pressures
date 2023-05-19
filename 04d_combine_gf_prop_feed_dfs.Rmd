@@ -14,13 +14,22 @@ Load libraries
 library(tidyverse)
 ```
 
+Data Paths
+```{r}
+raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+feed_4b_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04b_gapfill_perc_feed_soy_palm_oilcrops_2013_CB_FB/"
+feed_4c_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04c_calc_prop_feed_pulses_grains_2017_FAO_FB/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04d_combine_gf_prop_feed_dfs/"
+```
+
+
 Read in dfs
 ```{r}
-grains <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_grains_used_as_feed_gapfilled.csv")
-pulses <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_pulses_used_as_feed_gapfilled.csv")
-oils <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_oilcrops_used_as_feed_gapfilled.csv")
-soy <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_soy_used_as_feed_gapfilled.csv")
-pk <- read_csv("scripts/feed_in_trade_matrix/outputs/perc_dsq_palm_kernel_used_as_feed_gapfilled.csv")
+grains <- read_csv(paste0(feed_4c_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
+pulses <- read_csv(paste0(feed_4c_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
+oils <-   read_csv(paste0(feed_4b_path, "perc_dsq_oilcrops_used_as_feed_gapfilled.csv"))
+soy <-    read_csv(paste0(feed_4b_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
+pk <-     read_csv(paste0(feed_4b_path, "perc_dsq_palm_kernel_used_as_feed_gapfilled.csv"))
 ```
 
 Subset to only gapfilled percent feed and country variables (Area)
@@ -102,9 +111,10 @@ summary(feed_2)
 # remove duplicates for China (only keep China mainland and only keep one row of it)
 feed_3 <- feed_2 %>% 
   filter(!country == "China")
+feed_3[34,]                    # check to make sure this row is China
 feed_3 <- feed_3[-34,]
 
 # save csv
-write_csv(feed_3, "scripts/feed_in_trade_matrix/outputs/all_crops_perc_feed.csv")
+write_csv(feed_3, paste0(save_path, "all_crops_perc_feed.csv"))
 ```
 

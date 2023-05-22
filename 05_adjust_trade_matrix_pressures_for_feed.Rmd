@@ -48,6 +48,9 @@ Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 crops_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02d_connect_2017_crop_trade_to_pressures/"
+animals_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02c_connect_2017_animal_trade_to_pressures/"
+fish_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_connect_2017_fish_trade_to_pressures/"
+inland_aqua_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
 feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04d_combine_gf_prop_feed_dfs/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
 fish_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
@@ -515,28 +518,29 @@ test_5 <- feed_crops_w_prop_1 %>%
 test_6 <- full_join(test_4, test_5, by = c("Consumer_ISO3", "feed_category"))
 ```
 
-############################## Stopped here on 5/19 will continue next week######################################
-
 Read in animal, fw aquaculture, and fish trade matrices and combine into one.
 These dfs already have the proportions of each animal a country trades with its trading partners.
 ```{r}
 # read in animal, fw aquaculture, and fish trade matrices and combine into one
-animals <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_products_trade_matrix_w_pressures.csv")
-fish <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/capture_and_mariculture_fish_products_trade_matrix_w_pressures.csv")
-aqua <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/inland_aquaculture_products_trade_matrix_w_pressures.csv")
+animals <- read_csv(paste0(animals_pressures_path, "animal_products_trade_matrix_w_pressures.csv"))
+fish <- read_csv(paste0(fish_pressures_path, "capture_and_mariculture_trade_matrix_w_pressures.csv"))
+aqua <- read_csv(paste0(inland_aqua_pressures_path, "inland_aquaculture_products_trade_matrix_w_pressures.csv"))
 
 # format trade matrices so they can be combined into one df
 animals_1 <- animals %>% 
-  select(Consumer_ISO3, Producer_ISO3, prop_traded, item_combo) %>% 
-  rename(product = item_combo)
-animals_1 <- animals_1[, c(2, 1, 4, 3)]
+  select(Producer_ISO3, Consumer_ISO3, item_FAO, proportion_traded) %>%         # select columns and reorder
+  rename(product = item_FAO)
+
 fish_1 <- fish %>% 
-  select(source_country_iso3c, importer_iso3c, nceas_group, prop_traded) %>% 
-  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c,
+  select(source_country_iso3c, consumer_iso3c, nceas_group, proportion_traded) %>%  # select columns and reorder
+  rename(Producer_ISO3 = source_country_iso3c,
+         Consumer_ISO3 = consumer_iso3c, 
          product = nceas_group)
+
 aqua_1 <- aqua %>% 
-  select(source_country_iso3c, importer_iso3c, nceas_group, prop_traded) %>% 
-  rename(Consumer_ISO3 = importer_iso3c, Producer_ISO3 = source_country_iso3c,
+  select(source_country_iso3c, consumer_iso3c, nceas_group, proportion_traded) %>% # select columns and reorder
+  rename(Producer_ISO3 = source_country_iso3c,
+         Consumer_ISO3 = consumer_iso3c, 
          product = nceas_group)
 
 all_animals <- rbind(animals_1, fish_1)
@@ -545,7 +549,7 @@ all_animals_1 <- rbind(all_animals, aqua_1)
 # check data - should sum to 1 for each animal producing country
 check <- all_animals_1 %>% 
    group_by(Producer_ISO3, product) %>% 
-   summarise(sum = sum(prop_traded))
+   summarise(sum = sum(proportion_traded))
 range(check$sum)
 
 # make sure the categories match
@@ -557,7 +561,7 @@ table(feed_pressures_3$nceas_group)
 all_animals_2 <- all_animals_1 %>% 
   rename(animal_producing_country = Producer_ISO3,
          animal_consuming_country = Consumer_ISO3,
-         prop_animal_traded = prop_traded)
+         prop_animal_traded = proportion_traded)
 summary(all_animals_2)
 ```
 
@@ -566,23 +570,30 @@ Merge feed producer/consumer trade matrix with pressures with animal producer/co
 ```{r}
 # rename variables
 feed_pressures_4 <- feed_pressures_3 %>%
-  select(-c(5:9, 11)) %>% 
+  select(-c(cumu_pressure_feed,
+            water_pressure_feed,
+            ghg_pressure_feed,
+            nutrient_pressure_feed,
+            disturbance_pressure_feed,
+            prop_crop_feed_per_animal)) %>% 
   rename(animal_producing_country = Consumer_ISO3,
          feed_producing_country = Producer_ISO3,
          product = nceas_group)
 
-animal_feed_pressures_tm <- full_join(feed_pressures_4, all_animals_2, by = c("animal_producing_country", "product"))
+animal_feed_pressures_tm <- full_join(feed_pressures_4, 
+                                      all_animals_2, 
+                                      by = c("animal_producing_country", "product"))
 
 # check data
 summary(animal_feed_pressures_tm)
 
 no_feed_data <- animal_feed_pressures_tm %>% 
   filter(is.na(cumu_traded_system_feed))
-# 72,049 NAs for pressures - have animal trade data for an animal system, but no feed trade data 
+# 70,672 NAs for pressures - have animal trade data for an animal system, but no feed trade data 
 
 no_animal_data <- animal_feed_pressures_tm %>% 
   filter(is.na(prop_animal_traded))
-# 100,608 NAs for prop_animal_traded - have feed data, but no animal trade data
+# 182,349 NAs for prop_animal_traded - have feed data, but no animal trade data
 # (including what a country produces and keeps)
 
 # remove rows with NAs
@@ -590,11 +601,12 @@ animal_feed_pressures_tm_1 <- animal_feed_pressures_tm %>%
   filter(!is.na(cumu_traded_system_feed)) %>% 
   filter(!is.na(prop_animal_traded))
 
-# how many rows are we discarding? Only 0.66%.
-(1 - nrow(animal_feed_pressures_tm_1)/nrow(animal_feed_pressures_tm))*100
+# how many rows are we discarding?
+(1 - nrow(animal_feed_pressures_tm_1)/nrow(animal_feed_pressures_tm))*100 # %
+
 ```
 
-
+### NEED TO TEST SOMETHING ABOUT FISH NAME ALLOCATIONS
 Multiply traded feed pressures for each crop, animal system, and trading pair (feed producer and feed consumer) by the proportion of each animal traded between trading pair (animal producer and animal consumer)
 ```{r}
 animal_feed_pressures_tm_2 <- animal_feed_pressures_tm_1 %>% 

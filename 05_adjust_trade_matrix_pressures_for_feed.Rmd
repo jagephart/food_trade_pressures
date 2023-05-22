@@ -54,6 +54,7 @@ inland_aqua_pressures_path <- "/home/shares/food-systems/social_justice_projects
 feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04d_combine_gf_prop_feed_dfs/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
 fish_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/05_adjust_trade_matrix_pressures_for_feed/"
 ```
 
 
@@ -237,7 +238,8 @@ milk
 pigs_meat
 sheep_meat
 
-Mariculture (we have pressures data for bivalves but no feed data, becasue they don't need feed because they filter):
+Mariculture (we have pressures data for bivalves but no feed data, because they don't need feed because they filter):
+Renamed animal_agg is on the right side of the equations
 crustaceans_aquaculture_meat = crustaceans_aquaculture
 marine-fish-general_aquaculture_meat = marine_fish_general_aquaculture
 salmon_aquaculture_meat = salmonids_aquaculture
@@ -259,11 +261,11 @@ animal_consumption_3 <- animal_consumption_2 %>%
                                 str_detect(animal_system, regex("(?=.*pig)(?=.*meat)", ignore_case = TRUE)) ~ "pigs_meat",
                                 animal_system == "chickens_industrial_eggs" ~ "chicken_eggs",
                                 animal_system == "chickens_industrial_meat" ~ "chickens_meat",
-                                animal_system == "crustaceans_aquaculture_meat" ~ "crustaceans_aquaculture",
-                                animal_system == "marine-fish-general_aquaculture_meat" ~ "marine_fish_general_aquaculture",
-                                animal_system == "salmon_aquaculture_meat" ~ "salmonids_aquaculture",
-                                animal_system == "shrimp_aquaculture_meat" ~ "shrimps_prawns_aquaculture",
-                                animal_system == "tuna_aquaculture_meat" ~ "tuna_aquaculture",
+                                animal_system == "crustaceans_aquaculture_meat" ~ "crustaceans_mariculture",
+                                animal_system == "marine-fish-general_aquaculture_meat" ~ "marine_fish_general_mariculture",
+                                animal_system == "salmon_aquaculture_meat" ~ "salmonids_mariculture",
+                                animal_system == "shrimp_aquaculture_meat" ~ "shrimps_prawns_mariculture",
+                                animal_system == "tuna_aquaculture_meat" ~ "tuna_mariculture",
                                 TRUE ~ animal_system))
 
 table(animal_consumption_3$animal_agg)
@@ -287,21 +289,29 @@ fw_aqua_consumption <- read_csv(paste0(fish_consumption_path, "fw_aqua_crop_feed
 
 Convert to inland aquaculture trade categories
 
-From Mel:
+From Mel - for original data:
 Carps, barbels and other cyprinids = oth_carp + hypoph_carp
 Miscellaneous diadromous fishes = misc_diad + milkfish
 Salmons, trouts, smelts = trout
 Miscellaneous freshwater fishes = catfish
 Tilapias and other cichlids = tilapia
+
+Mel's key - updated data (left is trade matrix categories, right is pressures categories):
+oth_carp = oth_carp 
+hypoph_carp = hypoph_carp
+miscellaneous diadromous fishes = misc_diad + milkfish
+salmons, trouts, smelts = trout
+miscellaneous freshwater fishes = catfish
+tilapias and other cichlids = tilapia
 ```{r}
 fw_aqua_consumption_relabel <- fw_aqua_consumption %>% 
-  mutate(nceas_group = case_when(taxa == "catfish" ~ "Miscellaneous freshwater fishes",
-                                 taxa == "hypoph_carp" ~ "Carps, barbels and other cyprinids",
-                                 taxa == "milkfish" ~ "Miscellaneous diadromous fishes",
-                                 taxa == "misc_diad" ~ "Miscellaneous diadromous fishes",
-                                 taxa == "oth_carp" ~ "Carps, barbels and other cyprinids",
-                                 taxa == "tilapia" ~ "Tilapias and other cichlids",
-                                 taxa == "trout" ~ "Salmons, trouts, smelts",
+  mutate(nceas_group = case_when(taxa == "catfish" ~ "miscellaneous freshwater fishes",
+                                 taxa == "hypoph_carp" ~ "hypoph_carp",
+                                 taxa == "milkfish" ~ "miscellaneous diadromous fishes",
+                                 taxa == "misc_diad" ~ "miscellaneous diadromous fishes",
+                                 taxa == "oth_carp" ~ "oth_carp",
+                                 taxa == "tilapia" ~ "tilapias and other cichlids",
+                                 taxa == "trout" ~ "salmons, trouts, smelts",
                                  TRUE ~ as.character(NA)))
 summary(fw_aqua_consumption_relabel)
 table(fw_aqua_consumption_relabel$nceas_group)
@@ -589,11 +599,13 @@ summary(animal_feed_pressures_tm)
 
 no_feed_data <- animal_feed_pressures_tm %>% 
   filter(is.na(cumu_traded_system_feed))
-# 70,672 NAs for pressures - have animal trade data for an animal system, but no feed trade data 
+nrow(no_feed_data)
+# 54,966 NAs for pressures - have animal trade data for an animal system, but no feed trade data 
 
 no_animal_data <- animal_feed_pressures_tm %>% 
   filter(is.na(prop_animal_traded))
-# 182,349 NAs for prop_animal_traded - have feed data, but no animal trade data
+nrow(no_animal_data)
+# 98,136 NAs for prop_animal_traded - have feed data, but no animal trade data
 # (including what a country produces and keeps)
 
 # remove rows with NAs
@@ -606,7 +618,6 @@ animal_feed_pressures_tm_1 <- animal_feed_pressures_tm %>%
 
 ```
 
-### NEED TO TEST SOMETHING ABOUT FISH NAME ALLOCATIONS
 Multiply traded feed pressures for each crop, animal system, and trading pair (feed producer and feed consumer) by the proportion of each animal traded between trading pair (animal producer and animal consumer)
 ```{r}
 animal_feed_pressures_tm_2 <- animal_feed_pressures_tm_1 %>% 
@@ -682,7 +693,7 @@ So if CAN exported 1000 pressures in cows to the USA and 600 pressures in feed f
 
 Save df
 ```{r}
-write_csv(animal_feed_pressures_tm_3, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_feed_trade_matrix_w_pressures.csv")
+write_csv(animal_feed_pressures_tm_3, paste0(save_path, "animal_feed_trade_matrix_w_pressures.csv"))
 ```
 
 
@@ -716,22 +727,26 @@ non_feed_crops_2 <- non_feed_crops_1 %>%
 non_feed_crops_tm <- rbind(non_feed_crops_2, feed_crops_not_used_for_feed_2)
 
 # save csv
-write_csv(non_feed_crops_tm, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/non_feed_crops_trade_matrix_w_pressures.csv")
+write_csv(non_feed_crops_tm, paste0(save_path, "non_feed_crops_trade_matrix_w_pressures.csv"))
 ```
 
 
 Combine non-feed crops trade, animal feed trade, and animal (capture fisheries, mariculture, aquaculture, livestock) trade into one trade matrix that accounts for traded feed pressures.
 ```{r}
-non_feed_crops_trade <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/non_feed_crops_trade_matrix_w_pressures.csv")
-animal_feed_trade <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_feed_trade_matrix_w_pressures.csv")
-capture_mariculture_trade <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/capture_and_mariculture_fish_products_trade_matrix_w_pressures.csv")
-fw_aquaculture_trade <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/inland_aquaculture_products_trade_matrix_w_pressures.csv")
-livestock_trade <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/data/animal_products_trade_matrix_w_pressures.csv")
+non_feed_crops_trade <- read_csv(paste0(save_path, "non_feed_crops_trade_matrix_w_pressures.csv"))
+animal_feed_trade <- read_csv(paste0(save_path, "animal_feed_trade_matrix_w_pressures.csv"))
+capture_mariculture_trade <- read_csv(paste0(fish_pressures_path, "capture_and_mariculture_trade_matrix_w_pressures.csv"))
+fw_aquaculture_trade <- read_csv(paste0(inland_aqua_pressures_path, "inland_aquaculture_products_trade_matrix_w_pressures.csv"))
+livestock_trade <- read_csv(paste0(animals_pressures_path, "animal_products_trade_matrix_w_pressures.csv"))
 
 # format data so we can rbind it
 
 # order = producer, consumer, item, tonnes traded, cumu, ghg, water, nutrient, disturbance
-non_feed_crops_trade <- non_feed_crops_trade[,c(2, 1, 4, 3, 5:9)]
+non_feed_crops_trade <- non_feed_crops_trade %>% 
+  select(Producer_ISO3, Consumer_ISO3, Item,
+         tonnes_traded, trade_cumu_pressure,
+         trade_ghg, trade_water,
+         trade_nutrient, trade_disturbance)
 summary(non_feed_crops_trade)
 # one NA - remove
 non_feed_crops_trade_1 <- non_feed_crops_trade %>% 
@@ -749,32 +764,57 @@ animal_feed_trade_1 <- animal_feed_trade %>%
          trade_ghg = sum_ghg,
          trade_water = sum_water,
          trade_nutrient = sum_nutrient,
-         trade_disturbance = sum_disturbance)
-animal_feed_trade_1 <- animal_feed_trade_1[,c(1:2, 9, 3, 4, 6, 5, 7:8)]
+         trade_disturbance = sum_disturbance) 
+
+# order = producer, consumer, item, tonnes traded, cumu, ghg, water, nutrient, disturbance
+animal_feed_trade_1 <- animal_feed_trade_1 %>% 
+  select(Producer_ISO3, Consumer_ISO3, Item,
+         tonnes_traded, trade_cumu_pressure,
+         trade_ghg, trade_water,
+         trade_nutrient, trade_disturbance)
 
 summary(capture_mariculture_trade) #1 NA
+
 capture_mariculture_trade_1 <- capture_mariculture_trade %>% 
-  select(-c(Producer_country, sum_caught, prop_traded)) %>% 
+  select(-c(Producer_country, sum_caught, proportion_traded)) %>% 
   rename(Producer_ISO3 = source_country_iso3c,
-         Consumer_ISO3 = importer_iso3c,
+         Consumer_ISO3 = consumer_iso3c,
          Item = nceas_group,
-         tonnes_traded = trade_weight) %>% 
+         tonnes_traded = traded_tons) %>% 
   filter(!is.na(trade_cumu_pressure))
 
-summary(fw_aquaculture_trade) # 3,129 NAs
+# order = producer, consumer, item, tonnes traded, cumu, ghg, water, nutrient, disturbance
+capture_mariculture_trade_1 <- capture_mariculture_trade_1 %>% 
+  select(Producer_ISO3, Consumer_ISO3, Item,
+         tonnes_traded, trade_cumu_pressure,
+         trade_ghg, trade_water,
+         trade_nutrient, trade_disturbance)
+
+summary(fw_aquaculture_trade) # 409 NAs
 fw_aquaculture_trade_1 <- fw_aquaculture_trade %>% 
-  select(-c(Producer_country, sum_caught, prop_traded)) %>% 
+  select(-c(Producer_country, sum_caught, proportion_traded)) %>% 
   rename(Producer_ISO3 = source_country_iso3c,
-         Consumer_ISO3 = importer_iso3c,
+         Consumer_ISO3 = consumer_iso3c,
          Item = nceas_group,
-         tonnes_traded = trade_weight) %>% 
+         tonnes_traded = traded_tons) %>% 
   filter(!is.na(trade_cumu_pressure))
 
+# order = producer, consumer, item, tonnes traded, cumu, ghg, water, nutrient, disturbance
+fw_aquaculture_trade_1 <- fw_aquaculture_trade_1 %>% 
+  select(Producer_ISO3, Consumer_ISO3, Item,
+         tonnes_traded, trade_cumu_pressure,
+         trade_ghg, trade_water,
+         trade_nutrient, trade_disturbance)
+
+  
 summary(livestock_trade) #no NAs
 livestock_trade_1 <- livestock_trade %>% 
-  select(Producer_ISO3, Consumer_ISO3, item_combo, tonnes_traded, trade_cumu_pressure,
-         trade_ghg, trade_water, trade_nutrient, trade_disturbance) %>% 
-  rename(Item = item_combo)
+  # order = producer, consumer, item, tonnes traded, cumu, ghg, water, nutrient, disturbance
+  select(Producer_ISO3, Consumer_ISO3, item_FAO, 
+         tonnes_traded, trade_cumu_pressure,
+         trade_ghg, trade_water, 
+         trade_nutrient, trade_disturbance) %>% 
+  rename(Item = item_FAO)
 
 # rbind dfs together
 df_1 <- rbind(non_feed_crops_trade_1, animal_feed_trade_1)
@@ -786,7 +826,7 @@ df_4 <- rbind(df_3, livestock_trade_1)
 sum(df_4$trade_cumu_pressure)
 
 # save csv
-write_csv(df_4, "/home/shares/food-systems/social_justice_projects/food_trade_ej/data/trade_matrix_w_pressures_accounting_for_feed.csv")
+write_csv(df_4, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 ```
 
 

@@ -47,7 +47,7 @@ Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
 ```
 
 

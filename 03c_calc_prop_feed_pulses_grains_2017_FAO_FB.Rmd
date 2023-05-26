@@ -57,8 +57,8 @@ raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressu
 FAO_path <- paste0(raw_path, "FAO/")
 kastner_path <- paste0(raw_path, "kastner_2022/")
 fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
-feed_4a_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04c_calc_prop_feed_pulses_grains_2017_FAO_FB/"
+feed_4a_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calc_prop_feed_pulses_grains_2017_FAO_FB/"
 ```
 
 

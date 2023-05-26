@@ -51,10 +51,10 @@ crops_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_
 animals_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02c_connect_2017_animal_trade_to_pressures/"
 fish_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_connect_2017_fish_trade_to_pressures/"
 inland_aqua_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
-feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04d_combine_gf_prop_feed_dfs/"
+feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03d_combine_gf_prop_feed_dfs/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
 fish_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/05_adjust_trade_matrix_pressures_for_feed/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04_adjust_trade_matrix_pressures_for_feed/"
 ```
 
 

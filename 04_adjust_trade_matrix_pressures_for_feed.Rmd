@@ -726,8 +726,14 @@ non_feed_crops_2 <- non_feed_crops_1 %>%
 # bind together
 non_feed_crops_tm <- rbind(non_feed_crops_2, feed_crops_not_used_for_feed_2)
 
+#clean names to lower snake case
+
 # save csv
-write_csv(non_feed_crops_tm, paste0(save_path, "non_feed_crops_trade_matrix_w_pressures.csv"))
+write_csv(non_feed_crops_tm %>% 
+            rename(producer_iso3 = Producer_ISO3,  #clean names to lower snake case
+                   consumer_iso3 = Consumer_ISO3,
+                   item = Item), 
+          paste0(save_path, "non_feed_crops_trade_matrix_w_pressures.csv"))
 ```
 
 
@@ -824,6 +830,12 @@ df_4 <- rbind(df_3, livestock_trade_1)
 
 # check data - close to 4! We lost some pressures for which we didn't have trade/production data.
 sum(df_4$trade_cumu_pressure)
+
+# clean the names to be lower snake case
+df_4 <-  df_4 %>% 
+  rename(producer_iso3 = Producer_ISO3,
+         consumer_iso3 = Consumer_ISO3,
+         item = Item)
 
 # save csv
 write_csv(df_4, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))

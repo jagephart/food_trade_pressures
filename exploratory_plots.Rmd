@@ -14,6 +14,7 @@ Packages:
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(patchwork)
 ```
 
 
@@ -65,13 +66,13 @@ barbados_cow_meat <- trade_data_raw %>%
   mutate(percent_total_cumulative = 100*(trade_cumu_pressure/sum(trade_cumu_pressure)),
          percent_total_trade = 100*(tonnes_traded/sum(tonnes_traded))) %>% 
   arrange(desc(percent_total_cumulative)) %>% 
-  head(n = 15)
+  head(n = 10)
 
-ggplot(barbados_cow_meat,
+cow_pressure <- ggplot(barbados_cow_meat,
        aes(y = percent_total_cumulative,
            x = reorder(producer_iso3, -percent_total_trade))) +
   geom_col(position = "dodge") +
-  labs(title = "Top 15 Contributors to Cumulative Pressure from Cows Meat In Barbardos",
+  labs(title = "Top 10 Contributors to Cumulative Pressure from Cows Meat In Barbardos",
        x = "Country ISO3c",
        y = "Percent of Total Cumulative Pressure of Cows Meat") + 
   geom_text(aes(producer_iso3, 
@@ -80,11 +81,11 @@ ggplot(barbados_cow_meat,
             position = position_dodge(0.9),
             vjust = 0)
 
-ggplot(barbados_cow_meat,
+cow_trade <- ggplot(barbados_cow_meat,
        aes(y = percent_total_trade,
            x = reorder(producer_iso3, -percent_total_trade))) +
   geom_col(position = "dodge") +
-  labs(title = "Top 15 Contributors to Cows Meat Trade in Barbardos",
+  labs(title = "Top 10 Contributors to Cows Meat Trade in Barbardos",
        x = "Country ISO3c",
        y = "Percent of Cows Meat Trade") + 
   geom_text(aes(producer_iso3, 
@@ -92,6 +93,57 @@ ggplot(barbados_cow_meat,
                 label =round(percent_total_trade, 1)),
             position = position_dodge(0.9),
             vjust = 0)
+
+cow_pressure/cow_trade
+
+```
+
+## Top 30 Traded items and total traded
+
+```{r}
+top_food_pressures <- trade_data_raw %>% 
+  filter(producer_iso3 != consumer_iso3) %>% 
+  group_by(item) %>% 
+  summarise(tonnes_traded = sum(tonnes_traded),
+            trade_cumu_pressure = sum(trade_cumu_pressure),
+            trade_ghg = sum(trade_ghg),
+            trade_water = sum(trade_water),
+            trade_disturbance = sum(trade_disturbance),
+            trade_nutrient = sum(trade_nutrient)) %>% 
+  ungroup() 
+
+top_water_pressures <- top_food_pressures %>% 
+  arrange(desc(trade_water)) %>% 
+  slice(1:15)
+
+ggplot(top_water_pressures,
+       aes(x = tonnes_traded,
+           y = trade_water,
+           color = item)) +
+  geom_point()
+
+top_cumulative_pressures <- top_food_pressures %>% 
+  arrange(desc(trade_cumu_pressure)) %>% 
+  slice(1:15)
+
+efficient_foods <- top_food_pressures %>% 
+  mutate(trade_cumu_pressure = trade_cumu_pressure/tonnes_traded,
+         trade_ghg = trade_ghg/tonnes_traded,
+         trade_water = trade_water/tonnes_traded,
+         trade_disturbance = trade_disturbance/tonnes_traded,
+         trade_nutrient = trade_nutrient/tonnes_traded) %>% 
+  arrange(trade_cumu_pressure) %>% 
+  filter(!str_detect(item, pattern = "palm")) %>% 
+  slice(1:15)
+
+ggplot(efficient_foods,
+       aes(x = tonnes_traded,
+           y = trade_cumu_pressure,
+           color = item)) +
+  geom_point() +
+  labs(title = "The 15 Most Environmentally Efficient Food Items") +
+  ylab("Cumulative Pressure Per Tonne Traded") +
+  xlab("Total Tonnes Traded")
 
 ```
 

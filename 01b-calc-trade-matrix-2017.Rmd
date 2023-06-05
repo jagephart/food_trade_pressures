@@ -149,7 +149,7 @@ Information on when each country started and stopped reporting trade data.
 ```{r}
 ### Reporting Data
 # specify name of file and file path you want to read in
-reporting.data.file <- "raw_data/Code/Reporting_Dates.xls"
+reporting.data.file <- "raw_data/Codes/Reporting_Dates.xls"
 
 # read in the file
 reporting.date <- read_xls(reporting.data.file,1)
@@ -172,7 +172,7 @@ primary product name.
 ```{r}
 ### Primary item data
 # specify name of file and file path you want to read in
-item.map.file <- "raw_data/Code/primary_item_map_feed.csv"
+item.map.file <- "raw_data/Codes/primary_item_map_feed.csv"
 
 # read in data
 item.map <- fread(item.map.file, sep=",", header = T)
@@ -191,7 +191,7 @@ protein, calories, and some vitamins. This dataset does not indicate which prima
 ```{r}
 ##Conversion factors
 # specify name of file and file path you want to read in
-content.factors.file <- "raw_data/Code/content_factors_per_100g.xlsx"
+content.factors.file <- "raw_data/Codes/content_factors_per_100g.xlsx"
 
 # read in data
 # skip = 	Minimum number of rows to skip before reading anything, be it column names or data

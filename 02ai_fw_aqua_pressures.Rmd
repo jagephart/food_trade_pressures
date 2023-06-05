@@ -16,7 +16,7 @@ library(countrycode)
 File Paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fao_aquaculture/"
+fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/FAO/fao_aquaculture/"
 fw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fw_aquaculture/"
 pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"

@@ -31,6 +31,10 @@ trade_data_raw <- read_csv(file.path(trade_path, "trade_matrix_w_pressures_accou
 list_of_items <- trade_data_raw %>% 
   distinct(item)
 ```
+## Efficiencies explorations
+```{r}
+pressure_efficiencies <- read.csv("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/pressures_efficiencies.csv")
+```
 
 ## USA Cumulative Pressure
 ```{r}

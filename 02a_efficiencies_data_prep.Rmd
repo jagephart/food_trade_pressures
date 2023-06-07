@@ -1,0 +1,81 @@
+---
+title: "Pressures Efficiencies workflow"
+output: html_document
+date: "2023-06-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Packages
+```{r}
+library(tidyverse)
+
+```
+
+
+File Paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
+fw_pressures_path <-  "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04_adjust_trade_matrix_pressures_for_feed/"
+```
+
+Read in the data
+```{r}
+pressure_efficiencies_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv"))
+
+fw_pressures <- read.csv(file.path(fw_pressures_path, "fw_aquaculture_pressures.csv"))
+
+old_pressures <- read.csv(file.path(pressures_path, "rgn_raw_summary.csv"))
+
+trade_data <- read.csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
+
+
+map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "MapSPAM_to_FAO_v2.csv")) %>% 
+  select(SPAM_super, SPAM_full_name, FAO_item_code, product_description_FAOSTAT)
+
+livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "FAOSTAT_production_item_codes_8-5-2022.csv")) %>% 
+  filter(`Item Code` > 865) %>% 
+  select(item_code = `Item Code`, item = Item)
+
+```
+
+Make fish pressures one file
+```{r}
+pressure_categories <- pressure_efficiencies_raw %>% 
+  select(organism, product, category1_production) %>% 
+  distinct()
+
+  
+```
+
+Crop Pressure per Tonne
+```{r}
+crop_pressure_per_tonne <- pressure_efficiencies_raw %>% 
+  filter(product == "produce") %>% 
+  left_join(map_to_fao, by = c("organism" = "SPAM_super")) %>% 
+  select(iso3c, pressure, pressure_per_tonne, FAO_item_code, item = product_description_FAOSTAT)
+```
+
+Livestock Pressure per Tonne
+```{r}
+
+livestock_pressure_per_tonne <- pressure_efficiencies_raw %>% 
+  filter(organism %in% c("chickens", "cows", "goats", "sheep", "pigs", "buffaloes")) %>% 
+  left_join(livestock_FAO_categories)
+
+animal_trade_prop_rename <- animal_trade_prop_clean %>% 
+  mutate(item_combo = case_when(Item == "Eggs, hen, in shell" ~ "chickens_eggs",
+                                Item == "Meat, chicken" ~ "chickens_meat",
+                                Item == "Meat, cattle" ~ "cows_meat",
+                                Item == "Meat, goat" ~ "goats_meat",
+                                Item == "Milk" ~ "milk",
+                                Item == "Meat, pig" ~ "pigs_meat",
+                                Item == "Meat, sheep" ~ "sheep_meat",
+                                TRUE ~ "error"))
+```
+
+

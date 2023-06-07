@@ -21,11 +21,15 @@ raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_p
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
 fw_pressures_path <-  "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
 trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04_adjust_trade_matrix_pressures_for_feed/"
+matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
+seafood_trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 ```
 
 Read in the data
 ```{r}
-pressure_efficiencies_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv"))
+pressure_efficiencies_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv")) %>% 
+  rename(nceas_group = category1_production)
 
 fw_pressures <- read.csv(file.path(fw_pressures_path, "fw_aquaculture_pressures.csv"))
 
@@ -33,20 +37,70 @@ old_pressures <- read.csv(file.path(pressures_path, "rgn_raw_summary.csv"))
 
 trade_data <- read.csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 
+trade_matrix <- read_csv(paste0(matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
 map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "MapSPAM_to_FAO_v2.csv")) %>% 
   select(SPAM_super, SPAM_full_name, FAO_item_code, product_description_FAOSTAT)
 
+seafood_key <- read.csv(file.path(seafood_trade_path, "20230420_nceas_consumption.csv")) %>% 
+  distinct(habitat, method, nceas_group) %>% 
+  filter(nceas_group != "unknown",
+         habitat != "inland") %>% 
+  mutate(organism = case_when(nceas_group == "shrimps_prawns" ~ "shrimp",
+                              nceas_group == "benthic" ~ "benthic",
+                              nceas_group == "demersal" ~ "demersal",
+                              nceas_group == "large pelagics" ~ "large-pelagic",
+                              nceas_group == "medium pelagics" ~ "medium-pelagic",
+                              nceas_group == "small pelagics" ~ "small-pelagic",
+                              nceas_group == "reef associated" ~ "reef",
+                              nceas_group == "salmonids" ~ "salmon",
+                              nceas_group == "marine_fish_general" ~ "marine-fish-general",
+                              nceas_group == "bivalves" ~ "bivalve",
+                              nceas_group == "tuna" ~ "tuna",
+                              nceas_group == "crustaceans" ~ "crustaceans",
+                              nceas_group == "fofm" ~ "fofm")) %>% 
+  bind_rows(data.frame(habitat = "freshwater", method = "capture", nceas_group = "inland capture", organism = "fish")) %>% 
+  filter(!is.na(organism))
+  
+
+aquaculture_key <- read.csv(file.path(seafood_trade_path, "20230420_nceas_consumption.csv")) %>% 
+  distinct(habitat, method, nceas_group) %>% 
+  filter(habitat == "inland",
+         method == "aquaculture",
+         nceas_group != "unknown") %>% 
+  mutate(stressor_group = case_when(nceas_group == "miscellaneous freshwater fishes" ~ "catfish",
+                                    nceas_group == "hypoph_carp"  ~ "hypoph_carp",
+                                    nceas_group == "miscellaneous diadromous fishes"  ~ "misc_diad",
+                                    nceas_group == "oth_carp"  ~ "oth_carp",
+                                    nceas_group == "tilapias and other cichlids" ~ "tilapia",
+                                    nceas_group == "salmons, trouts, smelts" ~ "trout",
+                                    TRUE ~ as.character(NA)))
+  
+
 livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "FAOSTAT_production_item_codes_8-5-2022.csv")) %>% 
-  filter(`Item Code` > 865) %>% 
-  select(item_code = `Item Code`, item = Item)
+  filter(`Item Code` > 865,
+         `Item Code` %in% unique(trade_matrix$Item_Code)) %>% 
+  select(item_code = `Item Code`, item = Item) %>% 
+  mutate(item = tolower(item)) %>% 
+  mutate(nceas_group = case_when(str_detect(item, pattern = "eggs") ~ "chickens_eggs",
+                                 str_detect(item, pattern = "cow") & str_detect(item, pattern = "milk") ~ "cows_milk",
+                                 str_detect(item, pattern = "sheep") & str_detect(item, pattern = "milk") ~ "sheep_milk",
+                                 str_detect(item, pattern = "goat") & str_detect(item, pattern = "milk") ~ "goats_milk",
+                                 str_detect(item, pattern = "buffalo") & str_detect(item, pattern = "milk") ~ "buffaloes_milk",
+                                 str_detect(item, pattern = "cattle") & str_detect(item, pattern = "meat") ~ "cows_meat",
+                                 str_detect(item, pattern = "sheep") & str_detect(item, pattern = "meat") ~ "sheep_meat",
+                                 str_detect(item, pattern = "goat") & str_detect(item, pattern = "meat") ~ "goats_meat",
+                                 str_detect(item, pattern = "pig") & str_detect(item, pattern = "meat") ~ "pigs_meat",
+                                 str_detect(item, pattern = "chicken") & str_detect(item, pattern = "meat") ~ "chickens_meat")) 
+  
+
 
 ```
 
 Make fish pressures one file
 ```{r}
 pressure_categories <- pressure_efficiencies_raw %>% 
-  select(organism, product, category1_production) %>% 
+  select(organism, product, nceas_group = category1_production) %>% 
   distinct()
 
   
@@ -57,7 +111,8 @@ Crop Pressure per Tonne
 crop_pressure_per_tonne <- pressure_efficiencies_raw %>% 
   filter(product == "produce") %>% 
   left_join(map_to_fao, by = c("organism" = "SPAM_super")) %>% 
-  select(iso3c, pressure, pressure_per_tonne, FAO_item_code, item = product_description_FAOSTAT)
+  select(iso3c, nceas_group, item_code = FAO_item_code, item = product_description_FAOSTAT, pressure, pressure_per_tonne) %>% 
+  mutate(food_group = "crops")
 ```
 
 Livestock Pressure per Tonne
@@ -65,17 +120,46 @@ Livestock Pressure per Tonne
 
 livestock_pressure_per_tonne <- pressure_efficiencies_raw %>% 
   filter(organism %in% c("chickens", "cows", "goats", "sheep", "pigs", "buffaloes")) %>% 
-  left_join(livestock_FAO_categories)
+  left_join(livestock_FAO_categories, by = "nceas_group") %>% 
+  select(iso3c, nceas_group, item_code, item, pressure, pressure_per_tonne) %>% 
+  mutate(food_group = "livestock")
 
-animal_trade_prop_rename <- animal_trade_prop_clean %>% 
-  mutate(item_combo = case_when(Item == "Eggs, hen, in shell" ~ "chickens_eggs",
-                                Item == "Meat, chicken" ~ "chickens_meat",
-                                Item == "Meat, cattle" ~ "cows_meat",
-                                Item == "Meat, goat" ~ "goats_meat",
-                                Item == "Milk" ~ "milk",
-                                Item == "Meat, pig" ~ "pigs_meat",
-                                Item == "Meat, sheep" ~ "sheep_meat",
-                                TRUE ~ "error"))
+na_test <- livestock_pressure_per_tonne %>% 
+  filter(is.na(nceas_group))
+
+```
+
+Fisheries and Mariculture Pressure per Tonne
+```{r}
+fisheries_pressure_per_tonne <- pressure_efficiencies_raw %>% 
+  filter(organism %in% c("benthic", "demersal", "fofm", "large-pelagic", 
+                         "medium-pelagic", "small-pelagic", "reef", "fish", 
+                         "salmon", "marine-fish-general", "bivalve", 
+                         "shrimp", "tuna", "crustaceans")) %>% 
+  select(-nceas_group) %>% 
+  left_join(seafood_key, by = "organism") %>% 
+  select(iso3c, nceas_group, pressure, pressure_per_tonne) %>% 
+  mutate(food_group = "fisheries and mariculture")
+```
+
+Inland aquaculture Pressure per Tonne
+```{r}
+fw_aquaculture_pressures_per_tonne <- fw_pressures %>% 
+  mutate(stressor_group = str_replace(stressor_group, pattern = "milkfish", replacement = "misc_diad")) %>% 
+  left_join(aquaculture_key, by = "stressor_group") %>% 
+  select(iso3c, nceas_group, pressure, pressure_per_tonne) %>% 
+  mutate(food_group = "fw_aquaculture")
+
+```
+
+Bind pressures per tonne data
+```{r}
+pressures_per_tonne <- crop_pressure_per_tonne %>% 
+  bind_rows(livestock_pressure_per_tonne) %>% 
+  bind_rows(fisheries_pressure_per_tonne) %>% 
+  bind_rows(fw_aquaculture_pressures_per_tonne)
+
+write.csv(pressures_per_tonne, file = paste0(save_path, "pressures_per_tonne.csv"), row.names = FALSE)
 ```
 
 

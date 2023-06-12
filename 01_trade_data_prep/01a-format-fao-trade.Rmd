@@ -44,32 +44,62 @@ rm(k_trade_matrix)
 #read in recently downloaded FAO detailed trade matrix data
 fao_trade_matrix_raw <- fread(paste0(fao_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv"))
 
+fao_trade_quantity_per_year <- function(fao_trade_matrix_raw, year) {
+  # subset columns to match Kastner data columns and subset to only 2017
+  trade_matrix <- fao_trade_matrix_raw %>% 
+  select(-c(`Reporter Country Code (M49)`, `Partner Country Code (M49)`, `Item Code (CPC)`)) %>% 
+  filter(Year == year)
+  
+  # want to prioritize import data and only gapfill with export data
+  # from Kastner paper:
+  # "There are, for example, sometimes differences between a reported import from country A importing from country B, and the corresponding report of an export from country B to country A. There are also sometimes trade flows missing from reports (Gehlhar 1996). To harmonize these reports, we decided to prioritize import reports as being more reliable and only used reported exports to fill missing flows. This is a reasonable assumption and feasible for such a huge dataset."
+  
+  # separate import and export data into separate dataframes
+  # rename export data so it can be merged with import data, make the columns match up and switch the reporter and partner country names
+  export <- trade_matrix %>% 
+    filter(`Element Code` == 5910) %>% 
+    rename("Partner Countries_1" = "Reporter Countries") %>%
+    rename("Partner Country Code_1" = "Reporter Country Code") %>% 
+    rename("Reporter Countries" = "Partner Countries") %>% 
+    rename("Reporter Country Code" = "Partner Country Code") %>% 
+    rename("Partner Countries" = "Partner Countries_1") %>% 
+    rename("Partner Country Code" = "Partner Country Code_1") %>% 
+    rename("Value_gapfill" = Value) %>% 
+    rename("Flag_gapfill" = Flag) %>% 
+    select(-c("Element Code", "Element"))
+  
+  import <- trade_matrix %>% 
+    filter(`Element Code` == 5610)
 
-# subset columns to match Kastner data
-trade_matrix <- fao_trade_matrix_raw %>% 
+  # join import and export data back together 
+  import_export <- full_join(import, export, by = c("Reporter Countries", "Reporter Country Code", "Partner Countries", "Partner Country Code", "Item Code", "Item", "Year Code", "Year", "Unit"))
+  
+  # fill in missing import quantities with export quantities and make note in Flag column where that's done ("gapfill")
+  trade_df_gapfilled <- import_export %>% 
+    mutate(Value = ifelse(is.na(Value), Value_gapfill, Value)) %>% 
+    mutate(Flag = ifelse(is.na(Flag), "gapfill", Flag)) %>% 
+    mutate(`Element Code` = ifelse(is.na(`Element Code`), 5610, `Element Code`)) %>% 
+    mutate(Element = ifelse(is.na(Element), "Import Quantity", Element)) %>% 
+    select(-c(Value_gapfill, Flag_gapfill))
+  
+  return(trade_df_gapfilled)
+}
+```
+
+
+```{r}
+# subset columns to match Kastner data columns and subset to only 2017
+trade_matrix_2017 <- fao_trade_matrix_raw %>% 
   select(-c(`Reporter Country Code (M49)`, `Partner Country Code (M49)`, `Item Code (CPC)`)) %>% 
   filter(Year == 2017)
-
-# look at NAs - only in dollars (e.g., export value) rather than amount (e.g., export quantity)? - nope
-na_values <- trade_matrix %>% 
-  filter(Year == 2017) %>% 
-  filter(is.na(Value))
-table(na_values$Unit) # look at tonnes quantity
-
-# created this smaller dataset to test on, this all looked good with spot checks
-test1 <- trade_matrix %>%
- filter(Year == 2017) %>%
- filter(`Reporter Countries` == "United States of America" | `Reporter Countries` == "Brazil") %>%
- filter(`Partner Countries` == "United States of America" | `Partner Countries` == "Brazil") %>%
- filter(Unit == "tonnes")
 
 # want to prioritize import data and only gapfill with export data
 # from Kastner paper:
 # "There are, for example, sometimes differences between a reported import from country A importing from country B, and the corresponding report of an export from country B to country A. There are also sometimes trade flows missing from reports (Gehlhar 1996). To harmonize these reports, we decided to prioritize import reports as being more reliable and only used reported exports to fill missing flows. This is a reasonable assumption and feasible for such a huge dataset."
 
 # separate import and export data into separate dataframes
-# rename export data so it can be merged with import data
-export <- trade_matrix %>% 
+# rename export data so it can be merged with import data, make the columns match up and switch the reporter and partner country names
+export <- trade_matrix_2017 %>% 
   filter(`Element Code` == 5910) %>% 
   rename("Partner Countries_1" = "Reporter Countries") %>%
   rename("Partner Country Code_1" = "Reporter Country Code") %>% 
@@ -77,30 +107,32 @@ export <- trade_matrix %>%
   rename("Reporter Country Code" = "Partner Country Code") %>% 
   rename("Partner Countries" = "Partner Countries_1") %>% 
   rename("Partner Country Code" = "Partner Country Code_1") %>% 
-  rename("Value_gf" = Value) %>% 
-  rename("Flag_gf" = Flag) %>% 
+  rename("Value_gapfill" = Value) %>% 
+  rename("Flag_gapfill" = Flag) %>% 
   select(-c("Element Code", "Element"))
 
-import <- trade_matrix %>% 
+import <- trade_matrix_2017 %>% 
   filter(`Element Code` == 5610)
 
 # join import and export data back together 
 import_export <- full_join(import, export, by = c("Reporter Countries", "Reporter Country Code", "Partner Countries", "Partner Country Code", "Item Code", "Item", "Year Code", "Year", "Unit"))
 
 # fill in missing import quantities with export quantities and make note in Flag column where that's done ("gapfill")
-trade_df <- import_export %>% 
-  mutate(Value = ifelse(is.na(Value), Value_gf, Value)) %>% 
+trade_df_2017 <- import_export %>% 
+  mutate(Value = ifelse(is.na(Value), Value_gapfill, Value)) %>% 
   mutate(Flag = ifelse(is.na(Flag), "gapfill", Flag)) %>% 
   mutate(`Element Code` = ifelse(is.na(`Element Code`), 5610, `Element Code`)) %>% 
   mutate(Element = ifelse(is.na(Element), "Import Quantity", Element)) %>% 
-  select(-c(Value_gf, Flag_gf))
+  select(-c(Value_gapfill, Flag_gapfill))
 
-length(which(is.na(trade_df$Value))) #15523
+length(which(is.na(trade_df_2017$Value))) #15523
 
 # save df - can take out NAs later
-write_csv(trade_df, paste0(save_path,"Trade_2017_DetailedTradeMatrix_Gapfilled_7_14_22_formatted.csv"))
+write_csv(trade_df_2017, paste0(save_path,"Trade_2017_DetailedTradeMatrix_Gapfilled_7_14_22_formatted.csv"))
+```
 
 
+```{r}
 #########################################################################################
 # checking where these NA values came in by using a test dataset with only USA and Brazil
 test1 <- h_trade_matrix_1 %>% 

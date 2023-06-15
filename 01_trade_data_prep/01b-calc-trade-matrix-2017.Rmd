@@ -543,7 +543,11 @@ primary.conversion <- function(conversion_map, conversion_option, display){
 Join the trade data with the conversion factor data (get this from `primary.conversion` function)
 ```{r}
 #### map to primary equivalents ####
-trade.data <- left_join(trade.data, primary.conversion(item.map, conversion_opt, T), by=c("Item_Code"="FAO_code"))
+trade.data <- left_join(trade.data, 
+                        primary.conversion(conversion_map = item.map,
+                                           conversion_option = conversion_opt, 
+                                           display = T), 
+                        by=c("Item_Code"="FAO_code"))
 ```
 
 
@@ -587,7 +591,12 @@ sugar.crop.codes <- c(156,157)
 
 # filter production data (tonnes production for each country) to only include sugar products
 # join filtered production data with the conversion factor data (get this from `primary.conversion` function)
-sugar.production <- left_join(filter(production.all, Item_Code %in% sugar.crop.codes), primary.conversion(item.map, conversion_opt, F), by = c("Item_Code" = "FAO_code"))
+sugar.production <- left_join(filter(production.all, 
+                                     Item_Code %in% sugar.crop.codes), 
+                              primary.conversion(conversion_map = item.map, 
+                                                 conversion_option = conversion_opt, 
+                                                 display = F), 
+                              by = c("Item_Code" = "FAO_code"))
 
 # Create a new column in the sugar data called `Value.new`, which is the value of 
 # traded sugar (tonnes) times the conversion factor.
@@ -896,7 +905,6 @@ matrix.operation <- function(item_Code, year){
 ```
 
 
-
 Calculate consumption for each product/country based on country of product origin
 ```{r}
 # for loop for each row in q (each primary item code traded in selected year)
@@ -907,7 +915,8 @@ for (i in (1:nrow(q))){
   year <- as.numeric(q[i,1])
   # bind the transformed data (df with 1 row, all 0s, like an empty df) with the 
   # consumption data for each country according to the country of origin (matrix function)
-  transformed.data <- rbindlist(list(transformed.data, matrix.operation(item_Code, year)))
+  transformed.data <- rbindlist(list(transformed.data, 
+                                     matrix.operation(item_Code, year)))
 }
 
 # remove rows where the consumer_country_code = 0 (4 instances for 2017)
@@ -937,7 +946,7 @@ table(missing.prod.data$Item)
 
 # and add them to the diagonal
 add.data <- missing.prod.data %>%
-  #c reate new columns for producing and exporting countries that are the country's area code
+  # create new columns for producing and exporting countries that are the country's area code
   # these will be the same because it is just produced, not traded, so should be ex. Finland with Finland
   mutate(Consumer_Country_Code = Area_Code, Producer_Country_Code = Area_Code) %>%
   select(Consumer_Country_Code, Producer_Country_Code, Value, Item_Code, Year)
@@ -1075,7 +1084,7 @@ fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by
 
 
 Code below is checking Kastner calculations with FAO production data.
-This is all code I wrote, none of this is from the Kastner paper.
+This is all code I (Haley) wrote, none of this is from the Kastner paper.
 
 Checking data - sum amount each crop a country trades (assumed that they produced it in this transformed.data df)
 and compare values to FAOSTAT production data

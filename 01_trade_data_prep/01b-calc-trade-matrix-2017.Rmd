@@ -316,7 +316,7 @@ rm() function in R Language is used to delete objects from the memory.
 It can be used with ls() function to delete all objects.
 Delete the individual production dataframes from the environment - they are all in production.all
 ```{r}
-rm(list= c("production.crops", "production.animals", "production.offals"))
+# rm(list= c("production.crops", "production.animals", "production.offals"))
 ```
 
 

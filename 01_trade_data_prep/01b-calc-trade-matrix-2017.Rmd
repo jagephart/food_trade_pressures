@@ -1080,6 +1080,13 @@ fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by
 ```
 
 
+```{r}
+negative_trade <- transformed.data %>% 
+  filter(Value < -100)
+
+ggplot2::ggplot(data = negative_trade,
+                aes(x = Value)) + geom_histogram()
+```
 
 
 

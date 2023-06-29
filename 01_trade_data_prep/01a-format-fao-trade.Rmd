@@ -20,6 +20,7 @@ library(data.table)
 raw_folder_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 kastner_data_path <- paste0(raw_folder_path, "kastner_2022/")
 fao_data_path <- paste0(raw_folder_path, "FAO/2017_FAO_data/")
+production_data_path <- paste0(raw_folder_path, "FAO/production_data/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01a_format_fao_trade/"
 ```
 
@@ -45,7 +46,7 @@ Trade data - Gapfill imports with export data
 fao_trade_matrix_raw <- fread(paste0(fao_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv"))
 
 fao_trade_quantity_gapfill <- function(fao_trade_matrix_raw, year) {
-  # subset columns to match Kastner data columns and subset to only 2017
+  # subset columns to match Kastner data columns
   trade_matrix <- fao_trade_matrix_raw %>% 
   select(-c(`Reporter Country Code (M49)`, `Partner Country Code (M49)`, `Item Code (CPC)`)) %>% 
   filter(Year == year)
@@ -87,45 +88,60 @@ fao_trade_quantity_gapfill <- function(fao_trade_matrix_raw, year) {
 ```
 
 
-Gapfill and save as csv for 2016, 2017, 2018 data
+Gapfill and save as csv for 2015, 2016, 2017, 2018, 2019 data
 ```{r}
+# 2015 data
+trade_2015 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix_raw,
+                                         year = 2015)
+
+# save df - can take out NAs later
+write_csv(trade_2015, paste0(save_path,"Trade_2015_DetailedTradeMatrix_Gapfilled_formatted.csv"))
+
 # 2016 data
 trade_2016 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix_raw,
-                                        year = 2016)
+                                         year = 2016)
 
 # save df - can take out NAs later
 write_csv(trade_2016, paste0(save_path,"Trade_2016_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 
 # 2017 data
 trade_2017 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix_raw,
-                                        year = 2017)
+                                         year = 2017)
 
 # save df - can take out NAs later
 write_csv(trade_2017, paste0(save_path,"Trade_2017_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 
 # 2018 data
 trade_2018 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix_raw,
-                                        year = 2018)
+                                         year = 2018)
 
 # save df - can take out NAs later
 write_csv(trade_2018, paste0(save_path,"Trade_2018_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 
+# 2019 data
+trade_2019 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix_raw,
+                                         year = 2019)
+
+# save df - can take out NAs later
+write_csv(trade_2019, paste0(save_path,"Trade_2019_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 ```
 
 
 
-Average trade across three years
+Average trade across five years
 ```{r}
 # get the unique values of this row to add back in later
 unique(trade_2016$`Element Code`)
 unique(trade_2016$Element)
 unique(trade_2016$Unit)
 
-# rbind trade df for three years of interest
-average_trade <- rbind(trade_2016,
+# rbind trade df for five years of interest
+average_trade <- rbind(trade_2015,
+                       trade_2016,
                        trade_2017,
-                       trade_2018) %>%
-  # group by all columns of specificity except for year
+                       trade_2018,
+                       trade_2019) %>%
+  # group by all columns of specificity except for year and description columns
   group_by(`Reporter Country Code`,
            `Reporter Countries`,
            `Partner Country Code`,
@@ -134,6 +150,8 @@ average_trade <- rbind(trade_2016,
            Item) %>% 
   summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
   ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner matrix
   mutate(`Element Code` = 5610,
          Element = "Import Quantity",
          Unit = "tonnes") 
@@ -141,11 +159,18 @@ average_trade <- rbind(trade_2016,
 # Test where the NaN are coming from in the Value_average column
 NaN_test <- average_trade %>%  
   filter(is.nan(Value_average))
-# NaN only occur in rows where the Value is NA
+# NaN only occur in rows where the Value is NA so there is nothing we can really do about this for now
 # Also is only for 20,000 rows out of almost two million observations so can probably ignore and filter for these later
 
 write_csv(average_trade, paste0(save_path,"Trade_average_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 
+rm(fao_trade_matrix_raw,
+   trade_2015,
+   trade_2016,
+   trade_2017,
+   trade_2018,
+   trade_2019,
+   NaN_test)
 ```
 
 
@@ -155,7 +180,7 @@ Data in the bulk download files is shown pivoted by years (wide format), except 
 
 Kastner FAO production data is normalized data (long format) separated into crops, processed crops, and primary livestock. We can download these distinct categories from the FAO website if we do not use the bulk download option. Downloading selected options from the FAO website provides the data in long format (i.e. normalized).
 
-FAO products included in primary crops, processed crops, primary livestock, and processed livestock:
+FAO products included in primary crops, processed crops, primary livestock, and processed livestock.
 Crop and livestock statistics are recorded for 278 products, covering the following categories: 
 1) CROPS PRIMARY: Cereals, Citrus Fruit, Fibre Crops, Fruit, Oil Crops, Oil Crops and Cakes in Oil Equivalent, Pulses, Roots and Tubers, Sugar Crops, Treenuts and Vegetables. Data are expressed in terms of area harvested, production quantity and yield. Cereals: Area and production data on cereals relate to crops harvested for dry grain only. Cereal crops harvested for hay or harvested green for food, feed or silage or used for grazing are therefore excluded. 
 2) CROPS PROCESSED: Beer of barley; Cotton lint; Cottonseed; Margarine, short; Molasses; Oil, coconut (copra); Oil, cottonseed; Oil, groundnut; Oil, linseed; Oil, maize; Oil, olive, virgin; Oil, palm; Oil, palm kernel; Oil, rapeseed; Oil, safflower; Oil, sesame; Oil, soybean; Oil, sunflower; Palm kernels; Sugar Raw Centrifugal; Wine. 
@@ -198,10 +223,30 @@ k_production_livestock_primary_17 <- k_production_livestock_primary %>%
 rm(k_production_livestock_primary)
 ```
 
+Function to pull individual production year data for each category (crops, processed crops, livestock)
+```{r}
+fao_production_cleaning <- function(data_folder, year){
+  production_data <- fread(paste0(data_folder, "Production_Crops_", year, "_E_All_Data_(Normalized)_7_20_22.csv"))
+}
+```
+
+#### New Data
+```{r}
+fao_production_crops_raw_new <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv"))
+
+test_2017 <- fao_production_crops_raw_new %>% 
+  filter(Year == 2017)
+
+compare <- fao_production_crops_raw %>% 
+  filter(Element == "Production" | Element == "Yield")
+```
+
+
+#### Old Method
 2017 FAO data - Production Crops
 ```{r}
 # read in recently downloaded production crops data from FAO website
-fao_production_crops_raw <- fread(paste0(fao_data_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
 
 # format data
 production_crops <- fao_production_crops_raw %>% 
@@ -217,7 +262,7 @@ write_csv(production_crops, paste0(save_path, "Production_Crops_2017_E_All_Data_
 2017 FAO data - Production Processed Crops
 ```{r}
 # read in recently downloaded production crops processed data from FAO website
-fao_production_crops_processed_raw <- fread(paste0(fao_data_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fao_production_crops_processed_raw <- fread(paste0(production_data_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22.csv"))
 
 # format data
 production_crops_processed <- fao_production_crops_processed_raw %>% 
@@ -248,23 +293,28 @@ production_livestock_primary <- fao_production_livestock_primary_raw %>%
 write_csv(production_livestock_primary, paste0(save_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
 ```
 
-
+#### Alternative method?
+It looks like Haley was able to bulk download all of the years from 2015-2019 into one table for production of crops, processed crops, and livestock. A 
 Read in 2015 - 2019 production data downloaded from FAO website
 ```{r}
 # # all crops (primary and procesed)
-# h_production_crops <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_Crops_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv")
+h_production_crops <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_Crops_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv") %>% 
+  filter(Year == 2017)
+
 # # processed crops only
-# h_production_crops_processed <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_CropsProcessed_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv")
-# # livestock - primary
-# h_production_livestock_primary <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_LivestockPrimary_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv")
-# h_production_livestock_primary$`Item Code (CPC)` <- as.character(h_production_livestock_primary$`Item Code (CPC)`)
-# 
-# # note for crops, item code and area code parenthetical are different than 2017 download
-# # previously we had item code in FAO units but now we have item code in CPC units
-# # read in item code definitions from FAO
-# item_code <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/FAO_item_code_defintions_dl_11_28_22.csv")
-# item_code_1 <- item_code %>% 
-#   select(`Item Code`, `CPC Code`)
+ h_production_crops_processed <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_CropsProcessed_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv") %>% 
+  filter(Year == 2017)
+ 
+# livestock - primary
+h_production_livestock_primary <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_LivestockPrimary_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv")
+h_production_livestock_primary$`Item Code (CPC)` <- as.character(h_production_livestock_primary$`Item Code (CPC)`)
+
+# note for crops, item code and area code parenthetical are different than 2017 download
+# previously we had item code in FAO units but now we have item code in CPC units
+# read in item code definitions from FAO
+item_code <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/FAO_item_code_defintions_dl_11_28_22.csv")
+item_code_1 <- item_code %>%
+  select(`Item Code`, `CPC Code`)
 ```
 
 

@@ -233,6 +233,85 @@ rm(k_production_livestock_primary)
 ```
 
 #### New Data
+All Data Bulk Download
+```{r}
+all_production_raw <- fread(paste0(production_data_path, "Production_Crops_Livestock_E_All_Data_(Normalized)_06_29_2023.csv"))
+
+# clean raw data to simplify
+all_production <- all_production_raw %>% 
+  # Filter only for years of interest
+  filter(Year %in% c(2015, 2016, 2017, 2018, 2019)) %>% 
+  # remove extra area code and item code columns, remaining are in FAO format
+  select(-`Area Code (M49)`, - `Item Code (CPC)`) %>% 
+  # Only need production data in tonnes so filter for element code 5510
+  filter(`Element Code` == 5510,
+         # remove regions and China aggregated areas
+         `Area Code` <= 300)
+
+# Take average over years 
+all_production_average <- all_production %>% 
+  # group by all columns of specificity except for year and description columns
+  group_by(`Area Code`,
+           Area,
+           `Item Code`,
+           Item,
+           `Element Code`,
+           Element) %>% 
+  # Value_average is the mean of the value column for that group
+  summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner crop production data
+  mutate(`Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = "tonnes",
+         Flag = NA) %>% 
+  relocate(Value_average, .after = Unit)
+
+units_check <- all_production %>% 
+  distinct(`Element Code`, Element, Unit)
+
+production_items <- all_production %>% 
+  distinct(`Item Code`, Item)
+```
+
+Make lists of products for crops, crops processed, and livestock primary based on the "Items" groupings on FAO.
+```{r}
+crops_list <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv")) %>% 
+  distinct(`Item Code (FAO)`, Item)
+
+crops_processed_list <- fread(paste0(production_data_path, "Production_CropsProcessed_2015_2019_FAOSTAT_6_29_2023.csv")) %>% 
+  distinct(`Item Code (FAO)`, Item)
+
+livestock_primary_list <- fread(paste0(production_data_path, "Production_LivestockPrimary_2015_2019_FAOSTAT_6_29_2023.csv")) %>% 
+  distinct(`Item Code (FAO)`, Item)
+```
+
+Separate `all_production_average` by the appropriate groupings of crops, crops processed, and livestock primary.
+```{r}
+# separate crops production data
+crops_production_average <- all_production_average %>% 
+  filter(`Item Code` %in% c(crops_list$`Item Code (FAO)`))
+
+# save crops production data 
+write_csv(crops_production_average, paste0(save_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
+
+# separate processed crops production data
+processed_crops_production_average <- all_production_average %>% 
+  filter(`Item Code` %in% c(crops_processed_list$`Item Code (FAO)`))
+
+# save crops production data 
+write_csv(processed_crops_production_average, paste0(save_path, "Production_CropsProcessed_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
+
+# separate processed crops production data
+livestock_primary_production_average <- all_production_average %>% 
+  filter(`Item Code` %in% c(livestock_primary_list$`Item Code (FAO)`))
+
+# save crops production data 
+write_csv(livestock_primary_production_average, paste0(save_path, "Production_LivestockPrimary_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
+```
+
+
 2015-2019 Average Crop Production Data
 ```{r}
 fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv"))

@@ -21,6 +21,7 @@ raw_folder_path <- "/home/shares/food-systems/social_justice_projects/food_trade
 kastner_data_path <- paste0(raw_folder_path, "kastner_2022/")
 fao_data_path <- paste0(raw_folder_path, "FAO/2017_FAO_data/")
 production_data_path <- paste0(raw_folder_path, "FAO/production_data/")
+fb_data_path <- paste0(raw_folder_path, "FAO/food_balance_sheets/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01a_format_fao_trade/"
 ```
 
@@ -180,6 +181,14 @@ Data in the bulk download files is shown pivoted by years (wide format), except 
 
 Kastner FAO production data is normalized data (long format) separated into crops, processed crops, and primary livestock. We can download these distinct categories from the FAO website if we do not use the bulk download option. Downloading selected options from the FAO website provides the data in long format (i.e. normalized).
 
+Downloading production data from FAO website to match Kastner data. Download must be done in seperate batches for Crops Primary, Crops Processed, and Livestock Primary or it does not work on the FAO website.
+https://www.fao.org/faostat/en/#data/QCL
+- Select all countries. For coding system select FAO.
+- Select element: production quantity 
+- Select all Crops Primary, Crops Processed, or Livestock Primary
+- Select 2015, 2016, 2017, 2018, and 2019
+- Download
+
 FAO products included in primary crops, processed crops, primary livestock, and processed livestock.
 Crop and livestock statistics are recorded for 278 products, covering the following categories: 
 1) CROPS PRIMARY: Cereals, Citrus Fruit, Fibre Crops, Fruit, Oil Crops, Oil Crops and Cakes in Oil Equivalent, Pulses, Roots and Tubers, Sugar Crops, Treenuts and Vegetables. Data are expressed in terms of area harvested, production quantity and yield. Cereals: Area and production data on cereals relate to crops harvested for dry grain only. Cereal crops harvested for hay or harvested green for food, feed or silage or used for grazing are therefore excluded. 
@@ -221,13 +230,6 @@ k_production_livestock_primary_17 <- k_production_livestock_primary %>%
   head()
 
 rm(k_production_livestock_primary)
-```
-
-Function to pull individual production year data for each category (crops, processed crops, livestock)
-```{r}
-fao_production_cleaning <- function(data_folder, year){
-  production_data <- fread(paste0(data_folder, "Production_Crops_", year, "_E_All_Data_(Normalized)_7_20_22.csv"))
-}
 ```
 
 #### New Data
@@ -339,208 +341,6 @@ write_csv(production_livestock_primary_average, paste0(save_path, "Production_Li
 ```
 
 
-
-#### Old Method
-2017 FAO data - Production Crops
-```{r}
-# # read in recently downloaded production crops data from FAO website
-# fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
-# 
-# # format data
-# production_crops <- fao_production_crops_raw %>% 
-#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   #rename variables to match Kastner
-#   rename(`Item Code` = `Item Code (FAO)`) %>% 
-#   relocate(c(`Item Code`, Item), .before = `Element Code`)                      #change variable order to match Kastner
-# 
-# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-# write_csv(production_crops, paste0(save_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
-```
-
-2017 FAO data - Production Processed Crops
-```{r}
-# # read in recently downloaded production crops processed data from FAO website
-# fao_production_crops_processed_raw <- fread(paste0(production_data_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22.csv"))
-# 
-# # format data
-# production_crops_processed <- fao_production_crops_processed_raw %>% 
-#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   # rename variables to match Kastner
-#   rename(`Item Code` = `Item Code (FAO)`)  %>% 
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>%                  # change variable order to match Kastner
-#   select(-`Flag Description`)                                                   # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# 
-# write_csv(production_crops_processed, paste0(save_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
-```
-
-2017 FAO data - Production Livestock
-```{r}
-# #read in recently downloaded production livestock data from FAO website
-# fao_production_livestock_primary_raw <- fread(paste0(production_data_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22.csv"))
-# 
-# # format data
-# production_livestock_primary <- fao_production_livestock_primary_raw %>% 
-#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   #rename variables to match Kastner
-#   rename(`Item Code` = `Item Code (FAO)`) %>% 
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
-#   select(-`Flag Description`)                                                   #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# # Item codes are slightly different for some rows, but these are going to be subset just to tonnes anyways
-# # and the rows with tonnes as the unit all look good.
-# 
-# write_csv(production_livestock_primary, paste0(save_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
-```
-
-#### Alternative method?
-It looks like Haley was able to bulk download all of the years from 2015-2019 into one table for production of crops, processed crops, and livestock. A 
-Read in 2015 - 2019 production data downloaded from FAO website
-```{r}
-# # all crops (primary and procesed)
-h_production_crops <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_Crops_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv") %>% 
-  filter(Year == 2017)
-
-# # processed crops only
- h_production_crops_processed <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_CropsProcessed_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv") %>% 
-  filter(Year == 2017)
- 
-# livestock - primary
-h_production_livestock_primary <- fread("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/Production_LivestockPrimary_2015_2019_E_All_Data_(Normalized)_dl_11_28_22.csv")
-h_production_livestock_primary$`Item Code (CPC)` <- as.character(h_production_livestock_primary$`Item Code (CPC)`)
-
-# note for crops, item code and area code parenthetical are different than 2017 download
-# previously we had item code in FAO units but now we have item code in CPC units
-# read in item code definitions from FAO
-item_code <- read_csv("/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/FAO_production_data/FAO_item_code_defintions_dl_11_28_22.csv")
-item_code_1 <- item_code %>%
-  select(`Item Code`, `CPC Code`)
-```
-
-
-2015 production data
-```{r}
-# h_production_crops_2 <- h_production_crops %>% 
-#   filter(Year == 2015) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) #change variable order to match Kastner
-# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-# write_csv(h_production_crops_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2015/Production_Crops_2015_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_crops_processed_2 <- h_production_crops_processed %>% 
-#   filter(Year == 2015) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% #change variable order to match Kastner
-#   select(-`Flag Description`) # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_crops_processed_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2015/Production_CropsProcessed_2015_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_livestock_primary_2 <- h_production_livestock_primary %>% 
-#   filter(Year == 2015) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
-#   select(-`Flag Description`) #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_livestock_primary_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2015/Production_LivestockPrimary_2015_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-```
-
-
-2016 production data
-```{r}
-# h_production_crops_2 <- h_production_crops %>% 
-#   filter(Year == 2016) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) #change variable order to match Kastner
-# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-# write_csv(h_production_crops_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2016/Production_Crops_2016_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_crops_processed_2 <- h_production_crops_processed %>% 
-#   filter(Year == 2016) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% #change variable order to match Kastner
-#   select(-`Flag Description`) # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_crops_processed_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2016/Production_CropsProcessed_2016_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_livestock_primary_2 <- h_production_livestock_primary %>% 
-#   filter(Year == 2016) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
-#   select(-`Flag Description`) #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_livestock_primary_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2016/Production_LivestockPrimary_2016_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-```
-
-
-2018 production data
-```{r}
-# h_production_crops_2 <- h_production_crops %>% 
-#   filter(Year == 2018) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) #change variable order to match Kastner
-# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-# write_csv(h_production_crops_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2018/Production_Crops_2018_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_crops_processed_2 <- h_production_crops_processed %>% 
-#   filter(Year == 2018) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% #change variable order to match Kastner
-#   select(-`Flag Description`) # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_crops_processed_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2018/Production_CropsProcessed_2018_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_livestock_primary_2 <- h_production_livestock_primary %>% 
-#   filter(Year == 2018) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
-#   select(-`Flag Description`) #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_livestock_primary_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2018/Production_LivestockPrimary_2018_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-```
-
-
-2019 production data
-```{r}
-# h_production_crops_2 <- h_production_crops %>% 
-#   filter(Year == 2019) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) #change variable order to match Kastner
-# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-# write_csv(h_production_crops_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2019/Production_Crops_2019_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_crops_processed_2 <- h_production_crops_processed %>% 
-#   filter(Year == 2019) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% #change variable order to match Kastner
-#   select(-`Flag Description`) # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_crops_processed_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2019/Production_CropsProcessed_2019_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-# 
-# h_production_livestock_primary_2 <- h_production_livestock_primary %>% 
-#   filter(Year == 2019) %>%
-#   left_join(item_code_1,  by = c("Item Code (CPC)" = "CPC Code")) %>% 
-#   select(-c(1:2, 7)) %>% #remove first 2 columns to match Kastner
-#   rename(`Area Code` = `Area Code (M49)`) %>% #rename variables to match Kastner
-#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
-#   select(-`Flag Description`) #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# write_csv(h_production_livestock_primary_2, "/home/shares/food-systems/social_justice_projects/food_trade_ej/kastner_2022_data_code/Data_2019/Production_LivestockPrimary_2019_E_All_Data_(Normalized)_11_28_22_formatted.csv")
-```
-
-
-
 ### Food balances (Kastner calls these Commodity balances, but they are definitely the FAO food balances)
 
 There are differences in values for food balances between the old and new methodology. However, the data seem to be displayed in the same format with the same variables, so it should be fine to use the new methodology for 2017 with the Kastner script.
@@ -551,15 +351,10 @@ Kastner has detailed data for all items displayed in tonnes rather than in 1000 
 
 Downloading food balances for crops from FAO website to match Kastner data
 https://www.fao.org/faostat/en/#data/FBS
--select all countries
--select elements: domestic supply quantity, export quantity, feed, food, import quantity, losses, other uses (non-food), processed, production quantity, seed, stock variation
--select all crop and processed items (includes infant food, miscellaneous, alcohol (non-food), etc.) that are not animal products (meat, eggs, aquatic plants, aquatic products, wool, silk, honey, etc.)
--select 2017
+- From "Bulk Downloads" select "All Data Normalized"
+- .csv file labeled `FoodBalanceSheets_E_All_Data_(Normalized)` is our file of interest
 
-To download commodity balances for livestock and fish, select the same conditions as above, but the opposite items (select animal products but not crops).
-
-Compare commodity balances FAO data - Kastner vs. what I just downloaded.
-Convert values to tonnes (currently in 1,000 tonnes).
+The bulk download will need to be cleaned to match the Kastner data. Convert values to tonnes (currently in 1,000 tonnes). Based on the Kastner script the Food Balance Data is used to fill in offals and sugars data so we only need element codes 5511 for Production (offals) and 5131 for Processing (sugar). Based on this only these element codes are being kept and then averaged.
 
 Food balance data - Kastner data to match FAO data with
 ```{r}
@@ -570,6 +365,13 @@ k_comm_bal_crops_13 <- k_comm_bal_crops %>%
   filter(Year == 2013) %>% 
   head()
 
+# Make list of crop items from FAO included in Kastner commodity balances
+k_comm_bal_crops_items <- k_comm_bal_crops %>% 
+  distinct(`Item Code`, Item)
+# Make list of crop elements from FAO included in Kastner commodity balances
+k_comm_bal_crops_elements <- k_comm_bal_crops %>% 
+  distinct(`Element Code`, Element)
+
 rm(k_comm_bal_crops)
 
 #read in Kastner commodity balances fish and livestock data
@@ -578,8 +380,64 @@ k_comm_bal_livestock_fish_13 <- k_comm_bal_livestock_fish %>%
   filter(Year == 2013) %>% 
   head()
 
+# Make list of livestock and fish items from FAO included in Kastner commodity balances
+k_comm_bal_livestock_fish_items <- k_comm_bal_livestock_fish %>% 
+  distinct(`Item Code`, Item)
+
+# Make list of livestock and fish elements from FAO included in Kastner commodity balances
+# This list should be the exact same as the crop list
+k_comm_bal_livestock_fish_elements <- k_comm_bal_livestock_fish %>% 
+  distinct(`Element Code`, Element) %>% 
+  arrange(`Element Code`)
+
 rm(k_comm_bal_livestock_fish)
 ```
+
+All Data Food Balance Sheet
+```{r}
+all_fb_raw <- fread(paste0(fb_data_path, "FoodBalanceSheets_E_All_Data_(Normalized)_06_29_2023.csv"))
+
+element_list <- all_fb_raw %>% 
+  distinct(`Element Code`, Element)
+
+
+# Clean and remove excess data from bulk download
+all_fb <- all_fb_raw %>% 
+  # Filter only for years of interest
+  filter(Year %in% c(2015, 2016, 2017, 2018, 2019)) %>% 
+  # remove extra area code and item code columns, remaining are in FAO format
+  select(-`Area Code (M49)`, - `Item Code (CPC)`) %>% 
+  # remove rows with item code 2501 because it is population
+  filter(`Item Code` != 2501,
+         `Element Code` %in% c(5511, 5131)) %>% 
+  # multiply values by 1000 in and update units label to match Kastner
+  mutate(Value = Value*1000) %>% 
+  mutate(Unit = "tonnes")
+
+# Take average over years 
+commodity_balance_averages <- all_fb %>% 
+  # group by all columns of specificity except for year and description columns
+  group_by(`Area Code`,
+           Area,
+           `Item Code`,
+           Item,
+           `Element Code`,
+           Element) %>% 
+  # Value_average is the mean of the value column for that group
+  summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner crop production data
+  mutate(`Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = "tonnes",
+         Flag = NA) %>% 
+  relocate(Value_average, .after = Unit)
+
+write_csv(commodity_balance_averages, paste0(save_path, "CommodityBalances_2015_2019_(Normalized)_06_29_2023_formatted.csv"))
+
+```
+
 
 2017 crops commodity balance data to match with Kastner formatting
 ```{r}

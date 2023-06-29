@@ -231,22 +231,9 @@ fao_production_cleaning <- function(data_folder, year){
 ```
 
 #### New Data
+2015-2019 Average Crop Production Data
 ```{r}
-fao_production_crops_raw_new <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv"))
-
-test_2017 <- fao_production_crops_raw_new %>% 
-  filter(Year == 2017)
-
-compare <- fao_production_crops_raw %>% 
-  filter(Element == "Production" | Element == "Yield")
-```
-
-
-#### Old Method
-2017 FAO data - Production Crops
-```{r}
-# read in recently downloaded production crops data from FAO website
-fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv"))
 
 # format data
 production_crops <- fao_production_crops_raw %>% 
@@ -255,14 +242,34 @@ production_crops <- fao_production_crops_raw %>%
   rename(`Item Code` = `Item Code (FAO)`) %>% 
   relocate(c(`Item Code`, Item), .before = `Element Code`)                      #change variable order to match Kastner
 
-# final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
-write_csv(production_crops, paste0(save_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
+production_crops_average <- production_crops %>% 
+  # group by all columns of specificity except for year and description columns
+  group_by(`Area Code`,
+           Area,
+           `Item Code`,
+           Item,
+           `Element Code`,
+           Element) %>% 
+  # Value_average is the mean of the value column for that group
+  summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner crop production data
+  mutate(`Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = if_else(`Element Code` == 5510, true = "tonnes", false = "100 g/ha"),
+         Flag = NA,
+         Note = NA) %>% 
+  relocate(Value_average, .after = Unit)
+  
+# save the file
+write_csv(production_crops_average, paste0(save_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
 ```
 
-2017 FAO data - Production Processed Crops
+2015-2019 Average Processed Crop Production Data
 ```{r}
 # read in recently downloaded production crops processed data from FAO website
-fao_production_crops_processed_raw <- fread(paste0(production_data_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fao_production_crops_processed_raw <- fread(paste0(production_data_path, "Production_CropsProcessed_2015_2019_FAOSTAT_6_29_2023.csv"))
 
 # format data
 production_crops_processed <- fao_production_crops_processed_raw %>% 
@@ -272,13 +279,33 @@ production_crops_processed <- fao_production_crops_processed_raw %>%
   relocate(c(`Item Code`, Item), .before = `Element Code`) %>%                  # change variable order to match Kastner
   select(-`Flag Description`)                                                   # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
 
-write_csv(production_crops_processed, paste0(save_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
+# Take average over years 
+production_crops_processed_average <- production_crops_processed %>% 
+  # group by all columns of specificity except for year and description columns
+  group_by(`Area Code`,
+           Area,
+           `Item Code`,
+           Item,
+           `Element Code`,
+           Element) %>% 
+  # Value_average is the mean of the value column for that group
+  summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner crop production data
+  mutate(`Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = "tonnes",
+         Flag = NA) %>% 
+  relocate(Value_average, .after = Unit)
+
+write_csv(production_crops_processed_average, paste0(save_path, "Production_CropsProcessed_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
+
 ```
 
-2017 FAO data - Production Livestock
+2015-2019 Average Livestock Production Data
 ```{r}
-#read in recently downloaded production livestock data from FAO website
-fao_production_livestock_primary_raw <- fread(paste0(fao_data_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fao_production_livestock_primary_raw <- fread(paste0(production_data_path, "Production_LivestockPrimary_2015_2019_FAOSTAT_6_29_2023.csv")) 
 
 # format data
 production_livestock_primary <- fao_production_livestock_primary_raw %>% 
@@ -287,10 +314,81 @@ production_livestock_primary <- fao_production_livestock_primary_raw %>%
   rename(`Item Code` = `Item Code (FAO)`) %>% 
   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
   select(-`Flag Description`)                                                   #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
-# Item codes are slightly different for some rows, but these are going to be subset just to tonnes anyways
-# and the rows with tonnes as the unit all look good.
 
-write_csv(production_livestock_primary, paste0(save_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
+# Take average over years 
+production_livestock_primary_average <- production_livestock_primary %>% 
+  # group by all columns of specificity except for year and description columns
+  group_by(`Area Code`,
+           Area,
+           `Item Code`,
+           Item,
+           `Element Code`,
+           Element) %>% 
+  # Value_average is the mean of the value column for that group
+  summarise(Value_average = mean(Value, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # add back in three columns that are missing when groupby was done
+  # after adding these columns back everything should match the columns of the Kastner crop production data
+  mutate(`Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = "tonnes",
+         Flag = NA) %>% 
+  relocate(Value_average, .after = Unit)
+
+write_csv(production_livestock_primary_average, paste0(save_path, "Production_LivestockPrimary_2015_2019_FAOSTAT_6_29_2023_formatted.csv"))
+```
+
+
+
+#### Old Method
+2017 FAO data - Production Crops
+```{r}
+# # read in recently downloaded production crops data from FAO website
+# fao_production_crops_raw <- fread(paste0(production_data_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+# 
+# # format data
+# production_crops <- fao_production_crops_raw %>% 
+#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
+#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   #rename variables to match Kastner
+#   rename(`Item Code` = `Item Code (FAO)`) %>% 
+#   relocate(c(`Item Code`, Item), .before = `Element Code`)                      #change variable order to match Kastner
+# 
+# # final col in our data is flag description, in Kastner it is notes. We'll keep both in for now.
+# write_csv(production_crops, paste0(save_path, "Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
+```
+
+2017 FAO data - Production Processed Crops
+```{r}
+# # read in recently downloaded production crops processed data from FAO website
+# fao_production_crops_processed_raw <- fread(paste0(production_data_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+# 
+# # format data
+# production_crops_processed <- fao_production_crops_processed_raw %>% 
+#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
+#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   # rename variables to match Kastner
+#   rename(`Item Code` = `Item Code (FAO)`)  %>% 
+#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>%                  # change variable order to match Kastner
+#   select(-`Flag Description`)                                                   # final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
+# 
+# write_csv(production_crops_processed, paste0(save_path, "Production_CropsProcessed_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
+```
+
+2017 FAO data - Production Livestock
+```{r}
+# #read in recently downloaded production livestock data from FAO website
+# fao_production_livestock_primary_raw <- fread(paste0(production_data_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+# 
+# # format data
+# production_livestock_primary <- fao_production_livestock_primary_raw %>% 
+#   select(-c(`Domain Code`, Domain)) %>%                                         #remove first 2 columns to match Kastner
+#   rename(`Area Code` = `Area Code (FAO)`) %>%                                   #rename variables to match Kastner
+#   rename(`Item Code` = `Item Code (FAO)`) %>% 
+#   relocate(c(`Item Code`, Item), .before = `Element Code`) %>% 
+#   select(-`Flag Description`)                                                   #final col in our data is flag description, Kastner does not have a final column 'notes' so we'll delete the flag description column.
+# # Item codes are slightly different for some rows, but these are going to be subset just to tonnes anyways
+# # and the rows with tonnes as the unit all look good.
+# 
+# write_csv(production_livestock_primary, paste0(save_path, "Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"))
 ```
 
 #### Alternative method?

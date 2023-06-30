@@ -6,8 +6,8 @@ editor_options:
 ---
 
 Objective: Format the 2017 FAO production, commodity balances, and detailed trade matrix datasets to match Kastner's data that is input into the trade matrix script.
-
-Update: Formatted data for 2015, 2016, 2018, and 2019 on Nov 28, 2022.
+ 
+Update: Formatted data for 2015, 2016, 2017, 2018, and 2019 on June 29, 2023.
 
 ```{r}
 library(tidyverse)
@@ -27,12 +27,11 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 ### Detailed trade matrix
 
-Trade data - get error on FAO website when trying to download just one year of data. We have to use the bulk download and download all years of data and then later subset to 2017.
+Bulk download of trade matrix data was used and subset to years of interest.
 
 We need to gapfill missing trade data with trading partners (FAO does this for some, but not all).
 
-
-Kastner Trade Matrix example to understand how to set up the other data
+Kastner Trade Matrix example to understand how to format the trade data.
 ```{r}
 #read in Kastner detailed trade matrix data (from FAO) - This is to understand what we want the output data to look like
 k_trade_matrix <- fread(paste0(kastner_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized).csv"))
@@ -46,6 +45,7 @@ Trade data - Gapfill imports with export data
 #read in recently downloaded FAO detailed trade matrix data
 fao_trade_matrix_raw <- fread(paste0(fao_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv"))
 
+# Function to subset trade matrix by year of interest
 fao_trade_quantity_gapfill <- function(fao_trade_matrix_raw, year) {
   # subset columns to match Kastner data columns
   trade_matrix <- fao_trade_matrix_raw %>% 
@@ -127,8 +127,6 @@ trade_2019 <- fao_trade_quantity_gapfill(fao_trade_matrix_raw = fao_trade_matrix
 write_csv(trade_2019, paste0(save_path,"Trade_2019_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 ```
 
-
-
 Average trade across five years
 ```{r}
 # get the unique values of this row to add back in later
@@ -160,8 +158,8 @@ average_trade <- rbind(trade_2015,
 # Test where the NaN are coming from in the Value_average column
 NaN_test <- average_trade %>%  
   filter(is.nan(Value_average))
-# NaN only occur in rows where the Value is NA so there is nothing we can really do about this for now
-# Also is only for 20,000 rows out of almost two million observations so can probably ignore and filter for these later
+# NaN only occur in rows where the Value is NA so there is nothing we can really do about this
+# Also only 20,000 rows out of almost two million observationsare NaN so will ignore and filter for these later
 
 write_csv(average_trade, paste0(save_path,"Trade_average_DetailedTradeMatrix_Gapfilled_formatted.csv"))
 
@@ -179,10 +177,9 @@ rm(fao_trade_matrix_raw,
 
 Data in the bulk download files is shown pivoted by years (wide format), except for the Normalized file which is in database format (long format).
 
-Kastner FAO production data is normalized data (long format) separated into crops, processed crops, and primary livestock. We can download these distinct categories from the FAO website if we do not use the bulk download option. Downloading selected options from the FAO website provides the data in long format (i.e. normalized).
+Kastner FAO production data is normalized data (long format) separated into crops, processed crops, and primary livestock. Downloading selected options from the FAO website provides the data in long format (i.e. normalized).
 
-Downloading production data from FAO website to match Kastner data. Download must be done in seperate batches for Crops Primary, Crops Processed, and Livestock Primary or it does not work on the FAO website.
-https://www.fao.org/faostat/en/#data/QCL
+Downloading production data from FAO website to match Kastner data: https://www.fao.org/faostat/en/#data/QCL
 - From "Bulk Downloads" select "All Data Normalized"
 - .csv file labeled `Production_Crops_Livestock_E_All_Data_(Normalized)` is our file of interest
 
@@ -196,7 +193,7 @@ Crop and livestock statistics are recorded for 278 products, covering the follow
 
 Production data units from FAO match the Kastner production data.
 
-Compare format for recently downloaded FAO production data and Kastner downloaded FAO production data. Kastner provides multiple years of data while I only downloaded the 2017 production data since bulk download was not an option. Based on the variable names, it looks like Kastner did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. That means we need to do a couple data formatting things to make our variable names match Kastner's.
+Based on the variable names, it looks like Kastner did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. We will replicate this process below and subset for our years of interest.
 
 2017 production data from Kastner to be able to match the FAO data
 ```{r}
@@ -272,7 +269,7 @@ production_items <- all_production %>%
   distinct(`Item Code`, Item)
 ```
 
-Make lists of products for crops, crops processed, and livestock primary based on the "Items" groupings on FAO.
+Make lists of products for crops, crops processed, and livestock primary based on the "Items" groupings from FAO. Downloaded these from the FAO website.
 ```{r}
 crops_list <- fread(paste0(production_data_path, "Production_Crops_2015_2019_FAOSTAT_6_29_2023.csv")) %>% 
   distinct(`Item Code (FAO)`, Item)
@@ -310,18 +307,17 @@ write_csv(livestock_primary_production_average, paste0(save_path, "Production_Li
 
 ### Food balances (Kastner calls these Commodity balances, but they are definitely the FAO food balances)
 
-There are differences in values for food balances between the old and new methodology. However, the data seem to be displayed in the same format with the same variables, so it should be fine to use the new methodology for 2017 with the Kastner script.
+There are differences in values for food balances between the old and new methodology. However, the data seem to be displayed in the same format with the same variables, so it should be fine to use the new methodology for our years of interest with the Kastner script.
 
 Food supply quantity (tonnes) in Kastner == Food in FAO data.
 
-Kastner has detailed data for all items displayed in tonnes rather than in 1000 tonnes. I'm not sure how they got this, because I can only get these data in 1,000 tonnes. I've tried downloading just the 2017 data from the FAO website, doing a bulk download from the FAO website, and using the old (2013) and new methodology.
+Kastner has detailed data for all items displayed in tonnes rather than in 1000 tonnes. When downloading data from FAO the units are 1000 tonnes. To fix this we will just multiply by 1000 and change the unit label. We will use the bulk download data from the FAO website and clean it to match the Kastner data and suit it to our needs.
 
-Downloading food balances for crops from FAO website to match Kastner data
-https://www.fao.org/faostat/en/#data/FBS
+Downloading food balances for crops and livestock from FAO website to match Kastner data: https://www.fao.org/faostat/en/#data/FBS
 - From "Bulk Downloads" select "All Data Normalized"
 - .csv file labeled `FoodBalanceSheets_E_All_Data_(Normalized)` is our file of interest
 
-The bulk download will need to be cleaned to match the Kastner data. Convert values to tonnes (currently in 1,000 tonnes). Based on the Kastner script the Food Balance Data is used to fill in offals and sugars data so we only need element codes 5511 for Production (offals) and 5131 for Processing (sugar). Based on this only these element codes are being kept and then averaged.
+The bulk download will need to be cleaned to match the Kastner data. Convert values to tonnes (currently in 1,000 tonnes). Based on the Kastner script the Food Balance Data is used to fill in offals and sugars data so we only need element codes 5511 for Production (offals) and 5131 for Processing (sugar). Based on this only these element codes are being kept and then averaged. If this needs to be changed it will be done and the notes updated here.
 
 Food balance data - Kastner data to match FAO data with
 ```{r}
@@ -332,12 +328,13 @@ k_comm_bal_crops_13 <- k_comm_bal_crops %>%
   filter(Year == 2013) %>% 
   head()
 
-# Make list of crop items from FAO included in Kastner commodity balances
-k_comm_bal_crops_items <- k_comm_bal_crops %>% 
-  distinct(`Item Code`, Item)
-# Make list of crop elements from FAO included in Kastner commodity balances
-k_comm_bal_crops_elements <- k_comm_bal_crops %>% 
-  distinct(`Element Code`, Element)
+# # Make list of crop items from FAO included in Kastner commodity balances
+# k_comm_bal_crops_items <- k_comm_bal_crops %>% 
+#   distinct(`Item Code`, Item)
+# 
+# # Make list of crop elements from FAO included in Kastner commodity balances
+# k_comm_bal_crops_elements <- k_comm_bal_crops %>% 
+#   distinct(`Element Code`, Element)
 
 rm(k_comm_bal_crops)
 
@@ -347,15 +344,15 @@ k_comm_bal_livestock_fish_13 <- k_comm_bal_livestock_fish %>%
   filter(Year == 2013) %>% 
   head()
 
-# Make list of livestock and fish items from FAO included in Kastner commodity balances
-k_comm_bal_livestock_fish_items <- k_comm_bal_livestock_fish %>% 
-  distinct(`Item Code`, Item)
-
-# Make list of livestock and fish elements from FAO included in Kastner commodity balances
-# This list should be the exact same as the crop list
-k_comm_bal_livestock_fish_elements <- k_comm_bal_livestock_fish %>% 
-  distinct(`Element Code`, Element) %>% 
-  arrange(`Element Code`)
+# # Make list of livestock and fish items from FAO included in Kastner commodity balances
+# k_comm_bal_livestock_fish_items <- k_comm_bal_livestock_fish %>% 
+#   distinct(`Item Code`, Item)
+# 
+# # Make list of livestock and fish elements from FAO included in Kastner commodity balances
+# # This list should be the exact same as the crop list
+# k_comm_bal_livestock_fish_elements <- k_comm_bal_livestock_fish %>% 
+#   distinct(`Element Code`, Element) %>% 
+#   arrange(`Element Code`)
 
 rm(k_comm_bal_livestock_fish)
 ```
@@ -403,7 +400,4 @@ commodity_balance_averages <- all_fb %>%
 write_csv(commodity_balance_averages, paste0(save_path, "CommodityBalances_2015_2019_(Normalized)_06_29_2023_formatted.csv"))
 
 ```
-
-
-
 

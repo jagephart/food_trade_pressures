@@ -153,7 +153,12 @@ average_trade <- rbind(trade_2015,
   # after adding these columns back everything should match the columns of the Kastner matrix
   mutate(`Element Code` = 5610,
          Element = "Import Quantity",
-         Unit = "tonnes") 
+         `Year Code` = "2015-2019",
+         Year = "2015-2019",
+         Unit = "tonnes",
+         Flag = NA) %>% 
+  # relocate columns to match order of kastner matrix
+  relocate(Value_average, .after = Unit)
 
 # Test where the NaN are coming from in the Value_average column
 NaN_test <- average_trade %>%  

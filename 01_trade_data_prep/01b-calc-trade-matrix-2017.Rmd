@@ -60,7 +60,7 @@ if(!exists("conversion_opt")){
 
 # select year
 if(!exists("included_years")){
-  included_years = 2017
+  included_years = "2015-2019"
 }
 ```
 
@@ -105,15 +105,15 @@ For example - tonnes of refined sugar traded between Algeria and Albania.
 ### Trade data
 # specify name of file and file path you want to read in (this path is stored in the text file output so we'll keep it like this
 # where we save the path and then read in the file)
-trade.data.file <- "output_data/01a_format_fao_trade/Trade_2017_DetailedTradeMatrix_Gapfilled_7_14_22_formatted.csv"
+trade.data.file <- "output_data/01a_format_fao_trade/Trade_average_DetailedTradeMatrix_Gapfilled_formatted.csv"
 
 # read in the file with fread (only includes import quantity in tonnes)
 trade <- fread(trade.data.file)
 table(trade$Element)
 
 # check NAs
-length(which(is.na(trade$Value))) # 15,523 NAs
-length(which(is.na(trade$Value)))/length(trade$Value)*100 # 2.4% of the data
+length(which(is.na(trade$Value_average))) # 20,405 NAs
+length(which(is.na(trade$Value_average)))/length(trade$Value_average)*100 # 1.9% of the data
 # there are some NAs in these data because they are in the FAO data like that. This happens when either 1. country A says they 
 # import item X from country B, but they don't say how much and neither does country B (either NA or missing completely for the 
 # export row), or 2. country B says they export item X to country A, but they don't say how much and neither does country A.
@@ -134,7 +134,7 @@ length(which(is.na(trade$Value)))/length(trade$Value)*100 # 2.4% of the data
 # since they don't deal with NAs in the Value column, let's remove those NA rows from our trade data
 #also note that there are no negative values in the trade currently!
 raw.trade.data <- trade %>% 
-  filter(!is.na(Value))
+  filter(!is.na(Value_average))
 
 # replace spaces in variable names with "_"
 names(raw.trade.data)<- str_replace_all(names(raw.trade.data),c(" " = "_"))
@@ -221,7 +221,7 @@ for each crop for all years.
 ### Production data - crops
 
 # specify name of file and file path you want to read in
-production.crops.file <- "output_data/01a_format_fao_trade/Production_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.crops.file <- "output_data/01a_format_fao_trade/Production_Crops_2015_2019_FAOSTAT_6_29_2023_formatted.csv"
 
 # read in data
 production.crops <- fread(production.crops.file)
@@ -241,7 +241,7 @@ These data include: for each country, various measurements of production for liv
 ### Production data - animal products
 
 # specify name of file and file path you want to read in
-production.animals.file <- "output_data/01a_format_fao_trade/Production_LivestockPrimary_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.animals.file <- "output_data/01a_format_fao_trade/Production_LivestockPrimary_2015_2019_FAOSTAT_6_29_2023_formatted.csv"
 
 # read in data
 production.animals <- fread(production.animals.file)
@@ -261,7 +261,7 @@ Data includes production of edible offals in tons for each country.
 ### Production data - offals
 
 # specify name of file and file path you want to read in
-production.offals.file <- "output_data/01a_format_fao_trade/CommodityBalances_LivestockFish_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+production.offals.file <- "output_data/01a_format_fao_trade/CommodityBalances_2015_2019_(Normalized)_06_29_2023_formatted.csv"
 
 # read in data
 production.offals <- fread(production.offals.file)
@@ -334,7 +334,7 @@ This is not subset to just sugar yet, we must do this later.
 ```{r}
 ### Data files for sugar conversion
 # specify name of file and file path you want to read in
-sugar.processing.file <- "output_data/01a_format_fao_trade/CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22_formatted.csv"
+sugar.processing.file <- "output_data/01a_format_fao_trade/CommodityBalances_2015_2019_(Normalized)_06_29_2023_formatted.csv"
 
 # read in data
 sugar.processing <- fread(sugar.processing.file)
@@ -351,7 +351,7 @@ Create import and export dataframes.
 
 # create import data - we only have import data because we already gapfilled with export data from trading partners where necessary
 # so this df is exactly the same as the raw.trade.data df
-data.import <- select(raw.trade.data, Reporter_Country_Code, Partner_Country_Code, Element_Code, Item_Code, Year, Value) %>%
+data.import <- select(raw.trade.data, Reporter_Country_Code, Partner_Country_Code, Element_Code, Item_Code, Year, Value_average) %>% # () taken out for now because of average
   filter(Element_Code ==5610)
 
 # create export data
@@ -397,12 +397,12 @@ eliminate.dates <- function(fun.data){
 Set years without reports to 0 (set Value to 0). - no change in the number of rows in df
 ```{r}
 # run import and export dataframes through function that converts years without data reported to 0
-data.import <- eliminate.dates(data.import) 
+# data.import <- eliminate.dates(data.import) 
 # data.export <- eliminate.dates(data.export)
 
-# this function does nothing to the 2017 trade data
-length(which(data.import$Value == 0)) #178073
-length(which(raw.trade.data$Value == 0)) #178073
+# this function does nothing to the average trade data
+length(which(data.import$Value_average == 0)) #304433
+length(which(raw.trade.data$Value_average == 0)) #304433
 
 # remove reporting.data dataframe from environment
 # rm(reporting.date)
@@ -413,16 +413,20 @@ Eliminate rows where the exporting and importing countries are the same country 
 Also eliminate rows where Value = 0, which includes rows with no data reported (we set those
 rows to 0 in `eliminate.dates` function previously).
 ```{r}
-# set 6th column (Value) to 0 where importing and exporting countries (cols 1 and 2) are the same
-data.import[which(data.import[,1]==data.import[,2]), 6] <- 0
+# set Value_average column to 0 where importing and exporting countries (cols 1 and 2) are the same
+data.import <- data.import %>% 
+  mutate(Value_average = if_else(condition = Reporter_Country_Code == Partner_Country_Code,
+                                 true = 0,
+                                 false = Value_average))
+#data.import[which(data.import[,Reporter_Country_Code]==data.import[,Partner_Country_Code]), Value_average] <- 0
 
 # there were no instances where the importing and exporting countries were the same,
 # so no row's Value was set to 0
-length(which(data.import$Value == 0)) #178073
-length(which(raw.trade.data$Value == 0)) #178073
+length(which(data.import$Value_average == 0)) #304433
+length(which(raw.trade.data$Value_average == 0)) #304433
 
 # remove 0s - this does remove rows where 0s were reported by countries to FAO
-data.import <- filter(data.import, Value !=0)
+data.import <- filter(data.import, Value_average !=0)
 
 # do the same with the export dataframe
 #data.export[which(data.export[,1]==data.export[,2]), 6] <- 0
@@ -475,7 +479,7 @@ data.import <- rename(data.import, "Consumer_Country_Code"="Reporter_Country_Cod
 
 # make sure we only have one row for each item traded between 2 countries - we do, this line does not change anything
 trade.data <- data.import %>% 
-  distinct(Consumer_Country_Code, Producer_Country_Code, Year, Item_Code, .keep_all=T)
+  distinct(Consumer_Country_Code, Producer_Country_Code,  Year, Item_Code, .keep_all=T) # () variable removed because of average
 ```
 
 
@@ -496,8 +500,6 @@ Sort the `trade.data` by numbers in ascending order, first by the consumer count
 ## sort data ##
 trade.data <- arrange(trade.data, Consumer_Country_Code, Producer_Country_Code)
 ```
-
-## FINISHED HERE FOR THE DAY, PICK UP HERE TOMORROW
 
 function to create conversion factors for each product - divide processed products dry matter content by their primary products
 dry matter content. For example, wheat would be 0.86/0.86 = 1, wheat flour would be 0.88/0.86 = 1.02.
@@ -557,7 +559,7 @@ Offals have a conversion factor of 0, so all offals get the Value = 0.
 "Rice, paddy (rice milled equivalent)" is referred to as "Rice <96> total  (Rice milled equivalent)"
 in this dataframe.
 ```{r}
-trade.data <- mutate(trade.data, primary.Value= Value * Conversion_factor)
+trade.data <- mutate(trade.data, primary.Value= Value_average * Conversion_factor)
 ```
 
 
@@ -572,7 +574,7 @@ the total tonnes of apples traded between countries.
 Offals are removed at this stage.
 ```{r}
 primary.data <- trade.data %>%
-  group_by(Consumer_Country_Code, Producer_Country_Code, Year, primary_item) %>%
+  group_by(Consumer_Country_Code, Producer_Country_Code, Year, primary_item) %>% # () removed because of averaging
   summarise(Value.Sum = sum(primary.Value)) %>%
   ungroup() %>%
   filter(primary_item != 0, Value.Sum !="NaN")
@@ -580,7 +582,6 @@ primary.data <- trade.data %>%
 # remove the trade.data 
 # rm(trade.data)
 ```
-
 
 Calculate how much sugar (beets and cane separate) is produced by each country
 ```{r}
@@ -600,7 +601,7 @@ sugar.production <- left_join(filter(production.all,
 
 # Create a new column in the sugar data called `Value.new`, which is the value of 
 # traded sugar (tonnes) times the conversion factor.
-sugar.production$Value.new <- sugar.production$Value * sugar.production$Conversion_factor
+sugar.production$Value.new <- sugar.production$Value_average * sugar.production$Conversion_factor
 ```
 
 
@@ -612,7 +613,7 @@ sugar.shares <- sugar.production %>%
   group_by(Area_Code, Year) %>%
   # create new column called share that is proportion of sugar produced by each product (beets and sugar cane)
   # for example, in Afghanistan, beets = 0.14 and cane = 0.86, totaling 1
-  mutate(share = Value/sum(Value, na.rm=T)) %>%
+  mutate(share = Value_average/sum(Value_average, na.rm=T)) %>%
   ungroup() %>%
   # only keep some values
   select(Area_Code, Year, Item_Code, share) %>%
@@ -628,18 +629,18 @@ sugar.production <- sugar.production %>%
   # group data by country, primary items (sugar aggregate only), element (production), year, and unit (tonnes)
   group_by(Area_Code, Area, primary_item, FAO_name_primary, Element_Code, Element, Year_Code, Year, Unit) %>%
   # sum the primary product value of the two sugar products (beets and cane) for each country
-  summarise(Value = sum(Value.new, na.rm=T)) %>%
+  summarise(Value_average = sum(Value.new, na.rm=T)) %>%
   ungroup() %>%
   # remove countries that have 0 for sugar production
-  filter(Value > 0) %>%
+  filter(Value_average > 0) %>%
   # rename primary_item to Item_Code and rename FAO_name_primary to Item
   rename(Item_Code = primary_item, Item = FAO_name_primary) %>%
   # add a new column called Flag that is just an empty space - need it to bind with production.all in next step
   mutate(Flag=" ")
 
 # remove flag description column so they can rbind with sugar.production
-production.all <- production.all %>% 
-  select(-c(Flag_Description))
+production.all <- production.all #%>% 
+#  select(-c(Flag_Description))
 
 # bind production data with sugar production data
 production.all <- rbind(production.all, sugar.production)
@@ -648,6 +649,15 @@ production.all <- rbind(production.all, sugar.production)
 # rm(list = c("sugar.production"))
 ```
 
+For the `matrix.operation` function to work properly the year values need to be single years or possible to be numerical values. Currently our data is "2015-2019" to denote that it is an average over that time span. The below code chunk will mutate the year column to just be 2017 so the rest of the operations can work as expected.
+```{r}
+primary.data <- primary.data %>% 
+  # Year changed to 2017 for the sake of the calculations set up by Kastner
+  mutate(Year = 2017)
+production.all <- production.all %>% 
+  # Year changed to 2017 for the sake of the calculations set up by Kastner
+  mutate(Year = 2017)
+```
 
 Setting up for for loop where you use the matrix function
 ```{r}
@@ -655,7 +665,7 @@ Setting up for for loop where you use the matrix function
 
 # create a table with each row including the primary item code traded that year
 # for 2013 there were 150 primary items
-q <- primary.data %>% distinct(Year, primary_item)
+q <- primary.data %>% distinct(Year, primary_item) # () removed because of average
 
 # create a dataframe with the following 5 variable names. This df has 1 row, with 0s in all cells.
 transformed.data <- data.frame("Consumer_Country_Code" = 0,
@@ -674,19 +684,19 @@ The columns are always sorted in ascending order. The table is changed by refere
 primary.data <- as.data.table(primary.data)
 
 # create a key for the primary.data using both primary_item and year
-setkey(primary.data, "primary_item", "Year")
+setkey(primary.data, "primary_item", "Year") #() removed because of average
 
 # set production data as a data table
 production.all <- as.data.table(production.all)
 
 # create a key for the production data using the Item_Code, Year, and Element_Code
-setkey(production.all, "Item_Code", "Year", "Element_Code")
+setkey(production.all, "Item_Code",  "Year", "Element_Code") # () removed because of average
 
 # update text file
 cat("Calculating trade matrix \n", file=log.filename, append=T)
 ```
 
-
+## Stopped here, reincorporate year column into the workflow
 Function with lots of matrix calculations to calculate consumption data for each country
 according to the country of origin - country of origin being where the product was actually produced,
 not just the last country it passed through for processing.
@@ -738,7 +748,7 @@ matrix.operation <- function(item_Code, year){
   
   # join prod df (country area codes) with the production df using the country area codes, only keep values (tonnes produced)
   # production_data is a 2 column df, col 1 = country area code and col 2 = tonnes produced of selected product in selected year
-  production_data <- full_join(prod, select(production, Area_Code, Value), by= "Area_Code")
+  production_data <- full_join(prod, select(production, Area_Code, Value_average), by= "Area_Code") # Value_average instead of Value to reflect new average data
   
   # set the values in column 2 (production of selected product) that are NA to 0
   production_data[which(is.na(production_data[,2])), 2] <- 0
@@ -904,7 +914,6 @@ matrix.operation <- function(item_Code, year){
 
 ```
 
-
 Calculate consumption for each product/country based on country of product origin
 ```{r}
 # for loop for each row in q (each primary item code traded in selected year)
@@ -934,12 +943,12 @@ previous code chunk.
 #### identify primary items that are produced but not traded ####
 missing.prod.data <- production.all %>% 
   # filter to element code 5510 (production), selected year, and where the item code and value (tonnes) are not NA
-  filter(Element_Code==5510, Year %in% included_years, Item_Code !="NA", Value!="NA") %>%
+  filter(Element_Code==5510, Year %in% c(2017), Item_Code !="NA", Value_average!="NA") %>% # c(2017) was `included_years` but was changed to reflect averaging
   # filter for item codes that are primary_items in the item.map df (list of all processed/primary products and codes)
   # and for items codes that are not in the primary.data df (traded data)
   filter(Item_Code %in% item.map$primary_item & !(Item_Code %in% unique(primary.data$primary_item)))
 
-#1,126 rows of data in missing.prod.data
+#1,162 rows of data in missing.prod.data
 
 # look at items
 table(missing.prod.data$Item)
@@ -949,7 +958,7 @@ add.data <- missing.prod.data %>%
   # create new columns for producing and exporting countries that are the country's area code
   # these will be the same because it is just produced, not traded, so should be ex. Finland with Finland
   mutate(Consumer_Country_Code = Area_Code, Producer_Country_Code = Area_Code) %>%
-  select(Consumer_Country_Code, Producer_Country_Code, Value, Item_Code, Year)
+  select(Consumer_Country_Code, Producer_Country_Code, Value = Value_average, Item_Code, Year)
 
 #add missing production data to consumption trade data
 transformed.data <- rbind(transformed.data, add.data)
@@ -967,7 +976,7 @@ sugar.trade.data <- filter(transformed.data, Item_Code==2545)
 # select beet sugar and cane sugar from sugar.processing df , and select element code 5131 (processing)
 # (NOTE: processing code was 5130 for FAO commodity balances previously, but was changed)
 # remove large area codes that denote groupings of countries (e.g., EU), and only include values > 0 (sugar processing occurs in that country)
-sugar.processing <- filter(sugar.processing, Item_Code %in% c(2536,2537), Element_Code==5131, Area_Code<300, Value>0)
+sugar.processing <- filter(sugar.processing, Item_Code %in% c(2536,2537), Element_Code==5131, Area_Code<300, Value_average>0)
 
 # subtract 2380 from item code (turns to 156, 157) - this makes sugar beet and sugar cane match the FAO code
 sugar.processing$Item_Code <- sugar.processing$Item_Code - 2380
@@ -977,7 +986,7 @@ sugar.processing <- left_join(sugar.processing, primary.conversion(item.map, "dr
 
 # multiply tonnes of sugar beets and cane processed by a country by the conversion factor to get tonnes 
 # of beets and cane needed to produce beets and cane (lose tonnes in processing)
-sugar.processing$Value.new <- sugar.processing$Value * sugar.processing$Conversion_factor
+sugar.processing$Value.new <- sugar.processing$Value_average * sugar.processing$Conversion_factor
 
 # calculate percent of sugar that is processed from beets vs cane in each country
 # if they only process beets or cane, this value (processing_share) will be 1
@@ -998,6 +1007,8 @@ If a crop is processed but not produced in a country, set control to 0 (rather t
 ```{r}
 # check if a crop does not have any processing data
 sugar.crop.share <- sugar.crop.share %>%
+  # Make year 2017 so it matches the rest of the data
+  mutate(Year = 2017) %>% 
   group_by(Area_Code, Year) %>%
   mutate(control=sum(processing_share, na.rm=T)) %>%
   ungroup()
@@ -1045,7 +1056,7 @@ sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, V
 
 # filter production data to only include the sugar crop codes for beets and cane (156 and 157)
 sugar.production <- filter(production.all, Item_Code %in% sugar.crop.codes) %>% 
-  rename(national_production = Value)
+  rename(national_production = Value_average)
 
 # sum total sugar beets and sugar cane crops (separately) that a country produces in a year
 sugar.data <- sugar.data %>%
@@ -1076,13 +1087,13 @@ transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.dat
 
 
 #### write file ####
-fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by_country_of_origin_2017_import.csv")
+fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by_country_of_origin_2015_2019_import.csv")
 ```
 
 
 ```{r}
 negative_trade <- transformed.data %>% 
-  filter(Value < -100)
+  filter(Value < -1)
 
 ggplot2::ggplot(data = negative_trade,
                 aes(x = Value)) + geom_histogram()

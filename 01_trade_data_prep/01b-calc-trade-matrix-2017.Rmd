@@ -696,7 +696,6 @@ setkey(production.all, "Item_Code",  "Year", "Element_Code") # () removed becaus
 cat("Calculating trade matrix \n", file=log.filename, append=T)
 ```
 
-## Stopped here, reincorporate year column into the workflow
 Function with lots of matrix calculations to calculate consumption data for each country
 according to the country of origin - country of origin being where the product was actually produced,
 not just the last country it passed through for processing.
@@ -1093,7 +1092,7 @@ fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by
 
 ```{r}
 negative_trade <- transformed.data %>% 
-  filter(Value < -1)
+  filter(Value < -1000)
 
 ggplot2::ggplot(data = negative_trade,
                 aes(x = Value)) + geom_histogram()

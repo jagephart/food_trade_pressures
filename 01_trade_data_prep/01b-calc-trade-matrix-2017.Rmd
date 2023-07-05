@@ -1083,21 +1083,22 @@ sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, V
 
 # bind transformed.data (excluding sugar item code) with sugar.data
 transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.data)
+```
 
+Due to discrepancies in production and trade data, along with variability in primary commodity conversion factors, there are cases where exports exceed production and imports. This results in negative consumption values. Across all producing to consuming country flows by food item, there are are 2.78% percent of observations with a value less than -1 t, representing less than 0.3% of volume, and 0.66% of observations with less than -100 t. Since negative consumption is not possible, we replace all negative values with zero.
+```{r}
+transformed.data <- transformed.data %>% 
+  mutate(Value = if_else(condition = Value < 0,
+                         true = 0,
+                         false = Value))
 
+```
+
+Save the trade matrix data results that is an average of 2015-2019 data and removes the negative trade values from the matrix.
+```{r}
 #### write file ####
 fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by_country_of_origin_2015_2019_import.csv")
 ```
-
-
-```{r}
-negative_trade <- transformed.data %>% 
-  filter(Value < -1000)
-
-ggplot2::ggplot(data = negative_trade,
-                aes(x = Value)) + geom_histogram()
-```
-
 
 
 Code below is checking Kastner calculations with FAO production data.
@@ -1132,8 +1133,8 @@ diff <- setdiff(country_production_cut$Producer_Country_Code, production.FAO.2$A
 # select relevant columns from fao data
 faostat_cut <- production.FAO.2 %>% 
   filter(Element_Code == 5510 | Element_Code == 5511) %>% 
-  select(Area_Code, Area, Item_Code, Item, Year, Value) %>% 
-  rename(FAO_production = Value)
+  select(Area_Code, Area, Item_Code, Item, Year, Value_average) %>% 
+  rename(FAO_production = Value_average)
 
 # join dataframes by area code and item code
 fao_and_kastner_production <- full_join(faostat_cut, country_production_cut, by = c("Area_Code" = "Producer_Country_Code", "Item_Code" = "Item_Code"))

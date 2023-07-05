@@ -25,6 +25,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 ### Read in data
 ```{r}
 seafood_matrix <- read.csv(paste0(matrix_path, "20230420_nceas_consumption.csv"))
+
 ```
 
 ### Identify combinations of unknown data
@@ -66,6 +67,19 @@ seafood_matrix <- seafood_matrix %>%
      method == "unknown") ~ "all_unknown",
     TRUE ~ "known"
   ))
+
+
+# Check share of consumption originally unknown
+seafood_unknown_shares <- seafood_matrix %>%
+  mutate(unknown_type = case_when(
+    unknown_type == "known" ~ "known",
+    unknown_type != "known" ~ "unknown"
+  )) %>%
+  group_by(consumer_iso3c, unknown_type) %>%
+  summarise(consumption_live_weight_t = sum(consumption_live_weight_t)) %>%
+  group_by(consumer_iso3c) %>%
+  mutate(total = sum(consumption_live_weight_t),
+         percent = 100*consumption_live_weight_t/total)
 ```
 
 
@@ -155,6 +169,7 @@ seafood_check <- seafood_matrix %>%
   mutate(diff = consumption_new-consumption_original) %>%
   mutate(perc_diff = 100*(diff/consumption_original)) %>%
   arrange(desc(abs(perc_diff)))
+
 ```
 
 Note: The original consumption does not match the disaggregated consumption 1:1 due to cases where no proportion can be calculated. For example, if all marine capture sourced from a given country is unknown, a proportion cannot be calculated for known species groups. We could consider using the proportions of the source country to estimate this. Currently, all but 5 countries lose less than 1% of consumption. 
@@ -162,12 +177,14 @@ Note: The original consumption does not match the disaggregated consumption 1:1 
 ### Final cleaning
 ```{r}
 seafood_matrix_new <- seafood_matrix_new %>%
-  # Remove small values created by proportions
-  filter(consumption_live_weight_t > 10^-9) %>%
   # Remove fmfo as this is handled separately
   filter(nceas_group != "fomf") %>%
-  # Select specific columns and save
-  select(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group, consumption_live_weight_t)
+  # Remove NAs produced where there were no known species to reallocate to
+  filter(!is.na(consumption_live_weight_t)) %>%
+  group_by(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group) %>%
+  summarise(consumption_live_weight_t = sum(consumption_live_weight_t)) %>%
+  # Remove small values created by proportions
+  filter(consumption_live_weight_t > 10^-9)
 
 write_csv(seafood_matrix_new, paste0(save_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
 

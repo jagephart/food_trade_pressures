@@ -24,7 +24,20 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 ### Read in data
 ```{r}
-seafood_matrix <- read.csv(paste0(matrix_path, "20230420_nceas_consumption.csv"))
+seafood_matrix <- read.csv(paste0(matrix_path, "20230626_nceas_consumption.csv"))
+
+```
+
+### Average the data over the years (2015-2019)
+For each consumer country, source country, habitat, method, nceas_group (species) we want to take the average consumption_live_t over the five years of interest.
+```{r}
+colnames(seafood_matrix)
+
+# Group by everything except for year and take the mean of consumption_live_t
+seafood_matrix <- seafood_matrix %>% 
+  group_by(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group) %>% 
+  summarise(consumption_live_weight_t = mean(consumption_live_t, na.rm = TRUE)) %>% 
+  ungroup()
 
 ```
 

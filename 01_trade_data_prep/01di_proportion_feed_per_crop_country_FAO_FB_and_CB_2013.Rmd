@@ -38,21 +38,25 @@ NOTE:
 Since we ended up doing soy cake production / soybean processing, these calculations could have been much simpler.
 Essentially all we're doing is (feed + cake)/ domestic supply quantity of soybeans. But instead I used the more complicated route with all the multiplying proportions because that made sense when I was originally doing soy cake production / (soy cake + soy oil production) and multiplying that ratio by percent of dsq of soybeans that are processed. Since this is already done, I'm not going to change it, but something to keep in mind going forward and for explaining methods. It was also helpful doing it this way to check out proportions - like how much of soy processing is going to cake + oil, etc.
 
+## Set Up
 
 Load libraries
 ```{r}
 library(tidyverse)
+library(countrycode)
 ```
 
-Data Paths
+### Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+kastner_path <- paste0(raw_path, "kastner_2022/")
+fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
 ```
 
 
-Read in FAO Food Balances data and subset to 2013
+### Read in FAO Food Balances and Commodity Balanaces data and subset to 2013
 ```{r}
 fb <- read_csv(paste0(FAO_path, "FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv")) %>% 
   filter(Year == 2013)
@@ -77,8 +81,48 @@ cb <- read_csv(paste0(FAO_path, "CommodityBalances_(non-food)_E_All_Data_(Normal
   filter(Year == 2013)
 ```
 
+### For Gapfilling missing data
+We need to add in missing countries that are missing from FB and CB data. We will use a combination of FAO country names and additional countries from fisheries trade data. We won't need all of these countries, but it's good to include them all just in case.
+```{r}
+# rather than reading in the whole FAO country list, we'll just consider countries included in the Kastner trade matrices output
+# read in FAO country list
+tm_raw <- read_csv(paste0(kastner_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
-### Soy
+tm <- tm_raw %>% 
+  # just select the country codes
+  select(Consumer_Country_Code) %>% 
+  unique() %>% 
+  # match the country code to the country names
+  mutate(country = countrycode(Consumer_Country_Code, "fao", "country.name")) %>% 
+  # change some of the names for our needs
+  mutate(country = case_when(Consumer_Country_Code == 41 ~ "China, mainland",
+                             Consumer_Country_Code == 299 ~ "Palestine",
+                             TRUE ~ country))
+
+# read in fisheries trade data 
+fish_tm_raw <- read_csv(paste0(fish_trade_path, "20230626_nceas_consumption.csv"))
+
+# add country names and subset
+fish_tm <- fish_tm_raw %>% 
+  # just select the country codes
+  select(consumer_iso3c) %>% 
+  unique() %>% 
+  # match the country code to the country names
+  mutate(country = countrycode(consumer_iso3c, 'iso3c', 'country.name')) %>% 
+  # change some of the names for our needs
+  filter(!is.na(country)) # remove one NA (iso3c = NEI, Netherlands East Indies, not in FAO data either)
+
+
+# combine dfs to get complete list of countries
+countries <- full_join(tm, fish_tm, by = "country")
+
+# add iso3c
+countries <- countries %>% 
+  mutate(iso3 = countrycode(country, "country.name", "iso3c")) %>% 
+  select(country, iso3)
+```
+
+## Soy
 
 From the commodity balances data, all "Domestic supply quantity" (DSQ) is practically the same as "Feed" for soyabean cake of each country. Any countries where DSQ does not equal Feed is a difference of less than 1%. Therefore for our purposes, all commodity balance soyabean cake production values will be associated to feed.
 ```{r}
@@ -102,8 +146,9 @@ soy_cake_cb_wide <- soy_cb %>%
 
 The above chunk shows that most domestic supply of soy cake is from feed with the lowest proportion for a country being 80%.
 
-- calculate proportion soy DSQ going to processing (soy DSQ / soy processing)
-- calculate proportion soy DSQ directly going to feed (soy feed / soy DSQ)
+In the next code chunk we:
+- calculate the proportion of soyabean DSQ going to processing (soy processing / soy DSQ)
+- calculate the proportion of soyabean DSQ directly going to feed (soy feed / soy DSQ)
 - "Soyabean Oil" is not typically used for feed so therefore it is not included
 ```{r}
 # subset food balance data
@@ -123,7 +168,8 @@ soy_bean_fb_wide <- soy_bean_fb_wide %>%
   mutate(prop_process = Processing/domestic_supply_quantity) %>% 
   mutate(prop_raw_feed = Feed/domestic_supply_quantity)
 ```
-#### New Way
+
+### Calculate Soy Feed Proportions
 
 ```{r}
 # rename production in cb to cake
@@ -131,83 +177,139 @@ soy_cake_production <- soy_cake_cb_wide %>%
   rename(production_cake = Production) %>% 
   select(Area, production_cake)
 
-# merge fb with cb data
+# merge fb with cb data based on the country (Area)
 soy_fb_cb_bean_cake <- full_join(soy_bean_fb_wide, soy_cake_production, by = "Area")
 
+# calculate the sum of a countries feed and cake production 
+# and divide it by the total DSQ from the FB data
+# this is the proportion of DSQ that goes to feed for a country
 soy_feed_proportion <- soy_fb_cb_bean_cake %>%
   rowwise() %>% 
   mutate(prop_feed_total = sum(Feed, production_cake, na.rm=TRUE)/domestic_supply_quantity)
-  
-```
-Basically just need to do the above instead of everything happening below here. Much simpler and concise but need to write out decision making steps. We are close!!!
-
-Then add in the gapfilling step here!
-
-#### Old way
-For the food balance data there is a much greater variety of where a country's soyabean is directed for processing vs feed.
-
-- calculate proportion soy processing going to cake (feed) (soy cake production / soy processing)
-```{r}
-# rename production in cb to cake
-soy_cake_production <- soy_cake_cb_wide %>% 
-  rename(production_cake = Production) %>% 
-  select(Area, production_cake)
-
-# merge fb with cb data
-soy_fb_cb_bean_cake <- full_join(soy_bean_fb_wide, soy_cake_production, by = "Area")
-```
-
-
-```{r}
-# calculate proportion of processed soy that goes to cake 
-soy_feed_proportions <- soy_fb_cb_bean_cake_oil %>% 
-  mutate(prop_cake_in_processing = production_cake/Processing)
-# we want tonnes cake production / tonnes processing
-# rather than divided by tonnes cake + oil production because there could be other things
-# that are processed than just oil and soy, so we don't want to overestimate the amount
-# going to feed. We're not accounting for losses in feed production, but we are assuming
-# that those are small.
-
-# convert Infinities to 1 (has cake production but pk processing = 0)
-soy_feed_proportions$prop_cake_in_processing[soy_feed_proportions$prop_cake_in_processing > 100] <- 1  
-
-# check to see if cake_oil_production is close to 100% of processing per country
-# not quite 100% (see comments above)
-# soy_fb_cb_check <- soy_fb_cb_bean_cake_oil %>%
-#   mutate(cake_oil_production = production_cake + production_oil) %>%
-#   mutate(prop_cake_oil_in_processing = cake_oil_production/Processing)
-```
-
-
-- calculate proportion soy DSQ going to feed via processing (multiply previous 2 proportions)
-```{r}
-soy_feed_proportions <- soy_feed_proportions %>% 
-  mutate(prop_feed = prop_process*prop_cake_in_processing)
-
-# NaNs introduced where prop_process = NaN, which is where pk dsq = 0
-# NAs introduced where processing = NA, so prop_process also = NA
-```
-
-
-- add proportion soy directly going to feed to proportion soy DSQ going to feed via processing
-```{r}
-# using rowwise to incorporate na.rm = TRUE, otherwise if either prop_feed or prop_raw_feed are NA, it 
-# gives an NA for the prop_feed_total variable
-soy_fb_cb_5 <- soy_fb_cb_4 %>% 
-  rowwise() %>% 
-  mutate(prop_feed_total = sum(prop_feed, prop_raw_feed, na.rm=TRUE))
-# now all values that would be NA are 0 - so something to keep in mind with gapfilling
 
 # save soy df
-write_csv(soy_fb_cb_5, paste0(save_path, "perc_dsq_soy_used_as_feed.csv"))
+# write_csv(soy_feed_proportion, paste0(save_path, "perc_dsq_soy_used_as_feed.csv"))
+  
+```
+
+For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages as done below. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
+
+### Gapfill Soy
+
+Read in previously made `soy_feed_proporion` csv of percent feed for soy, add region column, and gapfill.
+```{r}
+soy <- soy_feed_proportion
+
+# have to rename Turkey because it got a ? symbol added when saved as csv previously
+# can't use %in% or == to identify it because it isn't showing up as a string
+soy[152,1]                    # check to make sure this is Turkey
+soy[152,1] <- "Turkey"
+soy[37,1]                     # check to make sure this is Côte d'Ivoire
+soy[37,1] <- "Côte d'Ivoire"
+soy[33,1]                     # check to make sure this is Taiwan
+soy[33,1] <- "Taiwan"
+
+# remove item column and rename prop_feed 
+soy <- soy %>% 
+  select(Area, domestic_supply_quantity, Feed, production_cake, prop_feed_total) %>% 
+  rename(soy_dsq = domestic_supply_quantity, 
+         soy_feed = Feed, 
+         soy_cake = production_cake, 
+         soy_prop_feed = prop_feed_total) %>% 
+  # have to do this line with the utf coding to avoid error when adding regions with countrycode package
+  mutate_if(is.character, utf8::utf8_encode) %>% 
+  # add iso3 column
+  mutate(iso3 = countrycode(Area, "country.name", "iso3c"))
+
+# join with country list
+soy <- full_join(soy, countries, by = "iso3") %>% 
+  # fill in country name where NA
+  mutate(Area = case_when(is.na(Area) ~ country, 
+                          TRUE ~ Area)) %>% 
+  select(-country)
+
+# check iso3 codes for duplicates
+# remove duplicates: China, China, mainland, Palestinian Territories
+soy <- soy %>% 
+  # this gets rid of duplicates of mainland China
+  unique() %>% 
+  # remove Palestinian Territories because we have Palestine
+  filter(!Area == "Palestinian Territories")
+
+# add region
+# we need a combination of UN subregion and intermediate codes
+# add subregion
+
+soy_regions <- soy %>% 
+  # add subregion
+  mutate(subregion = countrycode(iso3, 'iso3c', 'un.regionsub.name')) %>% 
+  # add intermediate region
+  mutate(intermed_region = countrycode(iso3, 'iso3c', 'un.regionintermediate.name')) %>% 
+  # make a region column for when there is no intermediate region use the subregion
+  mutate(region = case_when(is.na(intermed_region) ~ subregion,
+                            TRUE ~ intermed_region))  
+# more countries are matched with region when we use country name instead of iso3 codes
+
+# fill in Taiwan 
+soy_regions$region[soy_regions$Area == "Taiwan"] <- "Eastern Asia"
+
+# for the previously calculated regions (bottom rows in df) that show up as NA 
+# when trying to add the region column with the countrycode package,
+# copy their region name into the region column
+soy_regions <- soy_regions %>% 
+  mutate(region = case_when(is.na(region) ~ Area, 
+                            TRUE ~ region))
+
+# remove extra columns and reorder
+soy_regions <- soy_regions %>% 
+  select(-c(subregion, intermed_region)) %>% 
+  select(Area, iso3, region, soy_dsq, soy_feed, soy_cake, soy_prop_feed) # reorder
+
+# before using the regions to gapfill use this to look at the regional data
+region_test <- soy_regions %>% 
+  filter(Area == region) %>% 
+  select(region, region_prop = soy_prop_feed)
+
+```
+
+Melanesia, Micronesia, and Polynesia regions have NA for their soy_prop_feed. To gapfill these regions we will use the Small Island Developing States average. One could also use Oceania average, however this is includes data from Australia and New Zealand which are different economies than these regions that have no data.
+
+```{r}
+# replace NAs and 0s with region values (0s include NAs because of how this was previously calculated)
+soy_gap_filled <- soy_regions %>% 
+  group_by(region) %>% 
+  # for countries with a calculated zero, NA, NaN, or inf value use the regional average
+  mutate(soy_prop_feed_gf = case_when(soy_prop_feed == 0 ~ soy_prop_feed[Area == region],
+                                      is.na(soy_prop_feed) ~ soy_prop_feed[Area == region],
+                                      is.infinite(soy_prop_feed) ~ soy_prop_feed[Area == region],
+                                      TRUE ~ soy_prop_feed)) %>% 
+  ungroup() %>% 
+  # use "small Island Developing States" average for missing regions 
+  mutate(soy_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
+                                    true = soy_gap_filled$soy_prop_feed[soy_gap_filled$Area == "Small Island Developing States"],
+                                    false = soy_prop_feed_gf)) %>% 
+  # select only the columns we need
+  select(Area, iso3, region, soy_prop_feed_gf)
+
+## below is a data check to make sure that the above works as intended
+# gf_data_to_test <- soy_gap_filled %>% 
+#   select(Area, soy_prop_feed_gf)
+# 
+# # check to make sure the above worked
+# test_gf <- soy_regions %>% 
+#   filter(soy_prop_feed %in% c(0, NA, NaN, Inf)) %>% 
+#   select(Area, region, soy_prop_feed) %>% 
+#   left_join(gf_data_to_test, by = "Area") %>% 
+#   left_join(region_test, by = "region") %>% 
+#   mutate(data_test = soy_prop_feed_gf - region_prop)
+## end check
+
+# save csv
+#write_csv(soy_gap_filled, paste0(save_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
 ```
 
 
-For countries that are missing, we could use region averages, so we're keeping those in for now.
-
-
-
-### Palm kernel
+## Palm kernel
 - palm oil comes from the palm oil fruit, palm kernel oil comes from the palm kernel (seed inside of fruit)
 - only palm kernel cake is used as animal feed
 

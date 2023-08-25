@@ -50,7 +50,7 @@ library(countrycode)
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_prop_feed_per_crop_country_FAO_FB_and_CB_2013/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
 kastner_path <- paste0(raw_path, "kastner_2022/")
 fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
 ```
@@ -124,7 +124,8 @@ countries <- countries %>%
 
 ## Soy
 
-From the commodity balances data, all "Domestic supply quantity" (DSQ) is practically the same as "Feed" for soyabean cake of each country. Any countries where DSQ does not equal Feed is a difference of less than 1%. Therefore for our purposes, all commodity balance soyabean cake production values will be associated to feed.
+From the commodity balances data, all "Domestic supply quantity" (DSQ) is practically the same as "Feed" for soyabean cake of each country. Any countries where DSQ does not equal Feed is a difference of less than 1%. Therefore for our purposes, all commodity balance soyabean cake production values will be associated to feed. "Soyabean Oil" is not typically used for feed so therefore it is not included
+
 ```{r}
 # subset cb to soy cake
 soy_cb <- cb %>% 
@@ -144,12 +145,11 @@ soy_cake_cb_wide <- soy_cb %>%
 #   select(Area, prop_cake_feed)
 ```
 
-The above chunk shows that most domestic supply of soy cake is from feed with the lowest proportion for a country being 80%.
+The above chunk shows that most domestic supply of soy cake is from feed with the lowest proportion for a country being 80%. We will therefore assume all dsq of soy cake is for feed.
 
 In the next code chunk we:
 - calculate the proportion of soyabean DSQ going to processing (soy processing / soy DSQ)
 - calculate the proportion of soyabean DSQ directly going to feed (soy feed / soy DSQ)
-- "Soyabean Oil" is not typically used for feed so therefore it is not included
 ```{r}
 # subset food balance data
 soy_fb <- fb %>% 
@@ -188,7 +188,7 @@ soy_feed_proportion <- soy_fb_cb_bean_cake %>%
   mutate(prop_feed_total = sum(Feed, production_cake, na.rm=TRUE)/domestic_supply_quantity)
 
 # save soy df
-# write_csv(soy_feed_proportion, paste0(save_path, "perc_dsq_soy_used_as_feed.csv"))
+write_csv(soy_feed_proportion, paste0(save_path, "perc_dsq_soy_used_as_feed.csv"))
   
 ```
 
@@ -283,36 +283,42 @@ soy_gap_filled <- soy_regions %>%
                                       is.na(soy_prop_feed) ~ soy_prop_feed[Area == region],
                                       is.infinite(soy_prop_feed) ~ soy_prop_feed[Area == region],
                                       TRUE ~ soy_prop_feed)) %>% 
-  ungroup() %>% 
+  ungroup()
+
+soy_gap_filled <- soy_gap_filled %>% 
   # use "small Island Developing States" average for missing regions 
   mutate(soy_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
                                     true = soy_gap_filled$soy_prop_feed[soy_gap_filled$Area == "Small Island Developing States"],
                                     false = soy_prop_feed_gf)) %>% 
   # select only the columns we need
   select(Area, iso3, region, soy_prop_feed_gf)
+```
 
-## below is a data check to make sure that the above works as intended
-# gf_data_to_test <- soy_gap_filled %>% 
+Below is a check to make sure that the above gapfilling works as intended. The only `data_test` value that should not be zero are Melanesia, Micronesia, and Polynesia regions but that is because they were originally NA and we fixed that in the above. This is shown by the value in the `soy_prop_feed_gf` column.
+```{r}
+# gf_data_to_test <- soy_gap_filled %>%
 #   select(Area, soy_prop_feed_gf)
 # 
 # # check to make sure the above worked
-# test_gf <- soy_regions %>% 
-#   filter(soy_prop_feed %in% c(0, NA, NaN, Inf)) %>% 
-#   select(Area, region, soy_prop_feed) %>% 
-#   left_join(gf_data_to_test, by = "Area") %>% 
-#   left_join(region_test, by = "region") %>% 
+# test_gf <- soy_regions %>%
+#   filter(soy_prop_feed %in% c(0, NA, NaN, Inf)) %>%
+#   select(Area, region, soy_prop_feed) %>%
+#   left_join(gf_data_to_test, by = "Area") %>%
+#   left_join(region_test, by = "region") %>%
 #   mutate(data_test = soy_prop_feed_gf - region_prop)
-## end check
+# # end check
+```
 
+Save the new data
+```{r}
 # save csv
-#write_csv(soy_gap_filled, paste0(save_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
+write_csv(soy_gap_filled, paste0(save_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
 ```
 
 
 ## Palm kernel
 - palm oil comes from the palm oil fruit, palm kernel oil comes from the palm kernel (seed inside of fruit)
 - only palm kernel cake is used as animal feed
-
 
 Palm kernel methods:
 - make sure all cake is going to feed
@@ -321,7 +327,6 @@ Palm kernel methods:
 - calculate proportion palm kernel processing going to cake (feed) 
 - calculate proportion palm kernel DSQ going to feed via processing (multiply previous 2 proportions)
 - check if any palm kernels are going to feed directly
-
 
 Is all palm kernel cake going to feed?
 - make sure all cake is going to feed
@@ -334,11 +339,10 @@ pk_cake <- cb %>%
   pivot_wider(names_from = Element, values_from = Value)
 
 # how much pk cake going to feed?
-pk_cake_feed <- pk_cake %>% 
-  summarise(perc_cake_to_feed = Feed/`Domestic supply quantity`)
-# At least 96% of palm oil cake going to feed except in one country where it was 77%, which is likely an error
+# pk_cake_feed <- pk_cake %>% 
+#   summarise(perc_cake_to_feed = Feed/`Domestic supply quantity`)
 ```
-
+At least 96% of palm oil cake going to feed except in one country where it was 77%. For our purposes then we will assume that all palmkernel cake is being used for feed by countries.
 
 How much palm kernel is processed?
 Not all of the DSQ is processed, and losses aren't always accounted for.
@@ -359,21 +363,13 @@ pk_proc <- cb %>%
 pk_process_perc <- pk_proc %>% 
   mutate(perc_pk_processed = Processing/`Domestic supply quantity`)
 
-# I don't think palm kernels are going to anything besides palm kernel oil and cake
 ```
+Most of the domestic supply quantity of palm kernels is going to processing.
 
-
-Does palm kernel oil and palm kernel cake production equal palm kernel DSQ?
+Does palm kernel oil and palm kernel cake production equal palm kernel DSQ? This next code chunk is to understand the process flow of palm kernel more and not used for the final calculations.
 Sum tonnes palm kernel cake production from CB with palm kernel oil production from FB and compare to palm kernel DSQ from CB (or from FB - same values, but FB is rounded to the thousands, so CB is more detailed)
 - check to see if palm kernel oil production and palm kernel cake production are about equal to the weight of palm kernel dsq
 ```{r}
-# create df with palm kernels
-pk <- cb %>% 
-  filter(Item == "Palm kernels") %>% 
-  select(Area, Element, Item, Value) %>% 
-  filter(Element == "Feed" | Element == "Domestic supply quantity" | Element == "Production") %>% 
-  pivot_wider(names_from = Element, values_from = Value)
-
 # create df with palm kernels oil
 pk_oil <- fb %>% 
   filter(Item == "Palmkernel Oil") %>% 
@@ -381,67 +377,64 @@ pk_oil <- fb %>%
   filter(Element == "Feed" | Element == "Domestic supply quantity" | Element == "Production") %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes)
 
-# combine pk, pk_cake, and pk_oil
+# isolate palm cake production from cb
 pk_cake_prod <- pk_cake %>% 
+  # we are assuming all cake in production is used for feed
   select(Area, Production) %>% 
   rename(pk_cake_production = Production)
+
+# isolate palm oil production from fb
 pk_oil_prod <- pk_oil %>% 
   select(Area, Production) %>% 
   rename(pk_oil_production = Production)
-pk_proc_2 <- pk_proc %>% 
+
+# isolate palm kernel cb data for comparison (pk_proc is from above code chunk)
+pk_proc <- pk_proc %>% 
   select(Area, `Domestic supply quantity`, Processing, Feed) %>% 
   rename(pk_dsq = `Domestic supply quantity`, pk_processing = Processing, pk_feed = Feed)
-pk_1 <- full_join(pk_cake_prod, pk_oil_prod, by = "Area")
-pk_2 <- full_join(pk_1, pk_proc_2, by = "Area")
+
+# join cake and oil production
+pk_cake_oil <- full_join(pk_cake_prod, pk_oil_prod, by = "Area")
+#join cake and oil with palm kernel data
+pk_cake_oil_kernel <- full_join(pk_cake_oil, pk_proc, by = "Area")
 
 # sum pk oil and pk cake
-pk_2 <- pk_2 %>% 
+pk_cake_oil_kernel <- pk_cake_oil_kernel %>% 
   mutate(sum_cake_oil = (pk_cake_production + pk_oil_production))
+# only about 50 countries produce palm kernel cake + palm oil
+
 
 # check to see if pk_cake_production + pk_oil_production is close to pk processing
 # divide sum by dsq of pk
-pk_2 <- pk_2 %>% 
-  mutate(perc_proc_in_oil_cake = sum_cake_oil/pk_processing)
-# palm kernel cake + oil account for about 80-100% of palm kernel processed tonnes
+pk_cake_oil_kernel <- pk_cake_oil_kernel %>% 
+  mutate(perc_proc_in_oil_cake = sum_cake_oil/pk_dsq)
 
-# only 50 countries produce palm kernel cake/ palm oil
-# for most countries, over 85% of processed palm kernels are accounted for in the palm kernel cake and palm kernel oil production
-# there are 11 countries with oil and cake accounting for <60% of processing tonnes
-# we can assume those are lost or somehow else accounted for
-
-# there is only 1 country (Romania) that include feed as a category for palm kernels, 
-# and the amount is super low (3 tonnes)
 ```
+For most countries, over 80% of palm kernel DSQ is accounted for in the palm kernel cake and palm kernel oil production. There are 11 countries with oil and cake accounting for <60% of processing tonnes so we will assume those are lost or somehow else accounted for. Only 1 Romania includes feed as a category for palm kernels, and the amount is super low (3 tonnes) so it will be ignored.
 
 
-- calculate proportion palm kernel processing going to cake (feed)
+### Calculate palm kernel proportions
 ```{r}
-# calculate proportion of processed palm kernels that goes to cake 
-pk_2 <- pk_2 %>% 
-  mutate(prop_cake_in_processing = pk_cake_production/pk_processing)
+# rename production in cb to cake
+pk_cake_production <- pk_cake %>% 
+  rename(production_cake = Production) %>% 
+  select(Area, production_cake)
 
-# subset previous df to only percent pk processing / dsq variable and Area
-pk_process_perc_2 <- pk_process_perc %>% 
-  select(Area, perc_pk_processed)
+# merge cb data based on the country (Area)
+pk_cb_join_cake <- full_join(pk_proc, pk_cake_production, by = "Area")
 
-# join together
-pk_3 <- full_join(pk_2, pk_process_perc_2, by = "Area")
+# divide cake production by the total DSQ from the palm kernel commodity data
+# this is the proportion of DSQ that goes to feed for a country
+pk_feed_proportion <- pk_cb_join_cake %>%
+  rowwise() %>% 
+  mutate(prop_feed_total = production_cake/pk_dsq)
 
-# multiply prop of dsq that is processed by prop of processed that is turned into cake
-pk_3 <- pk_3 %>% 
-  mutate(prop_feed_total = prop_cake_in_processing*perc_pk_processed)
-
-# add column that shows these are palm kernels
-pk_3_clean <- pk_3 %>% 
-  mutate(Item = "palm kernel")
-# only 1 country includes feed (3 tonnes) for palm kernels
-
-# save df
-write_csv(pk_3_clean, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed.csv"))
+# save soy df
+write_csv(pk_feed_proportion, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed.csv"))
 ```
 
 
-### Oilcrops
+## Oilcrops
 
 includes cake related to groundnuts, sunflower seed, rape and mustardseed, sesame seed, cottonseed, and other oilcrops
 
@@ -455,7 +448,7 @@ Oilcrop methods:
 
 
 
-### Cottonseed
+## Cottonseed
 
 Is all cake going to feed? Check in commodity balances data. - Yes
 ```{r}

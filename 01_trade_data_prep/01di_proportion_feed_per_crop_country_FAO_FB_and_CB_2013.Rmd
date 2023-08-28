@@ -196,7 +196,7 @@ For countries that don't have data to calculate the proportion of DSQ going to f
 
 ### Gapfill Soy
 
-Read in previously made `soy_feed_proporion` csv of percent feed for soy, add region column, and gapfill.
+Read in previously made `soy_feed_proportion` of percent feed for soy, add region column, and gapfill.
 ```{r}
 soy <- soy_feed_proportion
 
@@ -433,6 +433,162 @@ pk_feed_proportion <- pk_cb_join_cake %>%
 write_csv(pk_feed_proportion, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed.csv"))
 ```
 
+### Gapfill Palm Kernel
+
+Read in previously made `pk_feed_proportion` of percent feed for palm kernels, add region column, and gapfill.
+```{r}
+pk <- pk_feed_proportion
+
+# have to rename Turkey because it got a ? symbol added when saved as csv previously
+# can't use %in% or == to identify it because it isn't showing up as a string
+# check that this is Turkey
+pk[109,1]
+pk[109,1] <- "Turkey"
+# check that this is Côte d'Ivoire
+pk[27,1]                     
+pk[27,1] <- "Côte d'Ivoire"
+# check that this is Taiwan
+pk[23,1]                     
+pk[23,1] <- "Taiwan"
+
+# add row for Polynesia and Central Asia region
+pk <- pk %>% 
+  add_row(Area = "Polynesia") %>% 
+  add_row(Area = "Central Asia") %>% 
+  add_row(Area = "Micronesia")
+
+
+# remove item column and rename prop_feed 
+# also have to do this line with the utf coding to avoid error when adding regions with countrycode package
+pk <- pk %>% 
+  select(Area, pk_dsq, pk_feed, production_cake, prop_feed_total) %>% 
+  rename(pk_cake = production_cake, pk_prop_feed = prop_feed_total) %>% 
+  mutate_if(is.character, utf8::utf8_encode)
+
+# add iso3 column
+pk <- pk %>% 
+  mutate(iso3 = countrycode(Area, "country.name", "iso3c"))
+
+# join with country list
+pk <- pk %>% 
+  full_join(countries, by = "iso3")
+
+# fill in country name where NA
+pk <- pk %>% 
+  mutate(Area = case_when(is.na(Area) ~ country, 
+                          TRUE ~ Area)) %>% 
+  select(-country)
+
+# check iso3 codes for duplicates
+# remove duplicates: China, China, mainland, Palestinian Territories add in Central Asia as an Area
+pk <- pk %>% 
+  # this gets rid of duplicates of mainland China
+  unique() %>% 
+  # remove Palestinian Territories because we have Palestine
+  filter(!Area == "Palestinian Territories") 
+
+# we need a combination of UN subregion and intermediate codes
+pk_region <- pk %>% 
+  # add subregion
+  mutate(subregion = countrycode(iso3, 'iso3c', 'un.regionsub.name')) %>% 
+  # add intermediate region
+  mutate(intermed_region = countrycode(iso3, 'iso3c', 'un.regionintermediate.name')) %>% 
+  # when there is not an intermediate region make it equivalent to the subregion
+  mutate(region = case_when(is.na(intermed_region) ~ subregion,
+                            TRUE ~ intermed_region))  
+# more countries are matched with region when we use country name instead of iso3 codes
+
+# fill in Taiwan region
+pk_region$region[pk_region$Area == "Taiwan"] <- "Eastern Asia"
+# add central asia
+
+# for the previously calculated regions that show up as NA 
+# when trying to add the region column with the countrycode package,
+# copy their region name into the region column
+pk_region <- pk_region %>% 
+  mutate(region = case_when(is.na(region) ~ Area, TRUE ~ region))
+
+# remove extra columns and reorder
+pk_region <- pk_region %>% 
+  select(-c(subregion, intermed_region)) %>% 
+  select(Area, iso3, region, pk_dsq, pk_feed, pk_cake, pk_prop_feed) # reorder
+
+# explore the regional values
+region_test <- pk_region %>% 
+  filter(Area == region) %>% 
+  select(Area, region, region_prop = pk_prop_feed)
+```
+
+Using `region_test` we can see that there are a number of regions that have NA values. As palm kernal and palm cake productions is highly concentrated in certain parts of the world this is not completely surprusing. However, we know that there is some production in these areas so we will need to gapfill this data with continent level averages. The regions we are missing data for or they have low DSQ are:
+
+- Australia and NZ
+- Central Asia
+- Melanesia
+- Northern Africa
+- Northern America
+- Northern Europe
+- Oceania
+- Southern Africa
+- Southern Asia
+- Western Asia
+
+Now that the we have added regions to the data, gapfill the NA values for countries and zero values. Even though some countries may produce little to no palm kernel/cake themselves it is unlikely that none of it is going to feed. Therefor we will gapfill the countries with a calculated zero value just like in the soy calculations.
+```{r}
+# replace 0s and NAs with region values (0s include NAs because of how this was previously calculated)
+pk_gap_filled <- pk_region %>% 
+  group_by(region) %>% 
+  # for countries with a calculated NA or zero values use the regional average
+  mutate(pk_prop_feed_gf = case_when(pk_prop_feed == 0 ~ pk_prop_feed[Area == region],
+                                     is.na(pk_prop_feed) ~ pk_prop_feed[Area == region],
+                                     TRUE ~ pk_prop_feed)) %>%
+  ungroup()
+```
+
+Add in continents to the data frame and gapfill again using the continents. Since Oceania does not have a value we will use the world average to gapfill that continental region.
+```{r}
+# add continent to df
+pk_gap_filled$continent <- countrycode(pk_gap_filled$Area, origin = 'country.name', destination = 'continent')
+
+# fill in continents names for gapfilling
+# countrycode function doesn't work because you are not allowed to set continent
+# or un.regionsub.name as the origin variable
+pk_gap_filled <- pk_gap_filled %>% 
+  mutate(continent = case_when(Area == "Africa" ~ "Africa",
+                               Area == "Europe" ~ "Europe",
+                               Area == "Americas" ~ "Americas",
+                               Area == "Oceania" ~ "Oceania",
+                               Area == "Asia" ~ "Asia",
+                               Area == "Africa" ~ "Africa",
+                               TRUE ~ continent))
+
+# Oceania doesn't have a value for percent feed, so replace with World value
+pk_gap_filled <- pk_gap_filled %>% 
+  mutate(pk_prop_feed_gf = case_when(Area == "Oceania" ~ pk_gap_filled$pk_prop_feed_gf[pk_gap_filled$Area == "World"],
+                                     TRUE ~ pk_prop_feed_gf))
+
+
+# replace NAs with continent values 
+pk_gap_filled <- pk_gap_filled %>% 
+  group_by(continent) %>% 
+  mutate(pk_prop_feed_gf = case_when(pk_prop_feed_gf == 0 ~ pk_prop_feed_gf[Area == continent],
+                                     is.na(pk_prop_feed_gf) ~ pk_prop_feed_gf[Area == continent],
+                                     TRUE ~ pk_prop_feed_gf)) %>% 
+  ungroup()
+
+# some regions have NAs (e.g., Australia and New Zealand) that's fine though because all countries
+# have been gapfilled. We'll keep the NAs for regions in. No percent feed values below 0 or above 1.
+```
+
+Clean and save
+```{r}
+# clean df before saving
+pk_gap_filled <- pk_gap_filled %>% 
+  select(Area, iso3, region, pk_prop_feed_gf)
+
+# save csv
+write_csv(pk_gap_filled, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed_gapfilled.csv"))
+```
+
 
 ## Oilcrops
 
@@ -440,35 +596,35 @@ includes cake related to groundnuts, sunflower seed, rape and mustardseed, sesam
 
 Oilcrop methods:
 - make sure all cake is going to feed (cake feed / cake production)
-- calculate proportion DSQ going to processing (processing / DSQ)
-- calculate proportion processing going to cake (feed) (cake production / processing)
-- calculate proportion DSQ going to feed via processing (multiply previous 2 proportions)
+- calculate proportion DSQ going to feed via processing (cake_production / DSQ)
 - calculate proportion DSQ directly going to feed (feed / DSQ)
 - add proportion directly going to feed to proportion DSQ going to feed via processing
 
 
 
-## Cottonseed
+### Cottonseed
 
-Is all cake going to feed? Check in commodity balances data. - Yes
+Is all cake going to feed? Check in commodity balances data. Cottonseed oil in the `fb` data does not have any feed values from the "Element" column therefore it is assumed to not be used for feed.
 ```{r}
-# subset cb to soy cake
-cotton_cake_cb <- cb %>% 
-  filter(Item == "Cottonseed Cake")
-
 # subset and convert to wide
-cotton_cake_cb_wide <- cotton_cake_cb %>% 
+cotton_cake_cb_wide <- cb %>% 
+  filter(Item == "Cottonseed Cake") %>% 
   select(Area, Element, Value) %>% 
   filter(Element == "Feed" | Element == "Domestic supply quantity" | Element == "Production") %>% 
   pivot_wider(names_from = Element, values_from = Value)
 
-# calculate proportion DSQ of cake going to feed - pretty much 100% for all countries
-cotton_cb_cake_feed <- cotton_cake_cb_wide %>% 
-  mutate(prop_cake_feed = Feed/`Domestic supply quantity`)
+# calculate proportion DSQ of cake going to feed - pretty much 100% for all countries except for China, mainland
+# cotton_cb_cake_feed <- cotton_cake_cb_wide %>% 
+#   mutate(prop_cake_feed = Feed/`Domestic supply quantity`)
 ```
 
-- calculate proportion cotton DSQ going to processing (cotton DSQ / cotton processing)
+Pretty much 100% of all cottonseed cake is used for feed according to the data except for mainland China. Because of the high quantity of cottonseed cake DSQ from mainland China this greatly affects the Asia and even World averages. As this is the only country where the proportion of feed is not >95% of cottonseed cake DSQ we will assume it is an artifact of the data and that for our purposes, all cake is going to feed.
+
+Next:
+- calculate proportion cottonseed DSQ going to processing (cotton DSQ / cotton processing)
 - calculate proportion cotton DSQ directly going to feed (cotton feed / cotton DSQ)
+
+Reminder: we use CB instead of FB because the FB rounds to the nearest thousandth but they are otherwise the same values for 
 ```{r}
 # subset commodity balance data
 cotton_cb <- cb %>% 
@@ -480,46 +636,35 @@ cotton_cb_wide <- cotton_cb %>%
   select(Area, Item, Element, Value) %>% 
   pivot_wider(names_from = Element, values_from = Value)
 
-# calculate proportion cotton going to processing and proportion cotton going to feed
-cotton_cb_2 <- cotton_cb_wide %>% 
-  mutate(prop_process = Processing/`Domestic supply quantity`) %>% 
-  mutate(prop_raw_feed = Feed/`Domestic supply quantity`)
+# calculate proportion cotton going to feed
+cotton_cb_wide <- cotton_cb_wide %>% 
+  rename(cotton_dsq = `Domestic supply quantity`) %>% 
+  mutate(prop_raw_feed = Feed/cotton_dsq)
 ```
 
-- calculate proportion cotton processing going to cake (cotton cake production / cotton processing)
+#### Calculate Cotton Feed Proportions
+- calculate proportion DSQ going to feed via processing (cake_production / DSQ)
+- calculate proportion DSQ directly going to feed (feed / DSQ)
+- add proportion directly going to feed to proportion DSQ going to feed via processing
 ```{r}
 # rename production in cb to cake
-cotton_cake_cb_2 <- cotton_cake_cb_wide %>% 
+cotton_cake_production <- cotton_cake_cb_wide %>% 
   rename(production_cake = Production) %>% 
   select(Area, production_cake)
 
-# merge fb with cb data
-cotton_fb_cb <- full_join(cotton_cb_2, cotton_cake_cb_2, by = "Area")
+# merge fb with cb data by country (Area)
+cotton_seed_cake_fb_cb <- full_join(cotton_cb_wide, cotton_cake_production, by = "Area")
 
-# subset oil 
-cotton_oil_fb <- fb %>% 
-  filter(Item == "Cottonseed Oil") %>% 
-  filter(Element == "Production")
+# calculate the sum of a countries feed and cake production 
+# and divide it by the total DSQ from the CB data
+# this is the proportion of DSQ that goes to feed for a country
+cotton_feed_proportion <- cotton_seed_cake_fb_cb %>%
+  rowwise() %>% 
+  mutate(prop_feed_total = sum(Feed, production_cake, na.rm=TRUE)/cotton_dsq)
 
-cotton_oil_fb_2 <- cotton_oil_fb %>% 
-  select(Area, value_tonnes) %>% 
-  rename(production_oil = value_tonnes)
+# save soy df
+write_csv(cotton_feed_proportion, paste0(save_path, "perc_dsq_cotton_used_as_feed.csv"))
 
-# merge oil production
-cotton_fb_cb_2 <- full_join(cotton_fb_cb, cotton_oil_fb_2, by = "Area")
-
-# calculate proportion of processed cotton that goes to cake 
-cotton_fb_cb_3 <- cotton_fb_cb_2 %>% 
-  mutate(prop_cake_in_processing = production_cake/Processing)
-
-# convert Infinities to 1 (has cake production but processing = 0) - doesn't have infinities
-# cotton_fb_cb_3$prop_cake_in_processing[cotton_fb_cb_3$prop_cake_in_processing > 100] <- 1  
-
-# check to see if cake_oil_production is close to 100% of processing per country
-# nope - seem to be lots of other products of the processing than cake + oil
-cotton_fb_cb_check <- cotton_fb_cb_2 %>% 
-  mutate(cake_oil_production = production_cake + production_oil) %>% 
-  mutate(prop_cake_oil_in_processing = cake_oil_production/Processing)
 ```
 
 - calculate proportion cotton DSQ going to feed via processing (multiply previous 2 proportions)
@@ -537,8 +682,9 @@ cotton_fb_cb_5 <- cotton_fb_cb_4 %>%
 write_csv(cotton_fb_cb_5, paste0(save_path,"perc_dsq_cotton_used_as_feed.csv"))
 ```
 
+For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages as done below. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
 
-
+#### Gapfill Cotton
 
 ### Groudnut
 

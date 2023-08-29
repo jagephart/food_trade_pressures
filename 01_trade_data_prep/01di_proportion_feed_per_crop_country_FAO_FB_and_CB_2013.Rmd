@@ -592,7 +592,7 @@ write_csv(pk_gap_filled, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed_ga
 
 ## Oilcrops
 
-includes cake related to groundnuts, sunflower seed, rape and mustardseed, sesame seed, cottonseed, and other oilcrops
+Includes cake related to groundnuts, sunflower seed, rape and mustardseed, sesame seed, cottonseed, and other oilcrops. Once these have all been calculated they will be combined into an oilcrops grouping.
 
 Oilcrop methods:
 - make sure all cake is going to feed (cake feed / cake production)
@@ -621,10 +621,9 @@ cotton_cake_cb_wide <- cb %>%
 Pretty much 100% of all cottonseed cake is used for feed according to the data except for mainland China. Because of the high quantity of cottonseed cake DSQ from mainland China this greatly affects the Asia and even World averages. As this is the only country where the proportion of feed is not >95% of cottonseed cake DSQ we will assume it is an artifact of the data and that for our purposes, all cake is going to feed.
 
 Next:
-- calculate proportion cottonseed DSQ going to processing (cotton DSQ / cotton processing)
 - calculate proportion cotton DSQ directly going to feed (cotton feed / cotton DSQ)
 
-Reminder: we use CB instead of FB because the FB rounds to the nearest thousandth but they are otherwise the same values for 
+Reminder: we use CB instead of FB because the FB rounds to the nearest thousandth but they are otherwise the same values 
 ```{r}
 # subset commodity balance data
 cotton_cb <- cb %>% 
@@ -667,24 +666,7 @@ write_csv(cotton_feed_proportion, paste0(save_path, "perc_dsq_cotton_used_as_fee
 
 ```
 
-- calculate proportion cotton DSQ going to feed via processing (multiply previous 2 proportions)
-- add proportion cotton directly going to feed to proportion cotton DSQ going to feed via processing
-```{r}
-cotton_fb_cb_4 <- cotton_fb_cb_3 %>% 
-  mutate(prop_feed = prop_process*prop_cake_in_processing)
-
-cotton_fb_cb_5 <- cotton_fb_cb_4 %>% 
-  rowwise() %>% 
-  mutate(prop_feed_total = sum(prop_feed, prop_raw_feed, na.rm=TRUE))
-# now all values that would be NA are 0 - so something to keep in mind with gapfilling
-
-# save df
-write_csv(cotton_fb_cb_5, paste0(save_path,"perc_dsq_cotton_used_as_feed.csv"))
-```
-
-For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages as done below. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
-
-#### Gapfill Cotton
+For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages for oil crops as a whole. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
 
 ### Groudnut
 
@@ -705,8 +687,12 @@ nut_cb_cake_feed <- nut_cb_wide %>%
   mutate(prop_cake_feed = Feed/`Domestic supply quantity`)
 ```
 
-- calculate proportion nut DSQ going to processing (nut DSQ / nut processing)
-- calculate proportion nut DSQ directly going to feed (nut feed / nut DSQ)
+For all countries with data, more than 80% of groundnut cake DSQ is for feed so we will assume all cake processing goes towards feed.
+
+Next:
+- calculate proportion groundnuts DSQ directly going to feed (groundnut feed / groundnut DSQ)
+
+We use FB data for groundnuts because the only CB data is for "Groundnut Cake".
 ```{r}
 # subset food balance data (groundnuts not in cb data, so have to use fb)
 nut_fb <- fb %>% 
@@ -719,75 +705,41 @@ nut_fb_wide <- nut_fb %>%
   pivot_wider(names_from = Element, values_from = value_tonnes)
 
 # calculate proportion nut going to processing and proportion nut going to feed
-nut_fb_2 <- nut_fb_wide %>% 
-  mutate(prop_process = Processing/`Domestic supply quantity`) %>% 
-  mutate(prop_raw_feed = Feed/`Domestic supply quantity`)
+nut_fb_wide <- nut_fb_wide %>% 
+  rename(nut_dsq = `Domestic supply quantity`) %>% 
+  mutate(prop_raw_feed = Feed/nut_dsq)
 ```
 
-- calculate proportion nut processing going to cake (nut cake production / nut processing)
+Only one country reports "Groundnuts (Shelled Eq)" data going to feed, Japan. Therefore we will exclude any of this product going directly into feed. 
+
+#### Calculate Groundnut Feed Proportions
+- calculate proportion DSQ going to feed via processing (cake_production / DSQ), for groundnuts this is the proportion of the product going to feed
+- add proportion directly going to feed to proportion DSQ going to feed via processing
+
 ```{r}
 # rename production in cb to cake
-nut_cb_2 <- nut_cb_wide %>% 
+nut_cake_production <- nut_cb_wide %>% 
   rename(production_cake = Production) %>% 
   select(Area, production_cake)
 
 # merge fb with cb data
-nut_fb_cb <- full_join(nut_fb_2, nut_cb_2, by = "Area")
+nut_fb_cb <- full_join(nut_fb_wide, nut_cake_production, by = "Area")
 
-# subset oil 
-nut_oil_fb <- fb %>% 
-  filter(Item == "Groundnut Oil") %>% 
-  filter(Element == "Production")
-
-nut_oil_fb_2 <- nut_oil_fb %>% 
-  select(Area, value_tonnes) %>% 
-  rename(production_oil = value_tonnes)
-
-# merge oil production
-nut_fb_cb_2 <- full_join(nut_fb_cb, nut_oil_fb_2, by = "Area")
-
-# calculate proportion of processed nut that goes to cake 
-nut_fb_cb_3 <- nut_fb_cb_2 %>% 
-  mutate(prop_cake_in_processing = production_cake/Processing)
-
-# convert Infinities to 1 (has cake production but processing = 0 b/c fb data is not as detailed as cb data so missing 
-# values that are less than 1000 tonnes)
-nut_fb_cb_3$prop_cake_in_processing[nut_fb_cb_3$prop_cake_in_processing > 100] <- 1  
-
-# check to see if cake_oil_production is close to 100% of processing per country
-# a high proportion of processing is accounted for by cake and oil, but seem to 
-# be lots of other products of the processing than cake + oil
-nut_fb_cb_check <- nut_fb_cb_2 %>% 
-  mutate(cake_oil_production = production_cake + production_oil) %>% 
-  mutate(prop_cake_oil_in_processing = cake_oil_production/Processing)
-```
-
-- calculate proportion nut DSQ going to feed via processing (multiply previous 2 proportions)
-- add proportion soy directly going to feed to proportion soy DSQ going to feed via processing
-```{r}
-nut_fb_cb_4 <- nut_fb_cb_3 %>% 
-  mutate(prop_feed = prop_process*prop_cake_in_processing)
-# there is one instance where a country has a small amount of processing (1000 tonnes) but no dsq
-# this country gets Inf for prop_feed
-
-nut_fb_cb_5 <- nut_fb_cb_4 %>% 
+# calculate the sum of a countries cake production 
+# and divide it by the total DSQ from the FB data
+# this is the proportion of DSQ that goes to feed for a country
+nut_feed_proportion <- nut_fb_cb %>% 
   rowwise() %>% 
-  mutate(prop_feed_total = sum(prop_feed, prop_raw_feed, na.rm=TRUE))
-# one infinity value - convert to 1
-nut_fb_cb_5$prop_feed_total[nut_fb_cb_5$prop_feed_total > 100] <- 1  
-
-# now all values that would be NA are 0 - so something to keep in mind with gapfilling
+  mutate(prop_feed_total = production_cake/nut_dsq)
 
 # save df
-write_csv(nut_fb_cb_5, paste0(save_path, "perc_dsq_groundnut_used_as_feed.csv"))
+write_csv(nut_feed_proportion, paste0(save_path, "perc_dsq_groundnut_used_as_feed.csv"))
 ```
 
+For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages for oil crops as a whole. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
 
-
-
-
-### Oilseed other
-oilcrops, other in FB - lots of negative DSQ for this category in FAO
+### Oilseed, other
+Oilcrops, other are used to caption the oilcrops that are not groundnut, sesamesee, etc. Use FB data because oilcrops, other CB data is only for cakes, which will be included.
 
 Is all cake going to feed? Check in commodity balances data. - Yes
 ```{r}
@@ -806,8 +758,12 @@ other_oil_cb_cake_feed <- other_oil_cb_wide %>%
   mutate(prop_cake_feed = Feed/`Domestic supply quantity`)
 ```
 
-- calculate proportion other_oil DSQ going to processing (other_oil DSQ / other_oil processing)
-- calculate proportion other_oil DSQ directly going to feed (other_oil feed / other_oil DSQ)
+Most of "Oilseed Cakes, Other" DSQ is going towards feed barring a few countries. Something to note is that some countries have a negative DSQ, however, we will be using the production values that have no negatives for the rest of the calculations.
+
+Next:
+- calculate proportion oil_other DSQ directly going to feed (feed / DSQ)
+
+Reminder: we use FB for "oilcrops, other" because the data is not included in CB 
 ```{r}
 # subset food balance data ("oilcrops other" not in cb data, so have to use fb)
 other_oil_fb <- fb %>% 
@@ -819,74 +775,47 @@ other_oil_fb_wide <- other_oil_fb %>%
   select(Area, Item, Element, value_tonnes) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes)
 
-# calculate proportion other_oil going to processing and proportion other_oil going to feed (decent amount going straight to feed)
-other_oil_fb_2 <- other_oil_fb_wide %>% 
-  mutate(prop_process = Processing/`Domestic supply quantity`) %>% 
-  mutate(prop_raw_feed = Feed/`Domestic supply quantity`)
+# calculate proportion other_oil going to feed
+other_oil_fb_wide <- other_oil_fb_wide %>% 
+  rename(other_oil_dsq = `Domestic supply quantity`) %>% 
+  mutate(prop_raw_feed = Feed/other_oil_dsq)
 ```
 
-- calculate proportion other_oil processing going to cake (other_oil cake production / other_oil processing)
+#### Calculate Oilcrop, Other Proportions
+- calculate proportion DSQ going to feed via processing (cake_production / DSQ)
+- calculate proportion DSQ directly going to feed (feed / DSQ)
+- add proportion directly going to feed to proportion DSQ going to feed via processing
 ```{r}
 # rename production in cb to cake
-other_oil_cb_2 <- other_oil_cb_wide %>% 
+other_oil_cake_production <- other_oil_cb_wide %>% 
   rename(production_cake = Production) %>% 
   select(Area, production_cake)
 
-# merge fb with cb data
-other_oil_fb_cb <- full_join(other_oil_fb_2, other_oil_cb_2, by = "Area")
+# merge fb with cb data by country (Area)
+other_oil_fb_cb <- full_join(other_oil_fb_wide, other_oil_cake_production, by = "Area") %>% 
+  # there are negative values for some of the dsq of other oilcrop, we will make these zero before calculations 
+  # this will change some proportions for countries but we will gapfill these in with averages later if necessary
+  mutate(other_oil_dsq = if_else(condition = other_oil_dsq < 0,
+                                 true = 0,
+                                 false = other_oil_dsq))
 
-# subset oil 
-other_oil_oil_fb <- fb %>% 
-  filter(Item == "Groundnut Oil") %>% 
-  filter(Element == "Production")
-
-other_oil_oil_fb_2 <- other_oil_oil_fb %>% 
-  select(Area, value_tonnes) %>% 
-  rename(production_oil = value_tonnes)
-
-# merge oil production
-other_oil_fb_cb_2 <- full_join(other_oil_fb_cb, other_oil_oil_fb_2, by = "Area")
-
-# calculate proportion of processed other_oil that goes to cake 
-other_oil_fb_cb_3 <- other_oil_fb_cb_2 %>% 
-  mutate(prop_cake_in_processing = production_cake/Processing)
-
-# convert Infinities to 1 (has cake production but processing = 0 b/c fb data is not as detailed as cb data so missing 
-# values that are less than 1000 tonnes)
-other_oil_fb_cb_3$prop_cake_in_processing[other_oil_fb_cb_3$prop_cake_in_processing > 100] <- 1  
-
-# check to see if cake_oil_production is close to 100% of processing per country
-# a high proportion of processing is accounted for by cake and oil, but seem to 
-# be lots of other products of the processing than cake + oil
-other_oil_fb_cb_check <- other_oil_fb_cb_2 %>% 
-  mutate(cake_oil_production = production_cake + production_oil) %>% 
-  mutate(prop_cake_oil_in_processing = cake_oil_production/Processing)
-```
-
-- calculate proportion other_oil DSQ going to feed via processing (multiply previous 2 proportions)
-- add proportion soy directly going to feed to proportion soy DSQ going to feed via processing
-```{r}
-other_oil_fb_cb_4 <- other_oil_fb_cb_3 %>% 
-  mutate(prop_feed = prop_process*prop_cake_in_processing)
-# there is one instance where a country has a small amount of processing (1000 tonnes) but no dsq
-# this country gets Inf for prop_feed
-
-other_oil_fb_cb_5 <- other_oil_fb_cb_4 %>% 
+# calculate the sum of a countries feed and cake production 
+# and divide it by the total DSQ from the CB data
+# this is the proportion of DSQ that goes to feed for a country
+other_oil_feed_proportion <- other_oil_fb_cb %>%
   rowwise() %>% 
-  mutate(prop_feed_total = sum(prop_feed, prop_raw_feed, na.rm=TRUE))
+  mutate(prop_feed_total = sum(Feed, production_cake, na.rm=TRUE)/other_oil_dsq)
 
-# one infinity value - convert to 1
-other_oil_fb_cb_5$prop_feed_total[other_oil_fb_cb_5$prop_feed_total > 100] <- 1  
-# now all values that would be NA are 0 - so something to keep in mind with gapfilling
+# there are a number of countries where the proportion is greater than 1, we will change these to be equal to 1
+other_oil_feed_proportion <- other_oil_feed_proportion %>% 
+  mutate(prop_feed_total = if_else(condition = prop_feed_total > 1,
+                                 true = 1,
+                                 false = prop_feed_total))
 
-# save df
-write_csv(other_oil_fb_cb_5, paste0(save_path, "perc_dsq_other_oil_used_as_feed.csv"))
+# save soy df
+write_csv(other_oil_feed_proportion, paste0(save_path, "perc_dsq_other_oil_used_as_feed.csv"))
+
 ```
-
-
-
-
-
 
 ### Rape and mustardseed
 

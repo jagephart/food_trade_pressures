@@ -191,8 +191,7 @@ grains <- grains %>%
 ```
 
 
-## Gapfill Grains
-### New way
+### Gapfill Grains
 ```{r}
 region_fb <- read_csv(paste0(FAO_path, "2017_FAO_data/FAO_Food_Balances_2017_grains_pulses_feed_dl_11_2_22.csv"))
 
@@ -211,7 +210,8 @@ grain_region_fb <- region_fb %>%
   filter(!Item == "Beans", !Item == "Pulses, Other and products", !Item == "Peas") %>% 
   # group by area and sum feed and dsq of grains
   group_by(Area) %>% 
-  summarise(sum_dsq = sum(`Domestic supply quantity`, na.rm=TRUE), sum_feed = sum(Feed, na.rm=TRUE)) %>% 
+  summarise(sum_dsq = sum(`Domestic supply quantity`, na.rm=TRUE), 
+            sum_feed = sum(Feed, na.rm=TRUE)) %>% 
   # calculate aggregate grain proportion
   mutate(total_prop_feed = sum_feed/sum_dsq)
 
@@ -271,193 +271,18 @@ grains_gap_filled <- left_join(grains_countries, grain_region_fb) %>%
   # select only the columns we need
   select(Area, iso3, region, grain_prop_feed_gf)
 
-write_csv(grains_3, paste0(save_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
+write_csv(grains_gap_filled, paste0(save_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
 
 ```
 
 
-### Old Way
-Download FAO FB data for regions for 2017
-```{r}
-region_fb <- read_csv(paste0(FAO_path, "2017_FAO_data/FAO_Food_Balances_2017_grains_pulses_feed_dl_11_2_22.csv"))
-
-# all 2017? - yes
-range(region_fb$Year)
-
-region_fb_1 <- region_fb %>% 
-  # FB data comes in units of 1000 tonnes so convert to tonnes
-  mutate(value_tonnes = Value*1000) %>% 
-  # remove columns
-  select(-c(`Element Code`, `Item Code (CPC)`, `Year Code`, Year, Unit, Value)) %>% 
-  pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
-  # calculate proportion of grain used for feed
-  mutate(prop_feed = Feed/`Domestic supply quantity`)
-
-# put in similar format to grains df
-region_fb_2 <- region_fb_1 %>% 
-  select(`Area Code (M49)`, Area, Item, prop_feed) %>% 
-  pivot_wider(names_from = Item, values_from = prop_feed) %>% 
-  rename(whea_prop_feed = `Wheat and products`) %>% 
-  rename(barl_prop_feed = `Barley and products`) %>% 
-  rename(maiz_prop_feed = `Maize and products`) %>% 
-  rename(sorg_prop_feed = `Sorghum and products`) %>% 
-  rename(rice_prop_feed = `Rice and products`) %>% 
-  rename(rye_prop_feed = `Rye and products`) %>% 
-  rename(oats_prop_feed = `Oats`) %>% 
-  rename(miller_prop_feed = `Millet and products`) %>% 
-  rename(ocer_prop_feed = `Cereals, Other`)
-
-# filled in NAs and 0s with continent first, and then world (did this in Excel)
-# if the continent has 0 for a crop, then keep it as 0
-# if the continent also has NA, then use world value (no continents with NAs in grains df)
-# read back in gapfilled csv (only really updated Polynesia, Micronesia, Caribbean, and a couple columns in African regions)
-#grains_region <- read_csv(paste0(FAO_path, "FAO_regional_grains_perc_feed_gapfilled.csv"))
-
-
-# calculate aggregate grains per region (sum feed / sum dsq)
-
-# remove pulses
-region_grains_wo_pulse <- region_fb_1 %>% 
-  filter(!Item == "Beans", !Item == "Pulses, Other and products", !Item == "Peas")
-
-# group by area and sum feed and dsq of grains
-region_grains_group <- region_grains_wo_pulse %>% 
-  group_by(Area) %>% 
-  summarise(sum_dsq = sum(`Domestic supply quantity`, na.rm=TRUE), sum_feed = sum(Feed, na.rm=TRUE))
-
-# check
-sum(region_grains_group$sum_dsq)
-sum(region_grains_wo_pulse$`Domestic supply quantity`)
-
-# calculate aggregate grain proportion
-region_grains_group <- region_grains_group %>% 
-  mutate(total_prop_feed = sum_feed/sum_dsq)
-
-# add aggregate grain proportion feed to the rest of the regional individual grain feed df
-grains_region <- full_join(grains_region, region_grains_group, by = "Area")
-```
-
-Merge grains df with list of countries from trade matrices to ensure all countries are gapfilled even if there wasn't any FAO FB or CB data for them
-```{r}
-# add iso3 to grains
-grains_a <- grains %>% 
-  mutate(iso3 = countrycode(Area, "country.name", "iso3c")) %>% 
-  mutate(iso3 = case_when(is.na(iso3) ~ "TUR", TRUE ~ iso3))
-
-# join with country list
-grains_b <- grains_a %>% 
-  full_join(countries_1, by = "iso3")
-
-# fill in country name where NA
-grains_c <- grains_b %>% 
-  mutate(Area = case_when(is.na(Area) ~ country, TRUE ~ Area)) %>% 
-  select(-country)
-
-# check iso3 codes for duplicates
-# remove duplicates: China, China, mainland, Palestinian Territories
-# this gets rid of duplicates of China and mainland China
-grains_d <- grains_c %>% 
-  unique()
-
-# remove Palestinian Territories because we have Palestine
-grains_e <- grains_d %>% 
-  filter(!Area == "Palestinian Territories")
-```
-
-
-Merge grains df with region by country name (countrycode package)
-```{r}
-# we need a combination of UN subregion and intermediate codes
-# add subregion
-grains_e$subregion <- countrycode(grains_e$iso3, origin = 'iso3c', destination = 'un.regionsub.name')
-
-# add intermediate
-grains_e$intermed_region <- countrycode(grains_e$iso3, origin = 'iso3c', destination = 'un.regionintermediate.name')
-
-# combine regions
-grains_1 <- grains_e %>% 
-  mutate(region = case_when(is.na(intermed_region) ~ subregion,
-                            TRUE ~ intermed_region))
-
-# compare region categories to what we downloaded from FAO
-dplyr::setdiff(grains_region$Area, grains_1$region) # continents are in grains_region but not grains_1
-dplyr::setdiff(grains_1$region, grains_region$Area) #nothing in grains_1 that's not in grains_region
-
-# remove subregion and intermediate region categories
-grains_2 <- grains_1 %>% 
-  select(-c(subregion, intermed_region))
-
-# add continent
-grains_2$continent <- countrycode(grains_2$iso3, origin = 'iso3c', destination = 'continent')
-
-# reorder columns so regions is next to country
-grains_2 <- grains_2[, c(1:2, 33:35, 3:32)]
-
-# fill in NA for region that didn't match properly (China Taiwan)
-grains_2$region[grains_2$`Area Code (FAO)` == 214] <- "Eastern Asia"
-```
-
-Gapfill missing or 0 grains data with regional grains feed data
-Countries with 0% of a crop going to feed likely just don't have any dsq of that crop.
-If they do, then it's likely that at least some of it is going to feed and just not being accounted for.
-```{r}
-grains_3 <- grains_2
-
-# match regions between 2 dfs
-inds <- match(grains_2$region, grains_region$Area)
-
-# fill in NAs and 0s with region level data
-grains_3$barl_prop_feed <- ifelse(is.na(grains_3$barl_prop_feed), grains_region$barl_prop_feed[inds], grains_3$barl_prop_feed)
-grains_3$barl_prop_feed <- ifelse(grains_3$barl_prop_feed == 0, grains_region$barl_prop_feed[inds], grains_3$barl_prop_feed)
-
-grains_3$maiz_prop_feed <- ifelse(is.na(grains_3$maiz_prop_feed), grains_region$maiz_prop_feed[inds], grains_3$maiz_prop_feed)
-grains_3$maiz_prop_feed <- ifelse(grains_3$maiz_prop_feed == 0, grains_region$maiz_prop_feed[inds], grains_3$maiz_prop_feed)
-
-grains_3$sorg_prop_feed <- ifelse(is.na(grains_3$sorg_prop_feed), grains_region$sorg_prop_feed[inds], grains_3$sorg_prop_feed)
-grains_3$sorg_prop_feed <- ifelse(grains_3$sorg_prop_feed == 0, grains_region$sorg_prop_feed[inds], grains_3$sorg_prop_feed)
-
-grains_3$mill_prop_feed <- ifelse(is.na(grains_3$mill_prop_feed), grains_region$mill_prop_feed[inds], grains_3$mill_prop_feed)
-grains_3$mill_prop_feed <- ifelse(grains_3$mill_prop_feed == 0, grains_region$mill_prop_feed[inds], grains_3$mill_prop_feed)
-
-grains_3$rice_prop_feed <- ifelse(is.na(grains_3$rice_prop_feed), grains_region$rice_prop_feed[inds], grains_3$rice_prop_feed)
-grains_3$rice_prop_feed <- ifelse(grains_3$rice_prop_feed == 0, grains_region$rice_prop_feed[inds], grains_3$rice_prop_feed)
-
-grains_3$whea_prop_feed <- ifelse(is.na(grains_3$whea_prop_feed), grains_region$whea_prop_feed[inds], grains_3$whea_prop_feed)
-grains_3$whea_prop_feed <- ifelse(grains_3$whea_prop_feed == 0, grains_region$whea_prop_feed[inds], grains_3$whea_prop_feed)
-
-grains_3$rye_prop_feed <- ifelse(is.na(grains_3$rye_prop_feed), grains_region$rye_prop_feed[inds], grains_3$rye_prop_feed)
-grains_3$rye_prop_feed <- ifelse(grains_3$rye_prop_feed == 0, grains_region$rye_prop_feed[inds], grains_3$rye_prop_feed)
-# the proportion of the dsq going to feed in Eastern Africa is 2.0 because the dsq is only 1,000 tonnes while
-# the proportion going to feed is 2,000 tonnes
-# convert these 2 values to 1
-grains_3$rye_prop_feed <- ifelse(grains_3$rye_prop_feed > 1, 1, grains_3$rye_prop_feed)
-
-grains_3$oats_prop_feed <- ifelse(is.na(grains_3$oats_prop_feed), grains_region$oats_prop_feed[inds], grains_3$oats_prop_feed)
-grains_3$oats_prop_feed <- ifelse(grains_3$oats_prop_feed == 0, grains_region$oats_prop_feed[inds], grains_3$oats_prop_feed)
-
-grains_3$ocer_prop_feed <- ifelse(is.na(grains_3$ocer_prop_feed), grains_region$ocer_prop_feed[inds], grains_3$ocer_prop_feed)
-grains_3$ocer_prop_feed <- ifelse(grains_3$ocer_prop_feed == 0, grains_region$ocer_prop_feed[inds], grains_3$ocer_prop_feed)
-# there are some rows with negative values or infinities for ocer_prop_feed
-# convert negative to region value and infinities to 1
-grains_3$ocer_prop_feed <- ifelse(grains_3$ocer_prop_feed < 0, grains_region$ocer_prop_feed[inds], grains_3$ocer_prop_feed)
-grains_3$ocer_prop_feed <- ifelse(grains_3$ocer_prop_feed > 1, 1, grains_3$ocer_prop_feed)
-
-grains_3$total_prop_feed <- ifelse(is.na(grains_3$total_prop_feed), grains_region$total_prop_feed[inds], grains_3$total_prop_feed)
-grains_3$total_prop_feed <- ifelse(grains_3$total_prop_feed == 0, grains_region$total_prop_feed[inds], grains_3$total_prop_feed)
-
-# save gapfilled grains df
-write_csv(grains_3, paste0(save_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
-```
-
-
-
-### PULSES
+## Pulses
 
 For pulses, need to combine all tonnes and then calculate proportions to make sure it's weighted correctly since we only have one xpul category for MapSPAM.
 
 ```{r}
 # format beans
-beans <- fb_1 %>% 
+beans <- fb %>% 
   filter(Item == "Beans") %>% 
   select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
@@ -465,7 +290,7 @@ beans <- fb_1 %>%
          beans_feed = Feed)
 
 # format peas
-peas <- fb_1 %>% 
+peas <- fb %>% 
   filter(Item == "Peas") %>% 
   select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
@@ -473,7 +298,7 @@ peas <- fb_1 %>%
          peas_feed = Feed)
 
 # format Pulses, Other and Products
-other_pulse <- fb_1 %>% 
+other_pulse <- fb %>% 
   filter(Item == "Pulses, Other and products") %>% 
   select(-c(`Item Code`, Item)) %>% 
   pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
@@ -484,144 +309,110 @@ other_pulse <- fb_1 %>%
 pulses <- beans %>% 
   full_join(peas, by = c("Area Code (FAO)", "Area")) %>% 
   full_join(other_pulse, by = c("Area Code (FAO)", "Area"))
+```
 
-# combine dsq and feed for each crop, then calculate proportion feed from total
-# have to use rowwise - if we just sum those columns without rowwise and na.rm=TRUE, then if there is an NA
-# in any of the columns, we get an NA for the sum
-# if pulse_dsq = 0, then prop_feed = NaN, otherwise prop_feed will = 0 if no values (0s or NAs) in pulse_feed
-pulses <- pulses %>% 
+### Calculate proportion of pulses for feed
+Combine dsq and feed for each crop, then calculate proportion feed from total DSQ. If pulse_dsq = 0, then prop_feed = NaN, otherwise prop_feed will = 0 if no values (0s or NAs) in pulse_feed.
+```{r}
+pulses <- pulses %>%
+  # have to use rowwise - otherwise it sums the whole column, similar to groupby(Area) 
   rowwise() %>% 
   mutate(pulse_dsq = sum(beans_dsq, peas_dsq, other_pulse_dsq, na.rm=TRUE)) %>% 
   mutate(pulse_feed = sum(beans_feed, peas_feed, other_pulse_feed, na.rm=TRUE)) %>% 
-  mutate(prop_feed = pulse_feed/pulse_dsq)
+  mutate(total_prop_feed = pulse_feed/pulse_dsq)
 
 # save pulses df before gapfilling
-write_csv(pulses, paste0(save_path, "perc_dsq_pulses_used_as_feed.csv"))
+#write_csv(pulses, paste0(save_path, "perc_dsq_pulses_used_as_feed.csv"))
+```
+
+### Gapfill Pulses
+```{r}
+region_fb <- read_csv(paste0(FAO_path, "2017_FAO_data/FAO_Food_Balances_2017_grains_pulses_feed_dl_11_2_22.csv"))
+
+# all 2017? - yes
+range(region_fb$Year)
+
+pulse_region_fb <- region_fb %>% 
+  # FB data comes in units of 1000 tonnes so convert to tonnes
+  mutate(value_tonnes = Value*1000) %>% 
+  # remove extra columns
+  select(-c(`Element Code`, `Item Code (CPC)`, `Year Code`, Year, Unit, Value)) %>% 
+  pivot_wider(names_from = Element, values_from = value_tonnes) %>% 
+  # calculate proportion of Item used for feed
+  mutate(prop_feed = Feed/`Domestic supply quantity`) %>% 
+  # filter for beans, pulses, and peas
+  filter(Item %in% c("Beans", "Pulses, Other and products", "Peas")) %>% 
+  # group by area and sum feed and dsq of pulses
+  group_by(Area) %>% 
+  summarise(sum_dsq = sum(`Domestic supply quantity`, na.rm=TRUE), 
+            sum_feed = sum(Feed, na.rm=TRUE)) %>% 
+  # calculate aggregate pulses proportion
+  mutate(total_prop_feed = sum_feed/sum_dsq)
+
+```
+
+Based on `pulse_region_fb` the only regions that have no feed data are Micronesia, Polynesia, and Melanesia. As New Zealand and Australia make up the rest of the Oceania region and their proportions are the higher end of the spectrum it would be more conservative to use the world average rather than the regional average. Also the economies of New Zealand and Australia are quite different than Micronesia, Polynesia, and Melanesia.
+
+```{r}
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Micronesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Polynesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Melanesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
+
 ```
 
 
-Merge pulses df with list of countries from trade matrices to ensure all countries are gapfilled even if there wasn't any FAO FB or CB data for them
+Merge pulses df with list of countries from trade matrices to ensure all countries are gapfilled even if there wasn't any FAO FB or CB data for them. Add in the subregion and intermediate regions for the countries
 ```{r}
 # add iso3 to pulses
-pulses_a <- pulses %>% 
+pulses_countries<- pulses %>% 
   mutate(iso3 = countrycode(Area, "country.name", "iso3c")) %>% 
-  mutate(iso3 = case_when(is.na(iso3) ~ "TUR", 
-                          TRUE ~ iso3))
-
-# join with country list
-pulses_b <- pulses_a %>% 
-  full_join(countries_1, by = "iso3")
-
-# fill in country name where NA
-pulses_c <- pulses_b %>% 
-  mutate(Area = case_when(is.na(Area) ~ country, 
-                          TRUE ~ Area)) %>% 
-  select(-country)
-
-# check iso3 codes for duplicates
-# remove duplicates: China, China, mainland, Palestinian Territories
-# this gets rid of duplicates of China and mainland China
-pulses_d <- pulses_c %>% 
-  unique()
-
-# remove Palestinian Territories because we have Palestine
-pulses_e <- pulses_d %>% 
+  # Turkey comes up as NA for iso3c because of lettering, fill this in
+  mutate(iso3 = case_when(is.na(iso3) ~ "TUR", TRUE ~ iso3)) %>% 
+  # join with country list
+  full_join(countries, by = "iso3") %>% 
+  # fill in country name where NA
+  mutate(Area = case_when(is.na(Area) ~ country, TRUE ~ Area)) %>% 
+  select(-country) %>% 
+  # this gets rid of duplicates of China and China, Mainland
+  unique() %>% 
+  # remove Palestinian Territories because we have Palestine
   filter(!Area == "Palestinian Territories")
-```
 
-
-Merge pulses df with region by country name (countrycode package)
-```{r}
-# we need a combination of UN subregion and intermediate codes
-# add subregion
-pulses_e$subregion <- countrycode(pulses_e$iso3, origin = 'iso3c', destination = 'un.regionsub.name')
-
-# add intermediate
-pulses_e$intermed_region <- countrycode(pulses_e$iso3, origin = 'iso3c', destination = 'un.regionintermediate.name')
-
-# combine regions
-pulses_1 <- pulses_e %>% 
+# Add in the regional information to pulses_countries
+pulses_countries <- pulses_countries %>% 
+  # add subregion and intermediate region
+  mutate(subregion = countrycode(iso3, origin = 'iso3c', destination = 'un.regionsub.name'),
+         intermed_region = countrycode(iso3, origin = 'iso3c', destination = 'un.regionintermediate.name')) %>% 
+  # make region column where the intermediate region is used unless it is missing, then use subregion
   mutate(region = case_when(is.na(intermed_region) ~ subregion,
-                            TRUE ~ intermed_region))
+                            TRUE ~ intermed_region)) %>% 
+  # reorder columns 
+  select(Area, iso3, region, pulse_dsq, pulse_feed, total_prop_feed)
 
-# compare region categories to what we downloaded from FAO
-dplyr::setdiff(grains_region$Area, pulses_1$region) # continents are in grains_region but not grains_1
-dplyr::setdiff(pulses_1$region, grains_region$Area) #nothing in grains_1 that's not in grains_region
+# fill in Taiwan 
+pulses_countries$region[pulses_countries$iso3 == "TWN"] <- "Eastern Asia"
 
-# remove subregion and intermediate region categories
-pulses_2 <- pulses_1 %>% 
-  select(-c(subregion, intermed_region))
-
-# add continent
-pulses_2$continent <- countrycode(pulses_2$iso3, origin = 'iso3c', destination = 'continent')
-
-# reorder columns so regions is next to country
-pulses_2 <- pulses_2[, c(1:2, 12:14, 3:11)]
-
-# fill in NA for region that didn't match properly (China Taiwan)
-pulses_2$region[pulses_2$`Area Code (FAO)` == 214] <- "Eastern Asia"
 ```
 
-
-Calculate percent feed for pulses for each region
-Add dsq for beans, peas, and other pulses, do the same with feed, and then divide the aggregate feed by aggregates tonnes.
+Now gapfill using the regional data!
 ```{r}
-region_beans <- region_fb_1 %>% 
-  filter(Item == "Beans") %>%
-  select(-c(prop_feed, Item)) %>% 
-  rename(beans_dsq = `Domestic supply quantity`,
-         beans_feed = Feed)
+# select only region and regions_prop_feed to join with country data
+pulse_region_fb <- pulse_region_fb %>% 
+  select(region = Area, region_prop_feed = total_prop_feed)
 
-region_peas <- region_fb_1 %>% 
-  filter(Item == "Peas") %>% 
-  select(-c(prop_feed, Item)) %>% 
-  rename(peas_dsq = `Domestic supply quantity`,
-         peas_feed = Feed)
 
-region_other_pulses <- region_fb_1 %>% 
-  filter(Item == "Pulses, Other and products") %>%
-  select(-c(prop_feed, Item)) %>% 
-  rename(other_pulse_dsq = `Domestic supply quantity`,
-         other_pulse_feed = Feed)
+pulses_gap_filled <- left_join(pulses_countries, pulse_region_fb) %>% 
+  # gapfill when total_prop_feed is -1, 0,  or NA using regional average. If > 1 make proportion 1 
+  mutate(pulses_prop_feed_gf = case_when(total_prop_feed <= 0 ~ region_prop_feed,
+                                         is.na(total_prop_feed) ~ region_prop_feed,
+                                         total_prop_feed > 1 ~ 1,
+                                         TRUE ~ total_prop_feed)) %>% 
+  # select only the columns we need
+  select(Area, iso3, region, pulses_prop_feed_gf)
 
-# combine dfs
-region_pulses <- region_beans %>% 
-  full_join(region_peas, by = c("Area Code (M49)", "Area")) %>% 
-  full_join(region_other_pulses, by = c("Area Code (M49)", "Area"))
+write_csv(pulses_gap_filled, paste0(save_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
 
-# sum dsq and feed and calculate proportion feed
-region_pulses <- region_pulses %>% 
-  rowwise() %>% 
-  mutate(pulse_dsq = sum(beans_dsq, peas_dsq, other_pulse_dsq, na.rm=TRUE)) %>% 
-  mutate(pulse_feed = sum(beans_feed, peas_feed, other_pulse_feed, na.rm=TRUE)) %>% 
-  mutate(prop_feed = pulse_feed/pulse_dsq)
-
-# set Micronesia to 0 (is NA but should  be 0)
-region_pulses <- region_pulses %>% 
-  mutate(prop_feed = case_when(Area == "Micronesia" ~ 0, TRUE ~ prop_feed))
 ```
 
 
-Gapfill missing or 0 pulses data with regional pulses feed data
-Countries with 0% of a crop going to feed likely just don't have any dsq of that crop.
-If they do, then it's likely that at least some of it is going to feed and just not being accounted for.
-```{r}
-pulses_3 <- pulses_2
-
-# match regions between 2 dfs
-inds_p <- match(pulses_3$region, region_pulses$Area)
-
-# fill in NAs and 0s with region level data
-pulses_3$prop_feed <- ifelse(is.na(pulses_3$prop_feed), region_pulses$prop_feed[inds_p], pulses_3$prop_feed)
-pulses_3$prop_feed <- ifelse(pulses_3$prop_feed == 0, region_pulses$prop_feed[inds_p], pulses_3$prop_feed)
-
-# one negative - convert negative to region value
-pulses_3$prop_feed <- ifelse(pulses_3$prop_feed < 0, region_pulses$prop_feed[inds_p], pulses_3$prop_feed)
-
-# two values over 1, convert these to 1
-pulses_3$prop_feed <- ifelse(pulses_3$prop_feed > 1, 1, pulses_3$prop_feed)
-
-# save gapfilled pulses df
-write_csv(pulses_3, paste0(save_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
-```
 

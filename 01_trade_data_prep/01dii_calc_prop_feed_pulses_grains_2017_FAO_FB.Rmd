@@ -253,6 +253,7 @@ grains_countries <- grains_countries %>%
 
 # fill in Taiwan 
 grains_countries$region[grains_countries$iso3 == "TWN"] <- "Eastern Asia"
+grains_countries$Area[grains_countries$iso3 == "TWN"] <- "Taiwan"
 
 ```
 
@@ -391,6 +392,7 @@ pulses_countries <- pulses_countries %>%
 
 # fill in Taiwan 
 pulses_countries$region[pulses_countries$iso3 == "TWN"] <- "Eastern Asia"
+pulses_countries$Area[pulses_countries$iso3 == "TWN"] <- "Taiwan"
 
 ```
 

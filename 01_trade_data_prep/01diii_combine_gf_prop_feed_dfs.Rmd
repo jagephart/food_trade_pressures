@@ -1,0 +1,83 @@
+---
+title: "Combine proportion feed dfs"
+author: "Haley Epperly"
+date: "2022-11-07"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Objective: Combine gapfilled proportion feed dfs for grains, pulses, oilcrops, soy, and palm kernels
+
+Load libraries
+```{r}
+library(tidyverse)
+```
+
+Data Paths
+```{r}
+raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+feed_1d_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
+```
+
+
+Read in dfs
+```{r}
+grains <- read_csv(paste0(feed_1d_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
+pulses <- read_csv(paste0(feed_1d_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
+oils <-   read_csv(paste0(feed_1d_path, "perc_dsq_oilcrops_used_as_feed_gapfilled.csv"))
+soy <-    read_csv(paste0(feed_1d_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
+pk <-     read_csv(paste0(feed_1d_path, "perc_dsq_palm_kernel_used_as_feed_gapfilled.csv"))
+
+# for pk the Area for Russia does not include federation like the other dfs so fix this below
+pk$Area[pk$Area == "Russia"] <- "Russian Federation"
+
+```
+
+Subset to only gapfilled percent feed and country variables (Area)
+
+```{r}
+feed <- grains %>% 
+  full_join(pulses , by = c("Area", "iso3", "region")) %>% 
+  full_join(oils %>% 
+              # oils has some weird stuff with the Area names so drop column
+              select(-Area),
+            by = c("iso3", "region")) %>% 
+  full_join(soy %>% 
+              # soy has some weird stuff with the Area names so drop column
+              select(-Area), 
+            by = c("iso3", "region")) %>% 
+  full_join(pk %>% 
+              # pk has some weird stuff with the Area names so drop column
+              select(-Area), 
+            by = c("iso3", "region")) 
+
+# there are some quirks after the join, so fix these below
+feed <- feed %>% 
+  # regions do not have an Area name since we joined by iso3 and region, fill in Area column
+  mutate(Area = case_when(is.na(iso3) ~ region,
+                          # Bermuda is missing the country name because it is missing from the grains and pulses data
+                          iso3 == "BMU" ~ "Bermuda",
+                          # otherwise keep Area the same
+                          TRUE ~ Area)) %>% 
+  # China and China, Mainland included for grains and pulses, we will only be using China, Mainland Values
+  filter(Area != "China")
+
+# Bermuda is missing from Grains, Pulses, and pk so gapfill with Northern America average
+feed$grain_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$grain_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
+feed$pulses_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$pulses_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
+feed$pk_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$pk_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
+
+
+```
+
+We are interested in the country values so we will filet out the regional proportions and save the data frame
+```{r}
+feed_countries <- feed %>% 
+  filter(Area != region)
+
+write_csv(feed_countries, paste0(save_path, "all_crops_perc_feed.csv"))
+
+```
+

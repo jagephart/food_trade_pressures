@@ -1102,7 +1102,7 @@ There are a few countries with NaN or zero values that we will gapfill following
 
 ### Gapfill Oilcrops
 
-Read in previously made `oils` of percent feed for soy, add region column, and gapfill.
+Read in previously made `oils` of percent feed for oil, add region column, and gapfill.
 ```{r}
 # have to rename Turkey because it got a ? symbol added when saved as csv previously
 # can't use %in% or == to identify it because it isn't showing up as a string
@@ -1187,11 +1187,11 @@ oil_gap_filled <- oil_regions %>%
 # fix zeros for Melanesia, Micronesia, and Polynesia
 oil_gap_filled <- oil_gap_filled %>% 
   # use "small Island Developing States" average for missing regions 
-  mutate(soy_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
+  mutate(oil_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
                                     true = oil_gap_filled$oil_prop_feed[oil_gap_filled$Area == "Small Island Developing States"],
                                     false = oil_prop_feed_gf)) %>% 
   # select only the columns we need
-  select(Area, iso3, region, soy_prop_feed_gf)
+  select(Area, iso3, region, oil_prop_feed_gf)
 ```
 
 Below is a quick check to make sure the above gapfill worked as intended.

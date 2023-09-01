@@ -28,21 +28,23 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 Read in the data
 ```{r}
+# read in the pressures efficiencies data
 pressure_efficiencies_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv")) %>% 
   rename(nceas_group = category1_production)
 
+# read in the freshwater aquaculture pressures data
 fw_pressures <- read.csv(file.path(fw_pressures_path, "fw_aquaculture_pressures.csv"))
 
-old_pressures <- read.csv(file.path(pressures_path, "rgn_raw_summary.csv"))
+#old_pressures <- read.csv(file.path(pressures_path, "rgn_raw_summary.csv"))
 
-trade_data <- read.csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
+#trade_data <- read.csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 
-trade_matrix <- read_csv(paste0(matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
+trade_matrix <- read_csv(paste0(matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv"))
 
 map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "MapSPAM_to_FAO_v2.csv")) %>% 
   select(SPAM_super, SPAM_full_name, FAO_item_code, product_description_FAOSTAT)
 
-seafood_key <- read.csv(file.path(seafood_trade_path, "20230420_nceas_consumption.csv")) %>% 
+seafood_key <- read.csv(file.path(seafood_trade_path, "20230626_nceas_consumption.csv")) %>% 
   distinct(habitat, method, nceas_group) %>% 
   filter(nceas_group != "unknown",
          habitat != "inland") %>% 

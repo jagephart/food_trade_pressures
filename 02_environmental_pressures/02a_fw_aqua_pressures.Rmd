@@ -1,0 +1,54 @@
+---
+title: "02ai_fw_aquaculture_pressures"
+output: html_document
+date: "2022-11-02"
+editor_options: 
+  chunk_output_type: console
+---
+
+GOAL: Calculate pressures for freshwater aquaculture by country and taxa group.
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(countrycode)
+```
+
+File Paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_fw_aquaculture_pressures/"
+```
+
+# Join with on-farm stressors
+Goal is to have stressors into per tonne units. Units here will be kg N/P per tonne, m3 water per tonne, kgC02eq per tonne, m2 per tonne. 
+```{r}
+# read in environmental pressures data for freshwater aquaculture
+pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
+  filter(weight=="live") %>%
+  filter(production=="aquaculture") %>%
+  filter(source == "on-farm") %>%
+  filter(allocation == "mass") %>%
+  # select stressor_group to match with tonnes_lw data, stressor, and median
+  dplyr::select(stressor_group = taxa, stressor, median)
+
+# make df for conversions of stressor data
+conversions <- data.frame(stressor = c("GHG", "N", "P", "Water", "Land"),
+                          conversion = c(0.001, 0.001, 0.001, 1, 0.000001),
+                          pressure = c("GHG", "nutrients", "nutrients", "water", "disturbance"))
+
+# join pressures data with conversions
+pressures_converted <- left_join(pressures, conversions, by = "stressor") %>%
+  # convert pressures data to per_tonne using conversions
+  mutate(pressure_per_tonne = median*conversion) %>%
+  # select the stressor_group (taxa), pressure type, and pressure per tonne
+  select(stressor_group, pressure, pressure_per_tonne) %>%
+  # calculate the pressure_per_tonne total for each stressor group and pressure
+  group_by(stressor_group, pressure) %>%
+  summarize(pressure_per_tonne = sum(pressure_per_tonne)) %>%
+  ungroup()
+
+# Save data
+write_csv(pressures_converted, paste0(save_path, "fw_aquaculture_pressures_per_tonne.csv"))
+```
+

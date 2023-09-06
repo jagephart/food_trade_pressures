@@ -1,0 +1,250 @@
+---
+title: "connect_2017_fw_aquaculture_to_pressures"
+author: "Haley Epperly"
+date: "2022-11-17"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+```
+## Set Up
+
+File paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
+pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_fw_aquaculture_pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
+```
+
+
+Method:
+The trade data contains the source country, consumer country, habitat, fishing method, nceas group, and the live weight traded between each country. The pressures data has the environmental pressure produced per tonne live weight of a given species. The pressures data is a global average for freshwater aquaculture so we only need to match the species traded with each pressure and multiple the two to get the total environmental pressure for the consuming country.
+
+## Read in the two data streams
+
+Trade data - from step 01c
+```{r}
+# read in all of the fish trade data, these are means of the years 2015-2019
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_w_unknowns_allocated.csv")) # read in the updated data
+
+# only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
+fw_trade_clean <- trade_matrix_raw %>% 
+  filter(habitat == "inland" & method == "aquaculture")
+
+
+```
+
+Read in freshwater aquaculture pressures data per tonne from Mel - calculated in step 02a
+```{r}
+pressure <- read_csv(paste0(pressures_path, "fw_aquaculture_pressures_per_tonne.csv")) 
+```
+
+## Match up the species groupings
+Compare species groups - these are extremely different. We will need to make sure that we can join the pressures per tonne of each species to their correct species in the trade data
+```{r}
+table(pressure$stressor_group)
+table(fw_trade_clean$nceas_group)
+```
+
+Investigating salmon to make sure Salmons, trouts, smelts are all inland aquaculture and don't include marine species.
+```{r}
+salmonid <- trade_matrix_raw %>% 
+  filter(nceas_group=="salmonids")
+salmon <- trade_matrix_raw %>% 
+  filter(nceas_group=="salmons, trouts, smelts")
+```
+Salmonids are all marine aquaculture, so Salmons, trouts, smelts is probably just inland.
+
+Mel's key - updated data (left is trade matrix categories, right is pressures categories):
+oth_carp = oth_carp 
+hypoph_carp = hypoph_carp
+miscellaneous diadromous fishes = misc_diad + milkfish
+salmons, trouts, smelts = trout
+miscellaneous freshwater fishes = catfish
+tilapias and other cichlids = tilapia
+
+Re-label pressures data to categories used in trade data (pressures data is more disaggregated)
+```{r}
+pressure_relabel <- pressure %>% 
+  mutate(nceas_group = case_when(stressor_group == "catfish" ~ "miscellaneous freshwater fishes",
+                                 stressor_group == "hypoph_carp" ~ "hypoph_carp",
+                                 stressor_group == "milkfish" ~ "miscellaneous diadromous fishes",
+                                 stressor_group == "misc_diad" ~ "miscellaneous diadromous fishes",
+                                 stressor_group == "oth_carp" ~ "oth_carp",
+                                 stressor_group == "tilapia" ~ "tilapias and other cichlids",
+                                 stressor_group == "trout" ~ "salmons, trouts, smelts",
+                                 TRUE ~ as.character(NA)))
+summary(pressure_relabel)
+
+pressure_relabel <- pressure_relabel %>% 
+  mutate(pressure = case_when(pressure == "GHG" ~ "ghg",
+                              pressure == "nutrients" ~ "nutrient",
+                              TRUE ~ pressure)) %>% 
+  filter(!is.na(nceas_group)) %>% 
+  select(nceas_group, pressure, pressure_per_tonne, stressor_group)
+
+```
+
+
+Sum pressures  by country for the same nceas category
+```{r}
+# pressure_agg <- pressure_relabel %>% 
+#   group_by(iso3c, country_name, pressure, nceas_group) %>% 
+#   summarise(sum_pressure_value = sum(stressor_value))
+
+# check data
+# sum(pressure_agg$sum_pressure_value)
+# sum(pressure_relabel$stressor_value)
+```
+
+
+Subset trade to relevant categories for which we have pressures data (removes ~ 25% of rows)
+```{r}
+fw_trade_subset <- fw_trade_clean %>% 
+  filter(nceas_group == "oth_carp" | 
+           nceas_group == "hypoph_carp" |
+           nceas_group == "miscellaneous diadromous fishes" |
+           nceas_group == "salmons, trouts, smelts" |
+           nceas_group == "miscellaneous freshwater fishes"|
+           nceas_group == "tilapias and other cichlids")
+
+# fw_trade_not_in <- fw_trade_clean %>% 
+#   filter(!nceas_group %in% c("oth_carp", "hypoph_carp", "miscellaneous diadromous fishes", "salmons, trouts, smelts", "miscellaneous freshwater fishes", "tilapias and other cichlids"))
+
+# check to see how much of trade data is unaccounted for when subset by available pressure data
+nrow(fw_trade_subset)/nrow(fw_trade_clean)
+
+#check by weight how much trade is unaccounted for
+sum(fw_trade_subset$consumption_live_weight_t)/sum(fw_trade_clean$consumption_live_weight_t)
+# more than 90 percent of the trade by weight
+```
+
+
+## Calculate the environmental pressures from freshwater aquaculture
+
+```{r}
+# join trade data with the pressures data
+fw_trade_pressures <- left_join(x = fw_trade_subset, y = pressure_relabel, by = "nceas_group")
+
+fw_trade_pressures <- fw_trade_pressures %>% 
+  # calculate the total pressure from live_weight_t and pressure_per_tonne
+  mutate(pressure_total = consumption_live_weight_t * pressure_per_tonne) %>% 
+  # select columns to make smaller
+  select(consumer_iso3c, source_country_iso3c, nceas_group, consumption_live_weight_t, pressure, pressure_per_tonne, pressure_total)
+```
+
+
+## Old
+
+To get to cumulative pressure, divide each pressure by the global pressure (to standardize) and then sum the four pressures for each animal product. The data is taken from the below GitHub but saved within this projects folder.
+https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv
+
+```{r}
+# read in data on total global pressures
+total_global_pressure <- read_csv(paste0(raw_data_path, "pressures/rescale_values.csv"))
+
+# join the fish pressures with the total global pressures
+sum_pressures <- left_join(pressure_agg, total_global_pressure, by = "pressure")
+
+# divide each pressure by the global total pressure to standardize - this includes total pressures from all crops and animal products
+sum_pressures_1 <- sum_pressures %>% 
+  mutate(prop_global_pressure = sum_pressure_value/global_total)
+
+# sum the four pressures for each crop
+sum_pressures_and_cumu <- sum_pressures_1 %>% 
+  group_by(iso3c, country_name, nceas_group) %>% 
+  mutate(cumu_pressure = sum(prop_global_pressure)) %>% 
+  ungroup()
+
+sum(sum_pressures_and_cumu$cumu_pressure) # 0.3585281
+
+# check: make sure cumulative pressures looks right (should have only one cumu pressure value for each crop product in each country)
+test1 <- sum_pressures_and_cumu %>% 
+  filter(country_name == "Brazil")
+test2 <- sum_pressures_and_cumu %>% 
+  filter(country_name == "Australia")
+
+# change formatting so all in wide format (right now only cumulative pressure is in wide format and other pressures are in long format)
+sum_pressures_and_cumu_wide <- sum_pressures_and_cumu %>% 
+  select(!c(global_total, prop_global_pressure)) %>% 
+  pivot_wider(names_from = pressure, values_from = sum_pressure_value)
+```
+
+
+Join the trade matrix with pressures df and look at missing values
+```{r}
+fish_trade_pressures_w_missing <- full_join(fw_trade_subset, sum_pressures_and_cumu_wide, by = c("source_country_iso3c" = "iso3c", "nceas_group" = "nceas_group"))
+
+# check missing trade data (have pressures but no trade data)
+missing_trade <- fish_trade_pressures_w_missing %>% 
+  filter(is.na(proportion_traded))
+
+# note: there are 20 rows of data that are included in sum_pressures_and_cumu_wide, but not in fw_trade_subset
+# this means that we have 2017 pressures data for these items in these countries, but they are not in Jessica's trade matrix.
+
+# for how many rows do we have trade data but not pressures data?
+missing_pressures <- fish_trade_pressures_w_missing %>% 
+  filter(is.na(cumu_pressure))
+
+# note: there are 409 rows of data that are included in fw_trade_subset, but not in sum_pressures_and_cumu_wide
+# this means that we have 2017 trade data for these items in these countries, but we don't have pressures data for them
+
+# sum of pressures from missing trade - we can use this as a check later
+summary_missing_pressures <- missing_trade %>% 
+  summarise_at(vars(cumu_pressure:water), sum, na.rm = TRUE)
+
+# left_join instead so we don't include those rows where we only have pressures data, but no trade
+fish_trade_pressures <- left_join(fw_trade_subset, sum_pressures_and_cumu_wide, by = c("source_country_iso3c" = "iso3c", "nceas_group" = "nceas_group"))
+```
+
+
+Multiply proportion traded between each country with the total amount of pressures for that product produced in that country. Then you can get the value of pressures (4 individual plus cumulative) for each product trade between 2 countries.
+```{r}
+fish_trade_pressures_1 <- fish_trade_pressures %>% 
+  mutate(trade_cumu_pressure = proportion_traded*cumu_pressure) %>% 
+  mutate(trade_ghg = proportion_traded*ghg) %>% 
+  mutate(trade_water = proportion_traded*water) %>% 
+  mutate(trade_nutrient = proportion_traded*nutrient) %>% 
+  mutate(trade_disturbance = proportion_traded*disturbance)
+
+# subset to remove extra variables
+fish_trade_pressures_cut <- fish_trade_pressures_1 %>% 
+  rename(Producer_country = country_name) %>% 
+  select(-c(cumu_pressure, ghg, water, nutrient, disturbance))
+
+# reorganize
+fish_trade_pressures_cut <- fish_trade_pressures_cut[,c(1, 7, 2:6, 8:12)]
+
+# save df
+write_csv(fish_trade_pressures_cut, paste0(save_path, "inland_aquaculture_products_trade_matrix_w_pressures.csv"))
+```
+
+
+```{r}
+# check to see if it looks right
+alb_test <- fish_trade_pressures_1 %>% 
+  filter(source_country_iso3c == "ALB") %>% 
+  filter(nceas_group == "salmons, trouts, smelts")
+sum(alb_test$traded_tons) # 569.4352 (matches sum_caught in df)
+sum(alb_test$proportion_traded) #1
+
+# make sure total value of "salmons, trouts, smelts" caught in ALB still matches original data
+alb_check <- fw_trade_proportions %>% 
+  filter(source_country_iso3c == "ALB") %>% 
+  filter(nceas_group == "salmons, trouts, smelts")
+sum(alb_check$traded_tons) # 569.4352 (matches alb_test)
+
+# these values should match the rows labeled cumu_pressure, disturbance, ghg, nutrient, and water in alb_test
+sum(alb_test$trade_cumu_pressure)
+sum(alb_test$trade_disturbance)
+sum(alb_test$trade_ghg)
+sum(alb_test$trade_nutrient)
+sum(alb_test$trade_water)
+```
+
+
+

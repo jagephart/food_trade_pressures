@@ -59,10 +59,12 @@ salmon <- trade_matrix_raw %>%
 ```
 Salmonids are all marine aquaculture, so Salmons, trouts, smelts is probably just inland.
 
+Reminder from `02b_fw_aqua_pressures.Rmd`, we have excluded milkfish pressures for now and all miscellaneous diadromous fish (misc_diad) trade will be categorized as this stressor. 
+
 Mel's key - updated data (left is trade matrix categories, right is pressures categories):
 oth_carp = oth_carp 
 hypoph_carp = hypoph_carp
-miscellaneous diadromous fishes = misc_diad + milkfish
+miscellaneous diadromous fishes = misc_diad (+ milkfish if pressure is reintroduced)
 salmons, trouts, smelts = trout
 miscellaneous freshwater fishes = catfish
 tilapias and other cichlids = tilapia
@@ -72,7 +74,7 @@ Re-label pressures data to categories used in trade data (pressures data is more
 pressure_relabel <- pressure %>% 
   mutate(nceas_group = case_when(stressor_group == "catfish" ~ "miscellaneous freshwater fishes",
                                  stressor_group == "hypoph_carp" ~ "hypoph_carp",
-                                 stressor_group == "milkfish" ~ "miscellaneous diadromous fishes",
+                                 #stressor_group == "milkfish" ~ "miscellaneous diadromous fishes",
                                  stressor_group == "misc_diad" ~ "miscellaneous diadromous fishes",
                                  stressor_group == "oth_carp" ~ "oth_carp",
                                  stressor_group == "tilapia" ~ "tilapias and other cichlids",
@@ -88,19 +90,6 @@ pressure_relabel <- pressure_relabel %>%
   select(nceas_group, pressure, pressure_per_tonne, stressor_group)
 
 ```
-
-
-Sum pressures  by country for the same nceas category
-```{r}
-# pressure_agg <- pressure_relabel %>% 
-#   group_by(iso3c, country_name, pressure, nceas_group) %>% 
-#   summarise(sum_pressure_value = sum(stressor_value))
-
-# check data
-# sum(pressure_agg$sum_pressure_value)
-# sum(pressure_relabel$stressor_value)
-```
-
 
 Subset trade to relevant categories for which we have pressures data (removes ~ 25% of rows)
 ```{r}
@@ -125,20 +114,24 @@ sum(fw_trade_subset$consumption_live_weight_t)/sum(fw_trade_clean$consumption_li
 
 
 ## Calculate the environmental pressures from freshwater aquaculture
-
+Now join trade data with pressure efficiency data by the `nceas_group`. The `fw_trade_pressures` should have 4x as many rows as `fw_trade_subset` as there are 4 pressures per `nceas_group`.
 ```{r}
 # join trade data with the pressures data
 fw_trade_pressures <- left_join(x = fw_trade_subset, y = pressure_relabel, by = "nceas_group")
 
+# check join
+nrow(fw_trade_pressures)
+nrow(fw_trade_subset)*4
+
 fw_trade_pressures <- fw_trade_pressures %>% 
   # calculate the total pressure from live_weight_t and pressure_per_tonne
   mutate(pressure_total = consumption_live_weight_t * pressure_per_tonne) %>% 
-  # select columns to make smaller
-  select(consumer_iso3c, source_country_iso3c, nceas_group, consumption_live_weight_t, pressure, pressure_per_tonne, pressure_total)
+  # select columns to make simpler
+  select(source_country_iso3c, consumer_iso3c, nceas_group, consumption_live_weight_t, pressure_type = pressure, pressure_per_tonne, pressure = pressure_total)
 ```
 
 
-## Old
+## Old way - can probably delete once confirmed
 
 To get to cumulative pressure, divide each pressure by the global pressure (to standardize) and then sum the four pressures for each animal product. The data is taken from the below GitHub but saved within this projects folder.
 https://github.com/OHI-Science/food_systems/blob/master/_analysis/rescale_values.csv

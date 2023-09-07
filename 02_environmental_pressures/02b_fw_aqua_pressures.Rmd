@@ -21,7 +21,22 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 ```
 
 # Join with on-farm stressors
-Goal is to have stressors into per tonne units. Units here will be kg N/P per tonne, m3 water per tonne, kgC02eq per tonne, m2 per tonne. 
+Goal is to have stressors into per tonne units that match the other pressures data. The units of the freshwater aquaculture pressures data is the following:
+
+- kg N/P per tonne (nutrient)
+- m3 water per tonne (water)
+- kgC02eq per tonne (GHG)
+- m2 per tonne (disturbance)
+
+We need to convert the pressures to match the units of the other pressure efficiency data:
+
+- tonnes N/P per tonne (nutrient) - 1000 kg/ tonne
+- m3 water per tonne (water) - no change
+- tonnes C02eq per tonne (GHG) - 1000 kg / tonne
+- km2 per tonne (disturbance) - 1000000 m2 / km2
+
+For now, we are excluding the milkfish pressure values as they are quite different compared to other misc diadromous fishes.
+
 ```{r}
 # read in environmental pressures data for freshwater aquaculture
 pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
@@ -29,11 +44,14 @@ pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Je
   filter(production=="aquaculture") %>%
   filter(source == "on-farm") %>%
   filter(allocation == "mass") %>%
+  # for now remove milkfish
+  filter(taxa != "milkfish") %>% 
   # select stressor_group to match with tonnes_lw data, stressor, and median
   dplyr::select(stressor_group = taxa, stressor, median)
 
 # make df for conversions of stressor data
 conversions <- data.frame(stressor = c("GHG", "N", "P", "Water", "Land"),
+                          # convert using the units as outlined in the description above
                           conversion = c(0.001, 0.001, 0.001, 1, 0.000001),
                           pressure = c("GHG", "nutrients", "nutrients", "water", "disturbance"))
 

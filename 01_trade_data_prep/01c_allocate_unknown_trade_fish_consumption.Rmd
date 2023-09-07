@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Objective: The fish trade matrix for human consumption has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
 
+Additionally, the fish meal fish oil trade data needs to averages across years and saved so that pressures can be applied.
+
 ## Setup
 ```{r}
 library(tidyverse)
@@ -28,7 +30,7 @@ seafood_matrix <- read.csv(paste0(matrix_path, "20230626_nceas_consumption.csv")
 
 ```
 
-### Average the data over the years (2015-2019)
+## Average the data over the years (2015-2019)
 For each consumer country, source country, habitat, method, nceas_group (species) we want to take the average consumption_live_t over the five years of interest.
 ```{r}
 colnames(seafood_matrix)
@@ -41,7 +43,7 @@ seafood_matrix <- seafood_matrix %>%
 
 ```
 
-### Identify combinations of unknown data
+## Identify combinations of unknown data
 ```{r}
 # Identify typologies of unknown 
 unknown_types <- seafood_matrix %>%
@@ -119,7 +121,7 @@ all_unknown <- all_unknown_prop_df %>%
   select(-all_unknown_prop, -all_unknown_t)
 ```
 
-# Unknown type 2: only habitat known
+### Unknown type 2: only habitat known
 ```{r}
 # Use proportions of all known consumption by habitat
 habitat_known_prop_df <- seafood_matrix %>%
@@ -139,7 +141,7 @@ habitat_known <- habitat_known_prop_df %>%
   select(-habitat_known_prop, -habitat_known_t)
 ```
 
-# Unknown type 3: only species group is unknown
+### Unknown type 3: only species group is unknown
 ```{r}
 # Use proportions of all known consumption by source, habitat, and method
 species_unknown_prop_df <- seafood_matrix %>%
@@ -170,7 +172,7 @@ seafood_matrix_new <- seafood_matrix %>%
   bind_rows(species_unknown)
 ```
 
-### Check consumption
+## Check consumption
 ```{r}
 seafood_check <- seafood_matrix %>%
   group_by(consumer_iso3c) %>%
@@ -187,7 +189,7 @@ seafood_check <- seafood_matrix %>%
 
 Note: The original consumption does not match the disaggregated consumption 1:1 due to cases where no proportion can be calculated. For example, if all marine capture sourced from a given country is unknown, a proportion cannot be calculated for known species groups. We could consider using the proportions of the source country to estimate this. Currently, all but 5 countries lose less than 1% of consumption. 
 
-### Final cleaning
+## Final cleaning
 ```{r}
 seafood_matrix_new <- seafood_matrix_new %>%
   # Remove fmfo as this is handled separately

@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 Goal of script:
-The pressures data reports the pressure efficiency based on the product group name (ex. cows_meat, yams_produce, soyb_produce, etc.). The trade data reports products in a variety of ways. The goal of this script is to pull in the different product names of from the trade data and pressures data to make a key for the items to be matched appropriately
+The pressures data reports the pressure efficiency based on the product group name (ex. cows_meat, yams_produce, soyb_produce, etc.). The trade data reports products in a variety of ways. The goal of this script is to pull in the different product names of from the trade data and pressures data to make a key for the items to be matched appropriately. Inland (freshwater) aquaculture is handled in its own script because the pressures efficiency data are global averages rather than specific to each country. See the script `02b_fw_aqua_pressures.Rmd`.
 
 ## Set Up
 Packages
@@ -23,11 +23,9 @@ File Paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
-#fw_pressures_path <-  "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
-#trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04_adjust_trade_matrix_pressures_for_feed/"
 matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
 seafood_trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
-#save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_efficiencies_data_prep/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 ```
 
 ## Read in the pressures data
@@ -35,14 +33,7 @@ seafood_trade_path <- "/home/shares/food-systems/social_justice_projects/food_tr
 # read in the pressures efficiency data
 pressure_efficiency_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv")) %>% 
   rename(nceas_group = category1_production)
-
-# read in the freshwater aquaculture pressures data
-#fw_pressures <- read.csv(file.path(fw_pressures_path, "fw_aquaculture_pressures.csv"))
-
-#old_pressures <- read.csv(file.path(pressures_path, "rgn_raw_summary.csv"))
 ```
-
-First focus on pressure efficiency, next fw_pressures
 
 ## Read in and clean trade data to make matching keys
 ```{r}
@@ -82,23 +73,6 @@ seafood_key <- read.csv(file.path(seafood_trade_path, "20230626_nceas_consumptio
   # remove jellfish nceas group as it is not captured in trade data
   filter(!is.na(organism))
   
-# read in the fish trade categories to match with appropriate pressures
-fw_aquaculture_key <- read.csv(file.path(seafood_trade_path, "20230626_nceas_consumption.csv")) %>% 
-  # retrieve the distinct combinations of habitat, method, and nceas_group
-  distinct(habitat, method, nceas_group) %>% 
-  # filter for inland aquaculture for the key
-  filter(habitat == "inland",
-         method == "aquaculture",
-         # remove unknown nceas_group as we took care of these in 01c
-         nceas_group != "unknown") %>% 
-  mutate(stressor_group = case_when(nceas_group == "miscellaneous freshwater fishes" ~ "catfish",
-                                    nceas_group == "hypoph_carp"  ~ "hypoph_carp",
-                                    nceas_group == "miscellaneous diadromous fishes"  ~ "misc_diad",
-                                    nceas_group == "oth_carp"  ~ "oth_carp",
-                                    nceas_group == "tilapias and other cichlids" ~ "tilapia",
-                                    nceas_group == "salmons, trouts, smelts" ~ "trout",
-                                    TRUE ~ as.character(NA)))
-  
 # read in the fao production item data to make livestock categories
 livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "FAOSTAT_production_item_codes_8-5-2022.csv")) %>% 
   # filter for meat products using the item code
@@ -123,16 +97,6 @@ livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_ju
   
 
 
-```
-
-Make fish pressures one file
-What is this for...?
-```{r}
-# pressure_categories <- pressure_efficiencies_raw %>% 
-#   select(organism, product, nceas_group = category1_production) %>% 
-#   distinct()
-# 
-#   
 ```
 
 ## Connect Pressure per Tonne data to the appropriate key
@@ -190,28 +154,18 @@ fisheries_pressure_per_tonne <- pressure_efficiency_raw %>%
   select(-nceas_group) %>% 
   #join with key
   left_join(seafood_key, by = "organism") %>% 
-  # match with livestoack and crop pressure per tonne dfs besides item and item code
+  # match with livestock and crop pressure per tonne dfs besides item and item code
   select(iso3c, nceas_group, pressure, pressure_per_tonne) %>% 
   # add in grouping
   mutate(food_group = "fisheries and mariculture")
 ```
 
-Inland aquaculture Pressure per Tonne
-```{r}
-fw_aquaculture_pressures_per_tonne <- fw_pressures %>% 
-  mutate(stressor_group = str_replace(stressor_group, pattern = "milkfish", replacement = "misc_diad")) %>% 
-  left_join(aquaculture_key, by = "stressor_group") %>% 
-  select(iso3c, nceas_group, pressure, pressure_per_tonne) %>% 
-  mutate(food_group = "fw_aquaculture")
-
-```
-
-Bind pressures per tonne data
+### Bind pressures per tonne data
+The fisheries and mariculture data will not have an `item` or `item_code` in `pressures_per_tonne` because they are matched with the trade data based on their assigned `nceas_group`. Some crop data may be missing an `item` description because the pressure data or trade data did not have one.
 ```{r}
 pressures_per_tonne <- crop_pressure_per_tonne %>% 
   bind_rows(livestock_pressure_per_tonne) %>% 
-  bind_rows(fisheries_pressure_per_tonne) %>% 
-  bind_rows(fw_aquaculture_pressures_per_tonne)
+  bind_rows(fisheries_pressure_per_tonne)
 
 write.csv(pressures_per_tonne, file = paste0(save_path, "pressures_per_tonne.csv"), row.names = FALSE)
 ```

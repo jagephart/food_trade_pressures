@@ -20,14 +20,12 @@ library(tidyverse)
 ### File paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
+matrix_path <- paste0(raw_data_path, "trade/aquatic_food_trade/")
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01e_allocate_unknown_trade_fmfo_consumption/"
 ```
 
-### Read in data
+## Read in data
 ```{r}
-seafood_matrix <- read.csv(paste0(matrix_path, "20230626_nceas_consumption.csv"))
-
 fmfo_matrix <- read.csv(paste0(matrix_path, "20230626_nceas_consumption_fmfo.csv"))
 
 ```
@@ -35,18 +33,11 @@ fmfo_matrix <- read.csv(paste0(matrix_path, "20230626_nceas_consumption_fmfo.csv
 ## Average the data over the years (2015-2019)
 For each consumer country, source country, habitat, method, nceas_group (species) we want to take the average consumption_live_t over the five years of interest.
 ```{r}
-colnames(seafood_matrix)
-
-# Group by everything except for year and take the mean of consumption_live_t
-seafood_matrix <- seafood_matrix %>% 
-  group_by(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group) %>% 
-  summarise(consumption_live_weight_t = mean(consumption_live_t, na.rm = TRUE)) %>% 
-  ungroup()
-
 colnames(fmfo_matrix)
 
 # Group by everything except for year and take the mean of consumption_live_t
-fmfo_matrix <- fmfo_matrix %>% 
+fmfo_matrix_mean <- fmfo_matrix %>% 
+  # rename to match other trade data
   rename(consumer_iso3c = consuming_iso3c) %>% 
   group_by(consumer_iso3c, source_country_iso3c, dom_source) %>% 
   summarise(consumption_live_weight_t = mean(consumption_live_t, na.rm = TRUE)) %>% 
@@ -56,46 +47,36 @@ fmfo_matrix <- fmfo_matrix %>%
 ## Identify combinations of unknown data
 ```{r}
 # Identify typologies of unknown 
-unknown_types <- seafood_matrix %>%
-  filter(source_country_iso3c == "unknown"|       
-           nceas_group == "unknown"|
-           habitat == "unknown"|
-           method == "unknown") %>%
-  select(source_country_iso3c, nceas_group, habitat, method) %>%
+unique(fmfo_matrix_mean$consumer_iso3c)
+unique(fmfo_matrix_mean$source_country_iso3c)
+unique(fmfo_matrix_mean$dom_source)
+# it looks like there are only source country unknowns but lets double check
+
+unknown_types <- fmfo_matrix_mean %>%
+  filter(source_country_iso3c == "unknown"|
+           consumer_iso3c == "unknown"|
+           dom_source == "unknown") %>%
+  select(source_country_iso3c, consumer_iso3c, dom_source) %>%
   mutate(
     source_country_iso3c = case_when(source_country_iso3c != "unknown" ~ "known",
                                      TRUE ~ "unknown"),
-    nceas_group = case_when(nceas_group != "unknown" ~ "known",
+    consumer_iso3c = case_when(consumer_iso3c != "unknown" ~ "known",
                             TRUE ~ "unknown"),
-    habitat = case_when(habitat != "unknown" ~ "known",
-                        TRUE ~ "unknown"),
-    method = case_when(method != "unknown" ~ "known",
-                       TRUE ~ "unknown")
+    dom_source = case_when(dom_source != "unknown" ~ "known",
+                        TRUE ~ "unknown")
     ) %>%
-  group_by(source_country_iso3c, nceas_group, habitat, method) %>%
+  group_by(source_country_iso3c, consumer_iso3c, dom_source) %>%
   tally()
+# there are only source country unknowns
 
 # Add typology group to source-consumption data frame
-seafood_matrix <- seafood_matrix %>%
-  mutate(unknown_type = case_when(
-    (source_country_iso3c != "unknown" &
-       nceas_group == "unknown" &
-       habitat != "unknown" &
-       method != "unknown") ~ "species_unknown",
-    (source_country_iso3c == "unknown" &
-     nceas_group == "unknown" &
-     habitat != "unknown" &
-     method == "unknown") ~ "habitat_only",
-    (source_country_iso3c == "unknown" &
-     nceas_group == "unknown" &
-     habitat == "unknown" &
-     method == "unknown") ~ "all_unknown",
-    TRUE ~ "known"
-  ))
+fmfo_matrix_mean <- fmfo_matrix_mean %>%
+  mutate(unknown_type = case_when(source_country_iso3c == "unknown" ~ "source_unknown",
+                                  TRUE ~ "known"))
 
 
 # Check share of consumption originally unknown
-seafood_unknown_shares <- seafood_matrix %>%
+fmfo_unknown_shares <- fmfo_matrix_mean %>%
   mutate(unknown_type = case_when(
     unknown_type == "known" ~ "known",
     unknown_type != "known" ~ "unknown"
@@ -108,87 +89,68 @@ seafood_unknown_shares <- seafood_matrix %>%
 ```
 
 
-### Unknown type 1: nothing known about source, habitat, method, or species group
+## We only have one type of unknown for the fofm data, where we do not know the source country 
 ```{r}
 # Use proportions of all known consumption
-all_unknown_prop_df <- seafood_matrix %>%
-  # Remove rows where any information is unknown
-  filter(source_country_iso3c != "unknown",       
-         nceas_group != "unknown",
-         habitat != "unknown",
-         method != "unknown") %>%
+source_known_prop_df <- fmfo_matrix_mean %>%
+  # Remove rows where source is unknown
+  filter(unknown_type != "source_unknown") %>%
   # Get proportions for each consuming country
   group_by(consumer_iso3c) %>%
-  mutate(all_unknown_prop = consumption_live_weight_t/sum(consumption_live_weight_t)) 
+  mutate(source_known_prop = consumption_live_weight_t/sum(consumption_live_weight_t)) %>% 
+  ungroup()
 
-all_unknown <- all_unknown_prop_df %>% 
-  left_join(seafood_matrix %>%
-              # Filter to rows where all information is unknown
-              filter(unknown_type == "all_unknown") %>%
-              select(consumer_iso3c, "all_unknown_t" = "consumption_live_weight_t"),
+unknowns <- fmfo_matrix_mean %>%
+              # Filter to rows where source is unknown
+              filter(unknown_type == "source_unknown") %>%
+              select(consumer_iso3c, source_unknown_t = consumption_live_weight_t)
+
+source_unknown <- source_known_prop_df %>% 
+  # join unknown data
+  left_join(fmfo_matrix_mean %>%
+              # Filter to rows where source is unknown
+              filter(unknown_type == "source_unknown") %>%
+              select(consumer_iso3c, source_unknown_t = consumption_live_weight_t),
             by = "consumer_iso3c") %>%
-  mutate(consumption_live_weight_t = all_unknown_prop*all_unknown_t) %>%
-  select(-all_unknown_prop, -all_unknown_t)
+  # make rows with no unknown sources 0 instead of NA
+  mutate(source_unknown_t = if_else(condition = is.na(source_unknown_t),
+                                    true = 0,
+                                    false = source_unknown_t)) %>% 
+  mutate(adjust_live_weight_t = source_known_prop*source_unknown_t)
+  #select(-source_known_prop, -source_unknown_t, -unknown_type)
+
+check <- source_unknown %>% 
+  group_by(consumer_iso3c, source_unknown_t) %>% 
+  summarise(adjust_live_weight_t = sum(adjust_live_weight_t)) %>% 
+  mutate(diff = source_unknown_t - adjust_live_weight_t)
+
+# The biggest difference between the adjusted tonnes and unknowns is e-11 so it is negligible and just due to R rounding
+
+
 ```
 
-# Unknown type 2: only habitat known
-```{r}
-# Use proportions of all known consumption by habitat
-habitat_known_prop_df <- seafood_matrix %>%
-  # Remove rows where habitat is unknown
-  filter(habitat != "unknown") %>%
-  # Get proportions for known habitats for each consuming country
-  group_by(consumer_iso3c, habitat) %>%
-  mutate(habitat_known_prop = consumption_live_weight_t/sum(consumption_live_weight_t)) 
-
-habitat_known <- habitat_known_prop_df %>% 
-  left_join(seafood_matrix %>%
-              # Filter to rows where all information is unknown other than habitat
-              filter(unknown_type == "habitat_only") %>%
-              select(consumer_iso3c, habitat, "habitat_known_t" = "consumption_live_weight_t"),
-            by = c("consumer_iso3c", "habitat")) %>%
-  mutate(consumption_live_weight_t = habitat_known_prop*habitat_known_t) %>%
-  select(-habitat_known_prop, -habitat_known_t)
-```
-
-# Unknown type 3: only species group is unknown
-```{r}
-# Use proportions of all known consumption by source, habitat, and method
-species_unknown_prop_df <- seafood_matrix %>%
-  # Remove rows where nceas group  is unknown
-  filter(nceas_group != "unknown") %>%
-  # Get proportions each consuming country by source, habitat, and method
-  group_by(consumer_iso3c, source_country_iso3c, habitat, method) %>%
-  mutate(species_unknown_prop = consumption_live_weight_t/sum(consumption_live_weight_t)) 
-
-species_unknown <- seafood_matrix %>% 
-  # Filter to rows where only species information is unknown
-  filter(unknown_type == "species_unknown") %>%
-  select(consumer_iso3c, source_country_iso3c, habitat, method,
-         "species_unknown_t" = "consumption_live_weight_t") %>%
-  left_join(species_unknown_prop_df,
-            by = c("consumer_iso3c", "source_country_iso3c", "habitat", "method")) %>%
-  mutate(consumption_live_weight_t = species_unknown_prop*species_unknown_t) %>%
-  select(-species_unknown_prop, -species_unknown_t)
-```
-
-### Combine all data frames with the known instances
+### Combine proportioned unknown tonnes with the consumption_live_weight_t
 ```{r}
 # Join all together
-seafood_matrix_new <- seafood_matrix %>%
-  filter(unknown_type == "known") %>%
-  bind_rows(all_unknown) %>%
-  bind_rows(habitat_known) %>%
-  bind_rows(species_unknown)
+fmfo_matrix_new <- source_unknown %>% 
+  # add consumption_live_weight_t and adjust_live_weight_t
+  mutate(consumption_live_weight_t = consumption_live_weight_t+adjust_live_weight_t) %>% 
+  select(consumer_iso3c, source_country_iso3c, dom_source, consumption_live_weight_t)
+
 ```
 
 ### Check consumption
+Check to make sure the total consumption is not different for countries.
 ```{r}
-seafood_check <- seafood_matrix %>%
+# take average consumption over years data frame
+fmfo_check <- fmfo_matrix_mean %>%
   group_by(consumer_iso3c) %>%
+  # total consumption weight
   summarise(consumption_original = sum(consumption_live_weight_t, na.rm = TRUE)) %>%
-  left_join(seafood_matrix_new %>%
+  # join with adjusted data
+  left_join(fmfo_matrix_new %>%
               group_by(consumer_iso3c) %>%
+              # total consumption weight
               summarise(consumption_new = sum(consumption_live_weight_t, na.rm = TRUE)),
             by = "consumer_iso3c") %>%
   mutate(diff = consumption_new-consumption_original) %>%
@@ -197,21 +159,12 @@ seafood_check <- seafood_matrix %>%
 
 ```
 
-Note: The original consumption does not match the disaggregated consumption 1:1 due to cases where no proportion can be calculated. For example, if all marine capture sourced from a given country is unknown, a proportion cannot be calculated for known species groups. We could consider using the proportions of the source country to estimate this. Currently, all but 5 countries lose less than 1% of consumption. 
+Any differences in tonnage between the the original data and new data is extremely small (e+-14), this is likely due to rounding of precise numbers in R so nothing to worry about.
 
-### Final cleaning
+###  Save
 ```{r}
-seafood_matrix_new <- seafood_matrix_new %>%
-  # Remove fmfo as this is handled separately
-  filter(nceas_group != "fomf") %>%
-  # Remove NAs produced where there were no known species to reallocate to
-  filter(!is.na(consumption_live_weight_t)) %>%
-  group_by(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group) %>%
-  summarise(consumption_live_weight_t = sum(consumption_live_weight_t)) %>%
-  # Remove small values created by proportions
-  filter(consumption_live_weight_t > 10^-9)
 
-write_csv(seafood_matrix_new, paste0(save_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
+write_csv(fmfo_matrix_new, paste0(save_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
 
 ```
 

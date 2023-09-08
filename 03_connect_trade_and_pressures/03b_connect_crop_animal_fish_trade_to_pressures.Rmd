@@ -1,0 +1,52 @@
+---
+title: "connect_trade_and_pressures"
+output: html_document
+date: "2023-09-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The goal of this script is to connect the trade data to the environmental efficiency data to calculate the quantity of the pressures from the producing countries. The next script will combine these pressures with freshwater aquaculture and adjust the trade for feed.
+
+## Setup
+Packages
+```{r}
+library(tidyverse)
+
+```
+
+
+Filepaths
+```{r}
+trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
+fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01e_allocate_unknown_trade_fmfo_consumption/"
+fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
+pressure_efficiency_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
+```
+
+## Pressure Efficiency Data
+Read in the pressure efficiency data. 
+```{r}
+pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
+
+```
+
+## Trade matrix - crops, animals, and fish
+Read in the different trade data.
+```{r}
+crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv"))
+
+fish_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
+
+fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
+
+old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
+```
+
+## Connect trade and pressures
+This section will conenect trade and pressures based on their broad groups. 
+
+- Crops and livestock trade will be connected to the pressures via the producer country code and the item code
+- fish and fmfo trade will be combined and connect to the pressures via their country code and nceas_group category

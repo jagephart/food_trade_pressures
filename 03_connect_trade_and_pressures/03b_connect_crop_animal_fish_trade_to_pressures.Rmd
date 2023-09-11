@@ -24,6 +24,7 @@ trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_tra
 fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01e_allocate_unknown_trade_fmfo_consumption/"
 fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressure_efficiency_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
+code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/"
 ```
 
 ## Pressure Efficiency Data
@@ -31,22 +32,108 @@ Read in the pressure efficiency data.
 ```{r}
 pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
 
+pressures_crops_livestock <- pressures_per_tonne %>% 
+  filter(food_group == "livestock" | food_group == "crops") 
+
 ```
 
 ## Trade matrix - crops, animals, and fish
 Read in the different trade data.
 ```{r}
-crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv"))
+crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv")) %>% 
+  # don't need year column
+  select(-Year) %>% 
+  # rename some columns
+  rename(consumer_country_code = Consumer_Country_Code,
+         producer_country_code = Producer_Country_Code,
+         traded_tonnes = Value,
+         item_code = Item_Code)
 
 fish_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
 
 fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
 
-old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
+#old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 ```
+
+Need to remember what the country codes in the trade matrix are....
 
 ## Connect trade and pressures
 This section will conenect trade and pressures based on their broad groups. 
 
 - Crops and livestock trade will be connected to the pressures via the producer country code and the item code
 - fish and fmfo trade will be combined and connect to the pressures via their country code and nceas_group category
+
+Set Up country codes to join trade and pressures
+```{r}
+# read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
+country_codes <- read_csv(paste0(code_path, "FAOSTAT_country_codes_8-10-2022.csv"))
+
+# format to match trade matrix variables names
+countries <- country_codes %>% 
+  select(`Partner Country Code`, `Partner Countries`, `ISO3 Code`) %>% 
+  rename('Country_Code' = 'Partner Country Code',
+         'Country' = 'Partner Countries',
+         'ISO3' = 'ISO3 Code') %>% 
+  unique()
+
+# "China, mainland" on the FAO website has the ISO3 code F41.
+# China, the aggregated country, has the ISO3 code CHN.
+# In the pressures data, they assign China mainland the ISO3 code CHN, so we need to be aware
+# of this in the gravity model if we match using ISO3 code. 
+# we will keep in line with the pressures data here, and give China mainland the ISO3 code CHN.
+countries <- countries %>% 
+  mutate(ISO3 = ifelse(Country == "China, mainland", "CHN", ISO3))
+```
+
+
+### Crops and Livestock
+```{r}
+# join the trade matrix with iso3c data
+crops_livestock_trade_countries <- crop_livestock_trade_matrix %>%
+  # join with countries data to producer country code
+  left_join(countries, by = c("producer_country_code" = "Country_Code")) %>%
+  # rename to producer colomns
+  rename(producer_country = Country, producer_iso3c = ISO3) %>% 
+  # relocate to after producer country code
+  relocate(c(producer_country, producer_iso3c), .after = producer_country_code) %>% 
+  # join with countries data to consumer country code
+  left_join(countries, by = c("consumer_country_code" = "Country_Code")) %>%
+  # rename to producer colomns
+  rename(consumer_country = Country, consumer_iso3c = ISO3) %>% 
+  # relocate to after producer country code
+  relocate(c(consumer_country, consumer_iso3c), .after = consumer_country_code)
+
+# check to see if any country codes didn't match
+country_na <- crops_livestock_trade_countries %>% 
+  filter(is.na(consumer_country) | is.na(producer_country) | is.na(consumer_iso3c) | is.na(producer_iso3c))
+# no missing country code data!
+
+# Join pressures/tonne data based on the producer_iso3c from trader data and the item_code
+crops_livestock_trade_pressures <- left_join(x = crops_livestock_trade_countries, 
+                                             y = pressures_crops_livestock,
+                                             by = c("producer_iso3c" = "iso3c",
+                                                    "item_code"))
+
+```
+
+NA check for items we do not have pressures for
+```{r}
+trade_pressures_na <- crops_livestock_trade_pressures %>% 
+  filter(is.na(pressure_per_tonne)) %>% 
+  select(-c(nceas_group, item, pressure, pressure_per_tonne, food_group))
+
+# read in item codes from FAO production data
+item_codes <- read_csv(paste0(code_path, "FAOSTAT_production_item_codes_8-5-2022.csv"))
+
+# format to match trade matrix
+item_codes <- item_codes %>% 
+  select("Item Code", Item) %>% 
+  rename('item_code' = 'Item Code')
+
+trade_pressures_na <- left_join(trade_pressures_na, item_codes, by = "item_code") %>% 
+  select(item_code, Item) %>% 
+  distinct()
+```
+
+We have a number of items that have been traded but do not have pressures associated with them. For now we need to look back to examine how these were addressed in the old workflow to address them here before moving on.

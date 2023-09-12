@@ -112,7 +112,7 @@ crop_pressure_per_tonne <- pressure_efficiency_raw %>%
   # keep certain columns only
   select(iso3c, nceas_group, 
          # make FAO_item_code just item_code
-         # rename to just item_code for matching with trade
+         # rename to item_code for matching with trade
          item_code = FAO_item_code, 
          # shorten to item
          item = product_description_FAOSTAT, 

@@ -47,7 +47,9 @@ crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_
   rename(consumer_country_code = Consumer_Country_Code,
          producer_country_code = Producer_Country_Code,
          traded_tonnes = Value,
-         item_code = Item_Code)
+         item_code = Item_Code) %>% 
+  # remove zeros data (removes close to 60,000 rows of data)
+  filter(traded_tonnes > 0)
 
 fish_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
 
@@ -59,7 +61,7 @@ fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_
 Need to remember what the country codes in the trade matrix are....
 
 ## Connect trade and pressures
-This section will conenect trade and pressures based on their broad groups. 
+This section will connect trade and pressures based on their broad groups. 
 
 - Crops and livestock trade will be connected to the pressures via the producer country code and the item code
 - fish and fmfo trade will be combined and connect to the pressures via their country code and nceas_group category
@@ -121,7 +123,16 @@ NA check for items we do not have pressures for
 ```{r}
 trade_pressures_na <- crops_livestock_trade_pressures %>% 
   filter(is.na(pressure_per_tonne)) %>% 
-  select(-c(nceas_group, item, pressure, pressure_per_tonne, food_group))
+  select(-c(nceas_group, pressure, pressure_per_tonne, food_group)) 
+
+# how much of of the original data does this include?
+# by quantity?
+nrow(trade_pressures_na)/nrow(crop_livestock_trade_matrix)
+# about 18% of the original rows of data
+
+# by volume?
+sum(trade_pressures_na$traded_tonnes)/sum(crop_livestock_trade_matrix$traded_tonnes)
+# about 6% of total tonnes traded.
 
 # read in item codes from FAO production data
 item_codes <- read_csv(paste0(code_path, "FAOSTAT_production_item_codes_8-5-2022.csv"))
@@ -132,8 +143,12 @@ item_codes <- item_codes %>%
   rename('item_code' = 'Item Code')
 
 trade_pressures_na <- left_join(trade_pressures_na, item_codes, by = "item_code") %>% 
-  select(item_code, Item) %>% 
+  select(producer_country, producer_iso3c, item_code, Item) %>% 
   distinct()
 ```
 
 We have a number of items that have been traded but do not have pressures associated with them. For now we need to look back to examine how these were addressed in the old workflow to address them here before moving on.
+
+The old joining method seems to use SPAM_super more than the item code but I think it is simply a matter of missing pressure data for trade data. Could look into regional averages for crops that are traded but do not have pressures data. Or, could just ignore. 
+
+

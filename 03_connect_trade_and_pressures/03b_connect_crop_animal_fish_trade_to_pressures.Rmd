@@ -32,13 +32,24 @@ Read in the pressure efficiency data.
 ```{r}
 pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
 
-pressures_crops_livestock <- pressures_per_tonne %>% 
-  filter(food_group == "livestock" | food_group == "crops") 
+pressures_crops <- pressures_per_tonne %>% 
+  filter(food_group == "crops") 
+
+pressures_livestock <- pressures_per_tonne %>% 
+  filter(food_group == "livestock") %>% 
+  distinct()
+
+pressure_livestock_codes <- pressures_livestock %>% 
+  select(item_code, nceas_group) %>% 
+  # there is no associated item code for goats milk
+  filter(!is.na(item_code)) %>% 
+  distinct()
 
 ```
 
 ## Trade matrix - crops, animals, and fish
-Read in the different trade data.
+Read in the trade data and clean if necessary. 
+
 ```{r}
 crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv")) %>% 
   # don't need year column
@@ -49,16 +60,22 @@ crop_livestock_trade_matrix <- read.csv(paste0(trade_matrix_path, "trade_matrix_
          traded_tonnes = Value,
          item_code = Item_Code) %>% 
   # remove zeros data (removes close to 60,000 rows of data)
-  filter(traded_tonnes > 0)
+  filter(traded_tonnes > 0) 
+
+#  Subset to only crops and livestock (866 == cattle, everything < 866 == non animal product)
+crop_trade_matrix <- crop_livestock_trade_matrix %>% 
+  filter(item_code < 866)
+
+livestock_trade_matrix <- crop_livestock_trade_matrix %>% 
+  filter(item_code >= 866)
 
 fish_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
 
 fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
 
 #old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
-```
 
-Need to remember what the country codes in the trade matrix are....
+```
 
 ## Connect trade and pressures
 This section will connect trade and pressures based on their broad groups. 
@@ -66,7 +83,7 @@ This section will connect trade and pressures based on their broad groups.
 - Crops and livestock trade will be connected to the pressures via the producer country code and the item code
 - fish and fmfo trade will be combined and connect to the pressures via their country code and nceas_group category
 
-Set Up country codes to join trade and pressures
+Set Up country codes and FAO codes to join trade and pressures
 ```{r}
 # read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
 country_codes <- read_csv(paste0(code_path, "FAOSTAT_country_codes_8-10-2022.csv"))
@@ -86,16 +103,31 @@ countries <- country_codes %>%
 # we will keep in line with the pressures data here, and give China mainland the ISO3 code CHN.
 countries <- countries %>% 
   mutate(ISO3 = ifelse(Country == "China, mainland", "CHN", ISO3))
+
+# read in data to map item_code from trade_matrix to pressures data
+map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/", "MapSPAM_to_FAO_v2.csv")) %>% 
+  select(item_code = FAO_item_code, item = product_description_FAOSTAT, SPAM_super) %>% 
+  distinct()
 ```
 
 
-### Crops and Livestock
+
+### Crops
+The crop trade data has a number of items/categories that should be removed as they are not considered food so we do not have pressures data for them.
+
+- SPAM_super "ofib" includs fiber crops that are not considered food
+- SPAM_super "othr" includes hops, pyrethrum, and rubber
+- SPAM_super "teas" includes tea, which are all not considered food
+- SPAM_super "toba" includes tobacco, which are all not considered food
+- SPAM_super "xcof" includes green coffee, which are all not considered food
+- Item "mate" is not considered food
+- We do not have pressures for "Chillies and peppers, green"
 ```{r}
 # join the trade matrix with iso3c data
-crops_livestock_trade_countries <- crop_livestock_trade_matrix %>%
+crop_trade_countries <- crop_trade_matrix %>%
   # join with countries data to producer country code
   left_join(countries, by = c("producer_country_code" = "Country_Code")) %>%
-  # rename to producer colomns
+  # rename to producer columns
   rename(producer_country = Country, producer_iso3c = ISO3) %>% 
   # relocate to after producer country code
   relocate(c(producer_country, producer_iso3c), .after = producer_country_code) %>% 
@@ -104,35 +136,57 @@ crops_livestock_trade_countries <- crop_livestock_trade_matrix %>%
   # rename to producer colomns
   rename(consumer_country = Country, consumer_iso3c = ISO3) %>% 
   # relocate to after producer country code
-  relocate(c(consumer_country, consumer_iso3c), .after = consumer_country_code)
+  relocate(c(consumer_country, consumer_iso3c), .after = consumer_country_code) %>% 
+  # join with FAO SPAM and item_code data
+  left_join(map_to_fao, 
+            by = "item_code") %>% 
+  # remove SPAM_super categories as explained above
+  filter(!SPAM_super == "ofib", !SPAM_super == "othr", !SPAM_super == "teas",
+         !SPAM_super == "toba", !SPAM_super == "xcof")
 
 # check to see if any country codes didn't match
-country_na <- crops_livestock_trade_countries %>% 
+country_na <- crop_trade_countries %>% 
   filter(is.na(consumer_country) | is.na(producer_country) | is.na(consumer_iso3c) | is.na(producer_iso3c))
 # no missing country code data!
 
+test_pressures <- pressures_crops %>% 
+  select(-item_code, - item) %>% 
+  distinct()
+```
+
+```{r}
 # Join pressures/tonne data based on the producer_iso3c from trader data and the item_code
-crops_livestock_trade_pressures <- left_join(x = crops_livestock_trade_countries, 
-                                             y = pressures_crops_livestock,
-                                             by = c("producer_iso3c" = "iso3c",
-                                                    "item_code"))
+crop_trade_pressures <- left_join(x = crop_trade_countries, 
+                                  y = test_pressures,
+                                  by = c("producer_iso3c" = "iso3c",
+                                         # for crops we join by the SPAM_super category
+                                         "SPAM_super"))
 
 ```
 
 NA check for items we do not have pressures for
 ```{r}
-trade_pressures_na <- crops_livestock_trade_pressures %>% 
+trade_pressures_na <- crop_trade_pressures %>% 
   filter(is.na(pressure_per_tonne)) %>% 
   select(-c(nceas_group, pressure, pressure_per_tonne, food_group)) 
 
 # how much of of the original data does this include?
 # by quantity?
-nrow(trade_pressures_na)/nrow(crop_livestock_trade_matrix)
-# about 18% of the original rows of data
+crop_trade_matrix_test <- crop_livestock_trade_matrix %>% 
+  # join with FAO SPAM and item_code data
+  left_join(map_to_fao, 
+            by = "item_code") %>% 
+  # remove SPAM_super categories as explained above
+  filter(!SPAM_super == "ofib", !SPAM_super == "othr", !SPAM_super == "teas",
+         !SPAM_super == "toba", !SPAM_super == "xcof") %>% 
+  filter(item_code < 866)
+
+nrow(trade_pressures_na)/nrow(crop_trade_matrix_test)
+# about 8.9% of the original rows of data
 
 # by volume?
-sum(trade_pressures_na$traded_tonnes)/sum(crop_livestock_trade_matrix$traded_tonnes)
-# about 6% of total tonnes traded.
+sum(trade_pressures_na$traded_tonnes)/sum(crop_trade_matrix_test$traded_tonnes)
+# about 5.6% of total tonnes traded.
 
 # read in item codes from FAO production data
 item_codes <- read_csv(paste0(code_path, "FAOSTAT_production_item_codes_8-5-2022.csv"))
@@ -142,13 +196,61 @@ item_codes <- item_codes %>%
   select("Item Code", Item) %>% 
   rename('item_code' = 'Item Code')
 
-trade_pressures_na <- left_join(trade_pressures_na, item_codes, by = "item_code") %>% 
-  select(producer_country, producer_iso3c, item_code, Item) %>% 
+trade_pressures_na_items <- left_join(trade_pressures_na, item_codes, by = "item_code") %>% 
+  select(producer_country, producer_iso3c, SPAM_super, item_code, Item) %>% 
+  distinct()
+
+items_na <- trade_pressures_na_items %>% 
+  select(item_code, Item, SPAM_super) %>% 
   distinct()
 ```
 
-We have a number of items that have been traded but do not have pressures associated with them. For now we need to look back to examine how these were addressed in the old workflow to address them here before moving on.
+We have a number of items that have been traded but do not have pressures associated with them. The old joining method seems to use SPAM_super more than the item code but I think it is simply a matter of missing pressure data for trade data. Could look into regional averages for crops that are traded but do not have pressures data. Or, could just ignore. 
 
-The old joining method seems to use SPAM_super more than the item code but I think it is simply a matter of missing pressure data for trade data. Could look into regional averages for crops that are traded but do not have pressures data. Or, could just ignore. 
+### Livestock
+```{r}
+livestock_trade_countries <- livestock_trade_matrix %>%
+  # join with countries data to producer country code
+  left_join(countries, by = c("producer_country_code" = "Country_Code")) %>%
+  # rename to producer columns
+  rename(producer_country = Country, producer_iso3c = ISO3) %>% 
+  # relocate to after producer country code
+  relocate(c(producer_country, producer_iso3c), .after = producer_country_code) %>% 
+  # join with countries data to consumer country code
+  left_join(countries, by = c("consumer_country_code" = "Country_Code")) %>%
+  # rename to producer colomns
+  rename(consumer_country = Country, consumer_iso3c = ISO3) %>% 
+  # relocate to after producer country code
+  relocate(c(consumer_country, consumer_iso3c), .after = consumer_country_code) %>% 
+  # removing beeswax, hides, skins, silk-worms, honey, other bird eggs, and meats (nes, ass, camel, duck, game, goose, horse, rabbit, turkey)
+  filter(item_code %in% c(pressure_livestock_codes[,1]))
+                          
+      
+# check to see if any country codes didn't match
+country_na <- livestock_trade_countries %>% 
+  filter(is.na(consumer_country) | is.na(producer_country) | is.na(consumer_iso3c) | is.na(producer_iso3c))
+# no missing country code data!
+
+livestock_trade_pressures <- livestock_trade_countries %>% 
+  left_join(pressures_livestock,
+            by = c("producer_iso3c" = "iso3c",
+                   # for livestock we join by the item_code 
+                   "item_code")) %>% 
+  # remove SPAM_super because that is NA for livestock
+  select(-SPAM_super) 
+  
+```
+
+Why are there extra rows now when we join with the pressures data? Need to create a check for many to many joins.... would mean there is multiple data for producer item codes in pressure_livestock...
+
+```{r}
+na_livestock <- livestock_trade_pressures %>% 
+  filter(is.na(nceas_group))
+
+na_livestock_items <- left_join(na_livestock, item_codes, by = "item_code") %>% 
+  select(item_code, Item) %>% 
+  distinct()
+
+```
 
 

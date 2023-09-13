@@ -37,8 +37,6 @@ pressure_efficiency_raw <- read.csv(file.path(pressures_path, "pressures_efficie
 
 ## Read in and clean trade data to make matching keys
 ```{r}
-#trade_data <- read.csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
-
 # read in the trade data calculated in 01b
 trade_matrix <- read_csv(paste0(matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv"))
 
@@ -102,7 +100,7 @@ livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_ju
 ## Connect Pressure per Tonne data to the appropriate key
 
 ### Crops
-We are adding the fao data key to the pressure efficiency data so that we will be able to connect the trade with the pressures. For crops, some of the SPAM_super items have multiple FAO item codes (ex. pota is the SPAM_super for potatoes and potato starch). These will therefor have the same associated pressure because of how the pressures data is aggregated. So when the final output has more rows than the original pressure_efficiency data it is because it is using the same pressure efficiencies for items under the same SPAM_super category.
+We are adding the fao data key to the pressure efficiency data so that we will be able to connect the trade with the pressures. For crops, some of the SPAM_super items have multiple FAO item codes (ex. pota is the SPAM_super for potatoes and potato starch). These will therefor have the same associated pressure because of how the pressures data is aggregated. The final output has more rows than the original pressure_efficiency data because it is using the same pressure efficiency for items under the same SPAM_super category.
 ```{r}
 crop_pressure_per_tonne <- pressure_efficiency_raw %>% 
   # filter pressures data to produce
@@ -111,6 +109,8 @@ crop_pressure_per_tonne <- pressure_efficiency_raw %>%
   left_join(map_to_fao, by = c("organism" = "SPAM_super")) %>%
   # keep certain columns only
   select(iso3c, nceas_group, 
+         # keep SPAM_super to gapfill test join with trade data
+         SPAM_super = organism,
          # make FAO_item_code just item_code
          # rename to item_code for matching with trade
          item_code = FAO_item_code, 
@@ -118,7 +118,8 @@ crop_pressure_per_tonne <- pressure_efficiency_raw %>%
          item = product_description_FAOSTAT, 
          pressure, pressure_per_tonne) %>% 
   # add a food_group column for crops
-  mutate(food_group = "crops")
+  mutate(food_group = "crops") %>% 
+  distinct()
 ```
 
 ### Livestock 

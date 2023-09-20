@@ -29,14 +29,55 @@ code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 ## Pressure Efficiency Data
 Read in the pressure efficiency data. 
+
+NOTE: As of right now some countries have multiple pressure efficiencies for a few items (see below list). It is unclear why this is happening presently but for now we will take the mean of any values where there is more than one and proceed with the calculations. 
+
+- chicken meat and eggs for livestock
+- xmil SPAM_super category for crops
 ```{r}
 pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
 
+## Crops
 pressures_crops <- pressures_per_tonne %>% 
   filter(food_group == "crops") 
 
+pressures_crops_wide <- pressures_crops %>% 
+  # pivot wide to simplify join with trade data
+  pivot_wider(names_from = pressure,
+              values_from = pressure_per_tonne) %>% 
+  mutate(food_group = "crops")
+
+# take a look at what items have multiple pressures (xmil SPAM_super category)
+# pressure_crops_dupes <- pressures_crops %>%
+#     dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
+#     dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#     dplyr::filter(n > 1L) 
+# 
+# pressure_crops_dupes_items <- pressure_crops_dupes %>% 
+#   select(iso3c, SPAM_super, item_code, item) %>% 
+#   distinct()
+
+## Livestock
 pressures_livestock <- pressures_per_tonne %>% 
   filter(food_group == "livestock") %>% 
+  distinct()
+
+pressures_livestock_wide <- pressures_livestock %>% 
+  # because of the multiple pressures for some chicken data group by and take the mean of these items,
+  group_by(iso3c, nceas_group, item_code, item, pressure) %>% 
+  summarise(pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = pressure,
+              values_from = pressure_per_tonne) %>% 
+  mutate(food_group = "livestock")
+
+pressure_livestock_dupes <- pressures_livestock %>%
+    dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
+    dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+    dplyr::filter(n > 1L) 
+
+pressure_livestock_dupes_items <- pressure_livestock_dupes %>% 
+  select(iso3c, nceas_group) %>%  #, item_code, item) %>% 
   distinct()
 
 pressure_livestock_codes <- pressures_livestock %>% 
@@ -157,18 +198,22 @@ test_pressures <- pressures_crops %>%
 ```{r}
 # Join pressures/tonne data based on the producer_iso3c from trader data and the item_code
 crop_trade_pressures <- left_join(x = crop_trade_countries, 
-                                  y = test_pressures,
+                                  y = pressures_crops_wide,
                                   by = c("producer_iso3c" = "iso3c",
                                          # for crops we join by the SPAM_super category
-                                         "SPAM_super"))
+                                         "SPAM_super")) %>% 
+  select(- c(consumer_country_code, producer_country_code, SPAM_super, nceas_group)) %>% 
+  # join with FAO SPAM and item_code data
+  left_join(map_to_fao, 
+            by = "item_code")
+  mutate()
 
 ```
 
 NA check for items we do not have pressures for
 ```{r}
 trade_pressures_na <- crop_trade_pressures %>% 
-  filter(is.na(pressure_per_tonne)) %>% 
-  select(-c(nceas_group, pressure, pressure_per_tonne, food_group)) 
+  filter(is.na(nceas_group)) 
 
 # how much of of the original data does this include?
 # by quantity?
@@ -232,12 +277,10 @@ country_na <- livestock_trade_countries %>%
 # no missing country code data!
 
 livestock_trade_pressures <- livestock_trade_countries %>% 
-  left_join(pressures_livestock,
+  left_join(pressures_livestock_wide,
             by = c("producer_iso3c" = "iso3c",
                    # for livestock we join by the item_code 
-                   "item_code")) %>% 
-  # remove SPAM_super because that is NA for livestock
-  select(-SPAM_super) 
+                   "item_code")) 
   
 ```
 
@@ -247,9 +290,18 @@ Why are there extra rows now when we join with the pressures data? Need to creat
 na_livestock <- livestock_trade_pressures %>% 
   filter(is.na(nceas_group))
 
+# what percentage by volume is NA?
+sum(na_livestock$traded_tonnes)/sum(livestock_trade_countries$traded_tonnes)
+# <1% by traded tonnes
+
+# what about by number of traded items?
+nrow(na_livestock)/nrow(livestock_trade_countries)
+# <1% by number of rows
+
 na_livestock_items <- left_join(na_livestock, item_codes, by = "item_code") %>% 
   select(item_code, Item) %>% 
   distinct()
+
 
 ```
 

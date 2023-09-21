@@ -28,11 +28,38 @@ seafood_trade_path <- "/home/shares/food-systems/social_justice_projects/food_tr
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 ```
 
-## Read in the pressures data
+## Read in the pressures data and cap at third standard deviation
 ```{r}
 # read in the pressures efficiency data
 pressure_efficiency_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv")) %>% 
   rename(nceas_group = category1_production)
+
+# cap pressure_per_tonne at the third standard deviation for the nceas_group and pressure
+pressure_efficiency_stats <- pressure_efficiency_raw %>% 
+  group_by(nceas_group, pressure) %>% 
+  summarise(mean = mean(pressure_per_tonne, na.rm = TRUE),
+            sd = sd(pressure_per_tonne, na.rm = TRUE),
+            third_sd = sd*3)
+
+pressure_efficiency_capped <- pressure_efficiency_raw %>% 
+  # join with stats - produces no NAs in mean or sd column
+  left_join(pressure_efficiency_stats, 
+            by = join_by(nceas_group, pressure)) %>% 
+  # cap + or - third standard deviation
+  mutate(pressure_per_tonne_new = case_when(is.na(pressure_per_tonne)~ NA,
+                                            pressure_per_tonne > (mean + third_sd) ~ (mean + third_sd),
+                                            pressure_per_tonne < (mean - third_sd) ~ (mean - third_sd),
+                                            TRUE ~ pressure_per_tonne)) %>% 
+  # remove columns no longer needed 
+  select(-c(pressure_per_tonne, mean, sd, third_sd)) %>% 
+  # rename pressure_per_tonne_new with pressure_per_tonne
+  rename(pressure_per_tonne = pressure_per_tonne_new)
+
+# uncomment and use pressure_efficiency_capped after making pressure_per_tonne_new to check
+# cap_check <- pressure_efficiency_capped %>% 
+#   mutate(change = pressure_per_tonne - pressure_per_tonne_new) %>% 
+#   filter(change != 0)
+
 ```
 
 ## Read in and clean trade data to make matching keys
@@ -102,30 +129,33 @@ livestock_FAO_categories <- read_csv(paste0("/home/shares/food-systems/social_ju
 ### Crops
 We are adding the fao data key to the pressure efficiency data so that we will be able to connect the trade with the pressures. For crops, some of the SPAM_super items have multiple FAO item codes (ex. pota is the SPAM_super for potatoes and potato starch). These will therefor have the same associated pressure because of how the pressures data is aggregated. The final output has more rows than the original pressure_efficiency data because it is using the same pressure efficiency for items under the same SPAM_super category.
 ```{r}
-crop_pressure_per_tonne <- pressure_efficiency_raw %>% 
+crop_pressure_per_tonne <- pressure_efficiency_capped %>% 
   # filter pressures data to produce
   filter(product == "produce") %>% 
-  # join with map_to_fao key using organism and SPAM_super categories
-  left_join(map_to_fao, by = c("organism" = "SPAM_super")) %>%
+  # # join with map_to_fao key using organism and SPAM_super categories
+  # left_join(map_to_fao, by = c("organism" = "SPAM_super")) %>%
   # keep certain columns only
   select(iso3c, nceas_group, 
-         # keep SPAM_super to gapfill test join with trade data
+         # rename to SPAM_super to join with trade data
          SPAM_super = organism,
-         # make FAO_item_code just item_code
-         # rename to item_code for matching with trade
-         item_code = FAO_item_code, 
-         # shorten to item
-         item = product_description_FAOSTAT, 
+         # # make FAO_item_code just item_code
+         # # rename to item_code for matching with trade
+         # item_code = FAO_item_code, 
+         # # shorten to item
+         # item = product_description_FAOSTAT, 
          pressure, pressure_per_tonne) %>% 
   # add a food_group column for crops
-  mutate(food_group = "crops") %>% 
+  mutate(food_group = "crops",
+         item = NA,
+         item_code = NA) %>% 
+  relocate(c(item, item_code), .after = SPAM_super) %>% 
   distinct()
 ```
 
 ### Livestock 
 We are adding the fao data key to the pressure efficiency data so that we will be able to connect the trade with the pressures. For livestock items, some of the nceas_groups have multiple items associated with them (ex. chicken_eggs is for both "eggs, hen, in shell" and "eggs, other bird, in shell"). These will therefor have the same associated pressure because of how the pressures data is aggregated. So when the final output has more rows than the original pressure_efficiency data it is because it is using the same pressure efficiency for items under the same nceas_group category.
 ```{r}
-livestock_pressure_per_tonne <- pressure_efficiency_raw %>% 
+livestock_pressure_per_tonne <- pressure_efficiency_capped %>% 
   # filter pressures data to meat (non-seafood) products from the organism column, buffaloes included to capture milk
   filter(organism %in% c("chickens", "cows", "goats", "sheep", "pigs", "buffaloes")) %>% 
   # join with livestock matching key
@@ -140,12 +170,14 @@ na_test <- livestock_pressure_per_tonne %>%
 
 unique(na_test$nceas_group)
 
+livestock_pressure_per_tonne <- livestock_pressure_per_tonne %>% 
+  filter(!is.na(item))
 ```
-We have pressures data for goats milk however we have no trade data that matches this. We will determine later if this is a problem when we join the two together
+We have pressures data for goats milk and feed however we have no trade data that matches this. We are doing our own feed pressures calculation and goats milk will have to be excluded since it does not have an appropriate FAO item to match with trade.
 
 ### Fisheries and Mariculture Pressure per Tonne
 ```{r}
-fisheries_pressure_per_tonne <- pressure_efficiency_raw %>% 
+fisheries_pressure_per_tonne <- pressure_efficiency_capped %>% 
   # filter for marine fisheries organism
   filter(organism %in% c("benthic", "demersal", "fofm", "large-pelagic", 
                          "medium-pelagic", "small-pelagic", "reef", "fish", 

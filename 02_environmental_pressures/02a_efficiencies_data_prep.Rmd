@@ -46,7 +46,7 @@ pressure_efficiency_capped <- pressure_efficiency_raw %>%
   left_join(pressure_efficiency_stats, 
             by = join_by(nceas_group, pressure)) %>% 
   # cap + or - third standard deviation
-  mutate(pressure_per_tonne_new = case_when(is.na(pressure_per_tonne)~ NA,
+  mutate(pressure_per_tonne_new = case_when(is.na(pressure_per_tonne) ~ NA,
                                             pressure_per_tonne > (mean + third_sd) ~ (mean + third_sd),
                                             pressure_per_tonne < (mean - third_sd) ~ (mean - third_sd),
                                             TRUE ~ pressure_per_tonne)) %>% 
@@ -183,6 +183,9 @@ fisheries_pressure_per_tonne <- pressure_efficiency_capped %>%
                          "medium-pelagic", "small-pelagic", "reef", "fish", 
                          "salmon", "marine-fish-general", "bivalve", 
                          "shrimp", "tuna", "crustaceans")) %>% 
+  # remove any feed pressures as we are calculating this separately and using a difference method than the pressure efficiency data
+  filter(!str_starts(string = nceas_group,
+                     pattern = "feed")) %>% 
   # remove nceas_group from pressures data as seafood key has appropriate nceas_group
   select(-nceas_group) %>% 
   #join with key
@@ -191,6 +194,28 @@ fisheries_pressure_per_tonne <- pressure_efficiency_capped %>%
   select(iso3c, nceas_group, pressure, pressure_per_tonne) %>% 
   # add in grouping
   mutate(food_group = "fisheries and mariculture")
+
+# marine_pressures_test <- pressure_efficiency_capped %>% 
+#   # filter for marine fisheries organism
+#   filter(organism %in% c("benthic", "demersal", "fofm", "large-pelagic", 
+#                          "medium-pelagic", "small-pelagic", "reef", "fish", 
+#                          "salmon", "marine-fish-general", "bivalve", 
+#                          "shrimp", "tuna", "crustaceans")) %>% 
+#   #join with key
+#   left_join(seafood_key, by = "organism") 
+# 
+# fisheries_pressure_dupes <- pressure_efficiency_capped %>% 
+#   # filter for marine fisheries organism
+#   filter(organism %in% c("benthic", "demersal", "fofm", "large-pelagic", 
+#                          "medium-pelagic", "small-pelagic", "reef", "fish", 
+#                          "salmon", "marine-fish-general", "bivalve", 
+#                          "shrimp", "tuna", "crustaceans")) %>% 
+#   dplyr::group_by(iso3c, organism, product, nceas_group, pressure) %>%
+#   dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#   dplyr::filter(n > 1L)
+  
+
+
 ```
 
 ### Bind pressures per tonne data

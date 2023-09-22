@@ -14,7 +14,7 @@ The goal of this script is to connect the trade data to the environmental effici
 Packages
 ```{r}
 library(tidyverse)
-
+library(countrycode)
 ```
 
 
@@ -32,8 +32,11 @@ Read in the pressure efficiency data.
 
 ```{r}
 pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
+```
 
 ### Crops
+Subset the pressure efficiency data to the crops food group. Pivot wider to make joining with trade data easier to manage.
+```{r}
 pressures_crops <- pressures_per_tonne %>% 
   filter(food_group == "crops") 
 
@@ -41,19 +44,65 @@ pressures_crops_wide <- pressures_crops %>%
   # pivot wide to simplify join with trade data
   pivot_wider(names_from = pressure,
               values_from = pressure_per_tonne) %>% 
-  mutate(food_group = "crops") %>% 
   # remove item and item code because the data is aggregated by SPAM_super
-  select(-item_code, - item) %>% 
+  select(-item_code, -item) %>% 
   # join will be with SPAM_super so make sure we have no repeats
   distinct()
 
 # check for dupes
-pressure_crops_dupes <- pressures_crops %>%
+pressures_crops_dupes <- pressures_crops %>%
     dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
     dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
     dplyr::filter(n > 1L)
+```
+
+#### Gapfill Set Up
+Set up regional gapfilling for crops pressures. For this purpose we will use the countrycode package and the United Nations regional designations. This will be used to gapfill countries that have trade data with another country for a given product, but are missing pressures data.
+```{r}
+pressures_crops_regions <- pressures_crops %>% 
+  # add subregion
+  mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
+  # add intermediate region
+  mutate(intermed_region = countrycode(iso3c, 'iso3c', 'un.regionintermediate.name')) %>% 
+  # the intermediate region designation is less broad than subregion
+  # make a region column for when there is no intermediate region use the subregion
+  mutate(region = case_when(is.na(intermed_region) ~ subregion,
+                            TRUE ~ intermed_region))  
+
+# fill in Taiwan Region
+pressures_crops_regions$region[pressures_crops_regions$iso3c == "TWN"] <- "Eastern Asia"
+# the iso3c code is presumed to be for Kosovo and will therefor have a designation of Southern Europe like neighboring countries
+pressures_crops_regions$region[pressures_crops_regions$iso3c == "XKO"] <- "Southern Europe"
+
+na_test <- pressures_crops_regions %>% 
+  filter(is.na(region)) %>% 
+  mutate(country = countrycode(iso3c, 'iso3c', 'country.name'))
+# no region NAs
+
+# calculate regional averages
+pressures_crops_regions <- pressures_crops_regions %>% 
+  group_by(region, SPAM_super, pressure) %>% 
+  # count number of pressures used in calculation
+  summarise(n = dplyr::n(),
+            # calculate means of groupings 
+            region_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
+  ungroup() 
+
+pressures_crops_regions_wide <- pressures_crops_regions %>% 
+  # remove count column
+  select(-n) %>% 
+  # pivot wide to merge with other data easily
+  pivot_wider(names_from = pressure,
+              values_from = region_pressure_per_tonne) %>% 
+  rename(region_ghg = ghg,
+         region_disturbance = disturbance,
+         region_nutrient = nutrient,
+         region_water = water)
+  
+```
 
 ### Livestock
+```{r}
 pressures_livestock <- pressures_per_tonne %>% 
   filter(food_group == "livestock") %>% 
   distinct()
@@ -61,8 +110,7 @@ pressures_livestock <- pressures_per_tonne %>%
 pressures_livestock_wide <- pressures_livestock %>% 
   # pivot wide to simplify join with trade data
   pivot_wider(names_from = pressure,
-              values_from = pressure_per_tonne) %>% 
-  mutate(food_group = "livestock")
+              values_from = pressure_per_tonne) 
 
 # check for dupes
 pressure_livestock_dupes <- pressures_livestock %>%
@@ -75,7 +123,25 @@ pressure_livestock_codes <- pressures_livestock %>%
   # there is no associated item code for goats milk
   filter(!is.na(item_code)) %>% 
   distinct()
+```
 
+### Marine Fish and FOFM
+
+```{r}
+pressures_fish <- pressures_per_tonne %>% 
+  filter(food_group == "fisheries and mariculture") 
+
+pressures_fish_wide <- pressures_fish %>% 
+  # pivot wide to simplify join with trade data
+  pivot_wider(names_from = pressure,
+              values_from = pressure_per_tonne) %>% 
+  mutate(food_group = "fisheries and mariculture")
+
+# check for dupes
+pressures_fish_dupes <- pressures_fish %>% 
+  dplyr::group_by(iso3c, nceas_group, SPAM_super, item, item_code, food_group, pressure) %>%
+    dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+    dplyr::filter(n > 1L)
 ```
 
 ## Trade matrix - crops, animals, and fish
@@ -100,7 +166,16 @@ crop_trade_matrix <- crop_livestock_trade_matrix %>%
 livestock_trade_matrix <- crop_livestock_trade_matrix %>% 
   filter(item_code >= 866)
 
-fish_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
+fish_marine_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv")) %>% 
+  # remove freshwater aquaculture since it is handled in step 03a
+  filter(habitat == "marine")
+
+inland_capture_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv")) %>% 
+  # inland capture pressures are included in these pressure efficiencies
+  filter(habitat == "inland" & method == "capture")
+
+# join marince trade and inland capture trade
+fish_trade_matrix <- rbind(fish_marine_trade_matrix, inland_capture_trade_matrix)
 
 fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
 
@@ -191,15 +266,18 @@ crop_trade_pressures <- left_join(x = crop_trade_countries,
                                          # for crops we join by the SPAM_super category
                                          "SPAM_super")) %>% 
   # remove some redundant columns, keep nceas_group for now to check for NAs
-  select(- c(consumer_country_code, producer_country_code, SPAM_super)) %>% 
+  select(- c(consumer_country_code, producer_country_code)) %>% 
   # calculate the total pressure traded by multiplying traded_tonnes by the pressure efficiency
   mutate(disturbance_total = disturbance*traded_tonnes,
          water_total = water*traded_tonnes,
          ghg_total = ghg*traded_tonnes,
-         nutrient_total = nutrient*traded_tonnes)
+         nutrient_total = nutrient*traded_tonnes) %>% 
+  # we do not have pressure efficiency data for sugar beet so filter out
+  filter(item != "Sugar beet")
 
 ```
 
+#### Missing Data Check
 NA check for items we do not have pressures for
 ```{r}
 trade_pressures_na <- crop_trade_pressures %>% 
@@ -214,7 +292,8 @@ crop_trade_matrix_test <- crop_livestock_trade_matrix %>%
   # remove SPAM_super categories as explained above
   filter(!SPAM_super == "ofib", !SPAM_super == "othr", !SPAM_super == "teas",
          !SPAM_super == "toba", !SPAM_super == "xcof") %>% 
-  filter(item_code < 866)
+  filter(item_code < 866) %>% 
+  filter(item != "Sugar beet")
 
 nrow(trade_pressures_na)/nrow(crop_trade_matrix_test)
 # about 8.9% of the original rows of data
@@ -236,11 +315,88 @@ trade_pressures_na_items <- left_join(trade_pressures_na, item_codes, by = "item
   distinct()
 
 items_na <- trade_pressures_na_items %>% 
-  select(item_code, Item, SPAM_super) %>% 
+  select(item_code, Item) %>% 
   distinct()
 ```
 
-We have a number of items that have been traded but do not have pressures associated with them. The old joining method seems to use SPAM_super more than the item code but I think it is simply a matter of missing pressure data for trade data. Could look into regional averages for crops that are traded but do not have pressures data. Or, could just ignore. 
+We have a number of items that have been traded but do not have pressures associated with them. We will gapfill these pressures using regional averages.
+
+#### Gapfill Crops
+```{r, warning=FALSE}
+crop_trade_pressures_missing <- crop_trade_pressures %>% 
+  # Filter for rows with missing pressures
+  filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance) | is.na(water)) %>% 
+  # add in regional ids
+  # add subregion
+  mutate(subregion = countrycode(producer_iso3c, 'iso3c', 'un.regionsub.name')) %>% 
+  # add intermediate region
+  mutate(intermed_region = countrycode(producer_iso3c, 'iso3c', 'un.regionintermediate.name')) %>% 
+  # the intermediate region designation is less broad than subregion
+  # make a region column for when there is no intermediate region use the subregion
+  mutate(producer_region = case_when(is.na(intermed_region) ~ subregion,
+                            TRUE ~ intermed_region)) %>% 
+  select(-c(subregion, intermed_region, disturbance_total, water_total, ghg_total, nutrient_total))
+
+# fill in Taiwan Region
+crop_trade_pressures_missing$producer_region[crop_trade_pressures_missing$producer_iso3c == "TWN"] <- "Eastern Asia"
+# the iso3c code is presumed to be for Kosovo and will therefor have a designation of Southern Europe like neighboring countries
+crop_trade_pressures_missing$producer_region[crop_trade_pressures_missing$producer_iso3c == "XKO"] <- "Southern Europe"
+
+# join with regions
+crop_trade_pressures_gapfilled <- left_join(x = crop_trade_pressures_missing, 
+                                            y = pressures_crops_regions_wide,
+                                            by = c("producer_region" = "region",
+                                                   # for crops we join by the SPAM_super category
+                                                   "SPAM_super")) %>% 
+  # gapfill
+  mutate(ghg = if_else(condition = is.na(ghg),
+                       true = region_ghg,
+                       false = ghg),
+         disturbance = if_else(condition = is.na(disturbance),
+                       true = region_disturbance,
+                       false = disturbance),
+         water = if_else(condition = is.na(water),
+                       true = region_water,
+                       false = water),
+         nutrient = if_else(condition = is.na(nutrient),
+                       true = region_nutrient,
+                       false = nutrient)) %>% 
+  # remove extra columns for joining back with other data
+  select(-c(producer_region, region_disturbance, region_ghg, region_nutrient, region_water)) %>% 
+  # calculate the total pressure traded by multiplying traded_tonnes by the pressure efficiency
+  mutate(disturbance_total = disturbance*traded_tonnes,
+         water_total = water*traded_tonnes,
+         ghg_total = ghg*traded_tonnes,
+         nutrient_total = nutrient*traded_tonnes)
+
+remaining_na <- crop_trade_pressures_gapfilled %>% 
+  # Filter for rows with missing pressures
+  filter(is.na(ghg) & is.na(nutrient) & is.na(disturbance) & is.na(water))
+
+nrow(remaining_na)/nrow(crop_trade_matrix_test)
+# about 1.5% of the original rows of data
+
+# by volume?
+sum(remaining_na$traded_tonnes)/sum(crop_trade_matrix_test$traded_tonnes)
+# about 0.7% of total tonnes traded.
+
+# unique(remaining_na$SPAM_super)
+```
+
+#### Rejoin gapfilled data
+```{r}
+# record the number of rows to ensure bind does not result in lost data 
+nrow(crop_trade_pressures)
+
+crop_trade_pressures <- crop_trade_pressures %>% 
+  # Filter for rows with no missing pressures
+  filter(!is.na(ghg) & !is.na(nutrient) & !is.na(disturbance) & !is.na(water)) 
+
+nrow(crop_trade_pressures) + nrow(crop_trade_pressures_gapfilled)
+
+crop_trade_pressures <- rbind(crop_trade_pressures, crop_trade_pressures_gapfilled)
+```
+
 
 ### Livestock
 ```{r}
@@ -302,4 +458,68 @@ na_livestock_items <- left_join(na_livestock, item_codes, by = "item_code") %>%
   distinct()
 ```
 
+
+### Fish
+```{r}
+# join the trade matrix with iso3c data
+fish_trade_countries <- fish_trade_matrix %>%
+  # filter out NEI iso3c code
+  filter(consumer_iso3c != "NEI",
+         source_country_iso3c != "NEI") %>% 
+  # join with countries data to producer iso3c
+  left_join(countries %>% 
+              select(-Country_Code),
+            by = c("source_country_iso3c" = "ISO3")) %>%
+  # rename to producer columns
+  rename(producer_country = Country, producer_iso3c = source_country_iso3c) %>% 
+  # relocate to after producer country code
+  relocate(c(producer_country), .after = producer_iso3c) %>% 
+  # join with countries data to consumer iso3c
+  left_join(countries %>% 
+              select(-Country_Code),
+            by = c("consumer_iso3c" = "ISO3")) %>%
+  # rename to producer columns
+  rename(consumer_country = Country, consumer_iso3c = consumer_iso3c) %>% 
+  # relocate to after producer country code
+  relocate(c(consumer_country), .after = consumer_iso3c) 
+
+# check to see if any country codes didn't match
+country_na <- fish_trade_countries %>% 
+  filter(is.na(consumer_country) | is.na(producer_country) | is.na(consumer_iso3c) | is.na(producer_iso3c))
+# no missing country code data!
+```
+
+#### Calculate the total pressures
+```{r}
+fish_trade_pressures <- fish_trade_countries %>% 
+  left_join(pressures_fish_wide,
+            by = c("producer_iso3c" = "iso3c",
+                   # for fish we join by the nceas_group 
+                   "nceas_group")) %>% 
+  # remove some redundant columns, keep food_group for now to check for NAs
+  select(- c(item, item_code, SPAM_super))
+  # # calculate the total pressure traded by multiplying consumption_live_weight_t by the pressure efficiency
+  # mutate(disturbance_total = disturbance*consumption_live_weight_t,
+  #        water_total = water*consumption_live_weight_t,
+  #        ghg_total = ghg*consumption_live_weight_t,
+  #        nutrient_total = nutrient*consumption_live_weight_t)
+```
+
+```{r}
+na_fish <- fish_trade_pressures %>% 
+  filter(is.na(food_group))
+
+# what percentage by volume is NA?
+sum(na_fish$consumption_live_weight_t)/sum(fish_trade_pressures$consumption_live_weight_t)
+# 2.2% by traded tonnes
+
+# what about by number of traded items?
+nrow(na_fish)/nrow(fish_trade_pressures)
+# 6.6% by number of rows
+
+unique(pressures_fish$nceas_group)
+
+unique(fish_trade_matrix$nceas_group)
+
+```
 

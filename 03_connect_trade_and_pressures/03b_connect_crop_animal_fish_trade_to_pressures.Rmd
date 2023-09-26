@@ -25,6 +25,7 @@ fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/foo
 fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressure_efficiency_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_connect_crop_livestock_oth_fish_pressures/"
 ```
 
 ## Pressure Efficiency Data
@@ -58,7 +59,7 @@ pressures_crops_dupes <- pressures_crops %>%
 
 #### Gapfill Set Up
 Set up regional gapfilling for crops pressures. For this purpose we will use the countrycode package and the United Nations regional designations. This will be used to gapfill countries that have trade data with another country for a given product, but are missing pressures data.
-```{r}
+```{r warning=FALSE}
 pressures_crops_regions <- pressures_crops %>% 
   # add subregion
   mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
@@ -127,7 +128,7 @@ pressure_livestock_codes <- pressures_livestock %>%
 
 #### Gapfill Set Up
 Set up regional gapfilling for livestock pressures. For this purpose we will use the countrycode package and the United Nations regional designations. This will be used to gapfill countries that have trade data with another country for a given product, but are missing pressures data.
-```{r}
+```{r warning=FALSE}
 pressures_livestock_regions <- pressures_livestock %>% 
   # add subregion
   mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
@@ -172,7 +173,7 @@ pressures_livestock_regions_wide <- pressures_livestock_regions %>%
   
 ```
 
-### Marine Fish
+### Marine Fish and Fish Oil Fish Meal (FOFM)
 
 ```{r}
 pressures_fish <- pressures_per_tonne %>% 
@@ -242,8 +243,6 @@ pressures_fish_regions_wide <- pressures_fish_regions %>%
   
 ```
 
-### FOFM
-
 ## Trade matrix - crops, animals, and fish
 Read in the trade data and clean if necessary. 
 
@@ -279,7 +278,15 @@ fish_trade_matrix <- rbind(fish_marine_trade_matrix, inland_capture_trade_matrix
   # we have no pressures data for jellyfish so filter out completely
   filter(nceas_group != "jellyfish")
 
-fmfo_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
+# the FOFM trade matrix will be joined with the fish_trade_matrix
+# the below code sets this up
+fofm_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv")) %>% 
+  # add nceas_group, habitat, and method column
+  mutate(nceas_group = "fofm",
+         habitat = "fofm",
+         method = "fofm") %>% 
+  # remove dom_source column
+  select(-dom_source)
 
 #old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
@@ -643,10 +650,12 @@ sum(livestock_trade_pressures$traded_tonnes)
 # no loses, livestock is done!
 ```
 
-### Fish
+### Fish and FOFM
 ```{r}
 # join the trade matrix with iso3c data
 fish_trade_countries <- fish_trade_matrix %>%
+  # rbind with fofm_trade_matrix
+  rbind(fofm_trade_matrix) %>% 
   # filter out NEI iso3c code
   filter(consumer_iso3c != "NEI",
          source_country_iso3c != "NEI") %>% 
@@ -699,7 +708,7 @@ sum(na_fish$consumption_live_weight_t)/sum(fish_trade_pressures$consumption_live
 
 # what about by number of traded items?
 nrow(na_fish)/nrow(fish_trade_pressures)
-# 8% by number of rows
+# 7.7% by number of rows
 
 unique(pressures_fish$nceas_group)
 
@@ -756,6 +765,82 @@ nrow(remaining_na)/nrow(fish_trade_pressures)
 # by volume?
 sum(remaining_na$consumption_live_weight_t)/sum(fish_trade_pressures$consumption_live_weight_t)
 # less than 1% of total tonnes traded.
-
-unique(remaining_na$nceas_group)
 ```
+
+#### Rejoin gapfilled data
+```{r}
+# record the number of rows to ensure bind does not result in lost data 
+nrow(fish_trade_pressures)
+sum(fish_trade_pressures$consumption_live_weight_t)
+
+fish_trade_pressures <- fish_trade_pressures %>% 
+  # Filter for rows with no missing pressures
+  filter(!is.na(ghg) & !is.na(nutrient) & !is.na(disturbance)) 
+
+nrow(fish_trade_pressures) + nrow(fish_trade_pressures_gapfilled)
+
+fish_trade_pressures <- rbind(fish_trade_pressures, fish_trade_pressures_gapfilled)
+sum(fish_trade_pressures$consumption_live_weight_t)
+
+# no loses, crops are done!
+```
+
+## Join Crops, Livestock, and Marine Trade/Pressures
+The below section joins the three areas of trade into one data frame. First we need to make sure they all have the same columns and structure
+```{r}
+### Crops
+crop_trade_pressures_clean <- crop_trade_pressures %>% 
+  # make sure food group is the same for all categories
+  mutate(food_group = "crops") %>% 
+  # remove SPAM_super and nceas_group
+  select(-SPAM_super, -nceas_group) %>% 
+  # remove pressures per tonne columns
+  select(-c(ghg, water, disturbance, nutrient))
+
+### Livestock
+livestock_trade_pressures_clean <- livestock_trade_pressures %>%
+  # remove item column 
+  select(-item) %>% 
+  # make nceas_group item
+  rename(item = nceas_group) %>% 
+  # make sure food group is the same for all categories
+  mutate(food_group = "livestock") %>% 
+  # remove pressures per tonne columns
+  select(-c(ghg, water, disturbance, nutrient))
+
+### Fish
+fish_trade_pressures_clean <- fish_trade_pressures %>% 
+  # make sure food group is the same for all categories
+  mutate(food_group = "fisheries and aquaculture",
+         # add in water_total columns (will be zero)
+         water_total = 0,
+         # add in item code column for fisheries and aquaculture, will be NA
+         item_code = NA) %>% 
+  # rename consumption_live_weight_t
+  rename(traded_tonnes = consumption_live_weight_t,
+         # rename nceas_group to item
+         item = nceas_group) %>% 
+  # remove method, habitat 
+  select(-habitat, -method) %>% 
+  # remove pressures per tonne columns
+  select(-c(ghg, disturbance, nutrient))
+
+# bind all together
+trade_pressures_final <- rbind(crop_trade_pressures_clean,
+                         livestock_trade_pressures_clean,
+                         fish_trade_pressures_clean)
+
+colnames(crop_trade_pressures_clean)
+colnames(livestock_trade_pressures_clean)
+colnames(fish_trade_pressures_clean)
+
+```
+
+## Save
+Note this saved file does not have pressures allocated to animals for feed yet. That will be done in the next step.
+```{r}
+write.csv(x = trade_pressures_final,
+          file = paste0(save_path, "trade_w_pressures_no_feed.csv"))
+```
+
+

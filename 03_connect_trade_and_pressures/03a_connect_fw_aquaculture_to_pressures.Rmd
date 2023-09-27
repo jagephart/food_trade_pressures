@@ -17,7 +17,8 @@ File paths
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02b_fw_aquaculture_pressures/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02aii_connect_2017_fw_aquaculture_to_pressures/"
+code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_connect_fw_aquaculture_pressures/"
 ```
 
 
@@ -41,6 +42,29 @@ fw_trade_clean <- trade_matrix_raw %>%
 Read in freshwater aquaculture pressures data per tonne from Mel - calculated in step 02a
 ```{r}
 pressure <- read_csv(paste0(pressures_path, "fw_aquaculture_pressures_per_tonne.csv")) 
+```
+
+Set Up country codes to join country names
+```{r}
+# read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
+country_codes <- read_csv(paste0(code_path, "FAOSTAT_country_codes_8-10-2022.csv"))
+
+# format to match trade matrix variables names
+countries <- country_codes %>% 
+  select(`Partner Country Code`, `Partner Countries`, `ISO3 Code`) %>% 
+  rename('Country_Code' = 'Partner Country Code',
+         'Country' = 'Partner Countries',
+         'ISO3' = 'ISO3 Code') %>% 
+  unique()
+
+# "China, mainland" on the FAO website has the ISO3 code F41.
+# China, the aggregated country, has the ISO3 code CHN.
+# In the pressures data, they assign China mainland the ISO3 code CHN, so we need to be aware
+# of this in the gravity model if we match using ISO3 code. 
+# we will keep in line with the pressures data here, and give China mainland the ISO3 code CHN.
+countries <- countries %>% 
+  mutate(ISO3 = ifelse(Country == "China, mainland", "CHN", ISO3))
+
 ```
 
 ## Match up the species groupings
@@ -125,24 +149,63 @@ sum(fw_trade_subset$consumption_live_weight_t)/sum(fw_trade_clean$consumption_li
 
 
 ## Calculate the environmental pressures from freshwater aquaculture
-Now join trade data with pressure efficiency data by the `nceas_group`. The `fw_trade_pressures` should have 4x as many rows as `fw_trade_subset` as there are 4 pressures per `nceas_group`.
+Now join trade data with pressure efficiency data by the `nceas_group`. The `fw_trade_pressures` should have the same amount of rows as `fw_trade_subset`.
 ```{r}
 # join trade data with the pressures data
 fw_trade_pressures <- left_join(x = fw_trade_subset, y = pressure_relabel, by = "nceas_group")
 
-# check join
-nrow(fw_trade_pressures)
-nrow(fw_trade_subset)*4
-
 fw_trade_pressures <- fw_trade_pressures %>% 
-  # calculate the total pressure from live_weight_t and pressure_per_tonne
-  mutate(pressure_total = consumption_live_weight_t * pressure_per_tonne) %>% 
-  # select columns to make simpler
-  select(source_country_iso3c, consumer_iso3c, nceas_group, consumption_live_weight_t, pressure_type = pressure, pressure_per_tonne, pressure = pressure_total)
+  # calculate the total pressure traded by multiplying consumption_live_weight_t by the pressure efficiency
+  mutate(disturbance_total = disturbance*consumption_live_weight_t,
+         ghg_total = ghg*consumption_live_weight_t,
+         nutrient_total = nutrient*consumption_live_weight_t,
+         water_total = water*consumption_live_weight_t) 
 ```
 
 ## Set up for joining with other data and save
 ```{r}
+fw_trade_pressures_clean <- fw_trade_pressures %>% 
+  # filter out NEI iso3c code
+  filter(consumer_iso3c != "NEI",
+         source_country_iso3c != "NEI") %>% 
+  # join with countries data to producer iso3c
+  left_join(countries %>% 
+              select(-Country_Code),
+            by = c("source_country_iso3c" = "ISO3")) %>%
+  # rename to producer columns
+  rename(producer_country = Country, producer_iso3c = source_country_iso3c) %>% 
+  # relocate to after producer country code
+  relocate(c(producer_country), .after = producer_iso3c) %>% 
+  # join with countries data to consumer iso3c
+  left_join(countries %>% 
+              select(-Country_Code),
+            by = c("consumer_iso3c" = "ISO3")) %>%
+  # rename to producer columns
+  rename(consumer_country = Country, consumer_iso3c = consumer_iso3c) %>% 
+  # relocate to after producer country code
+  relocate(c(consumer_country), .after = consumer_iso3c) %>% 
+  # make sure food group is the same for all categories
+  mutate(food_group = "fisheries and aquaculture",
+         # add in item code column for fisheries and aquaculture, will be NA
+         item_code = NA) %>% 
+  # add item column for freshwater aquaculture
+  mutate(item = case_when(nceas_group == "miscellaneous freshwater fishes" ~ "fw_aquaculture_miscellaneous_freshwater_fishes",
+                          nceas_group == "hypoph_carp" ~ "fw_aquaculture_hypoph_carp",
+                          nceas_group == "miscellaneous diadromous fishes" ~ "fw_aquaculture_miscellaneous_diadromous_fishes",
+                          nceas_group == "oth_carp" ~ "fw_aquaculture_oth_carp",
+                          nceas_group == "tilapias and other cichlids" ~ "fw_aquaculture_tilapias_and_other_cichlids",
+                          nceas_group == "salmons, trouts, smelts" ~ "fw_aquaculture_salmons_trouts_smelts",
+                          TRUE ~ NA)) %>% 
+  # rename consumption_live_weight_t
+  rename(traded_tonnes = consumption_live_weight_t) %>% 
+  #excess columns
+  select(-c(ghg, disturbance, nutrient, water, nceas_group, habitat, method, stressor_group))
 
+```
+
+Save
+```{r}
+write.csv(x = fw_trade_pressures_clean,
+          file = paste0(save_path, "fw_aquaculture_trade_pressures.csv"))
 ```
 

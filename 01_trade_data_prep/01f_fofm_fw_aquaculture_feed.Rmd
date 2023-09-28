@@ -1,0 +1,396 @@
+---
+title: "02ai_fw_aquaculture_pressures"
+output: html_document
+date: "2022-11-02"
+editor_options: 
+  chunk_output_type: console
+---
+
+GOAL: Calculate pressures for freshwater aquaculture by country and taxa group.
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(countrycode)
+```
+
+File Paths
+```{r}
+raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
+fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/FAO/fao_aquaculture/"
+fw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fw_aquaculture/"
+pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+```
+
+
+# FAO production data
+
+Format these data to include only the years of interest
+IN = freshwater
+BW = brackishwater
+MA = marine
+Al = all environments
+```{r}
+# read in production data
+raw_production <- read_csv(paste0(fao_data_path, "Aquaculture_Quantity.csv")) %>%
+  # filter for freshwater aquaculture
+  filter(ENVIRONMENT.ALPHA_2_CODE=="IN") %>%
+  # filter for 2017 (may need to do 2015-2019)
+  filter(PERIOD %in% c(2017)) %>% #c(2015, 2016, 2017, 2018, 2019)
+  # select columns of interest
+  select(UN_Code = COUNTRY.UN_CODE, species_code = SPECIES.ALPHA_3_CODE, PERIOD, VALUE) %>%
+  # group by country and species to calculate mean quantity tonnes live weight across years and species
+  group_by(UN_Code, species_code) %>%
+  summarize(tonnes_lw = mean(VALUE, na.rm=TRUE)) %>%
+  ungroup()
+
+# read in country code csv
+country <- read_csv(paste0(fao_data_path, "CL_FI_COUNTRY_GROUPS.csv")) %>%
+  dplyr::select(UN_Code, UN_country_name = Name_En)
+
+# check for duplicates
+sum(duplicated(country$UN_Code))
+
+# read in species information for fish
+species <- read_csv(paste0(fao_data_path, "CL_FI_SPECIES_GROUPS.csv")) %>%
+  # select species code, taxa code, taxa name, major group. ISSCAAP Group, and scientific name
+  dplyr::select(species_code = `3A_Code`, Taxonomic_Code, taxa_name = Name_En, Major_Group_En, ISSCAAP_Group_En, Scientific_Name) %>%
+  unique
+
+# check for duplicates
+sum(duplicated(species$species_code))
+
+# explore differences between species code in production and species data
+setdiff(raw_production$species_code, species$species_code)
+# explore difference between UN code from production bs UN code from countries df
+setdiff(raw_production$UN_Code, country$UN_Code)
+
+# join production data with country data for names of countries to be added
+production <- left_join(raw_production, country, by="UN_Code") %>%
+  # join with the species code data to get species information
+  left_join(species, by="species_code") %>%
+  # fix Turkey name for iso3c
+  mutate(UN_country_name = ifelse(UN_country_name=="Türkiye", "Turkey", UN_country_name)) %>%
+  # get iso3c from country name
+  mutate(iso3c = countrycode(UN_country_name, origin="country.name", destination = "iso3c"),
+                       country_name = countrycode(iso3c, origin= "iso3c", destination = "country.name")) %>%
+  # these are older country designations with no production for years of interest
+  filter(!is.na(iso3c)) %>% 
+  filter(tonnes_lw > 0)
+
+```
+
+
+# Assigning taxonomic categories
+
+NOTE: Considered including the "Sturgeons, paddlefishes" as "Tilapias and other cichlids", but didn't due to Jessica's comments:
+- I suspect a lot of that production is for caviar and the pressures for tilapia probably doesn't apply well.
+- It also looks like there is quite a bit of production of juveniles for stocking recreational fisheries.
+```{r}
+# read in groupings data
+groups <- read_csv(paste0(fw_data_path, "taxa_isscaap_groupings.csv")) %>%
+  filter(environment=="freshwater")
+unique(groups$isscaap_group)
+
+# see what groupings match in our data
+intersect(production$ISSCAAP_Group_En, groups$isscaap_group)
+# see what groups are included in production data but not grouping data
+in_fao <- setdiff(production$ISSCAAP_Group_En, groups$isscaap_group)
+# see what groups are included in grouping data but not production data
+setdiff(groups$isscaap_group, production$ISSCAAP_Group_En)
+
+# review what groups we are missing from grouping data
+tmp <- filter(production, ISSCAAP_Group_En %in% in_fao)
+unique(tmp$ISSCAAP_Group_En)
+
+# explore pearls data
+filter(production, ISSCAAP_Group_En %in% "Pearls, mother-of-pearl, shells" ) %>% data.frame()
+
+## change some groupings here
+production_update <- production %>%
+  mutate(ISSCAAP_Group_En = ifelse(ISSCAAP_Group_En=="Shrimps, prawns", "Freshwater crustaceans", ISSCAAP_Group_En)) %>%
+  mutate(ISSCAAP_Group_En = ifelse(ISSCAAP_Group_En=="Miscellaneous coastal fishes" & taxa_name =="Obscure pufferfish", "Miscellaneous freshwater fishes", ISSCAAP_Group_En)) %>%
+  mutate(ISSCAAP_Group_En = ifelse(ISSCAAP_Group_En=="Miscellaneous coastal fishes" & taxa_name =="Flathead grey mullet", "Miscellaneous freshwater fishes", ISSCAAP_Group_En)) %>%
+  mutate(ISSCAAP_Group_En = ifelse(ISSCAAP_Group_En=="Miscellaneous coastal fishes" & taxa_name =="Mullets nei", "Miscellaneous freshwater fishes", ISSCAAP_Group_En)) 
+
+# see what groupings match in our data
+intersect(production_update$ISSCAAP_Group_En, groups$isscaap_group)
+# see what groups are included in production data but not grouping data
+in_fao <- setdiff(production_update$ISSCAAP_Group_En, groups$isscaap_group)
+# see what groups are included in grouping data but not production data
+setdiff(groups$isscaap_group, production$ISSCAAP_Group_En)
+
+
+## now make some adjustments to match Jessica's groups
+hypoph_carp <- unique(grep("Hypophthalmichthys", production_update$Scientific_Name, value=TRUE))
+
+production_update <- production_update %>%
+  mutate(stressor_group = ifelse(taxa_name %in% c("Bighead carp", "Silver carp", "Silver, bighead carps nei"), "hypoph_carp", NA)) %>%
+  mutate(stressor_group = ifelse(Scientific_Name %in% hypoph_carp, "hypoph_carp", stressor_group)) %>%
+  mutate(stressor_group = ifelse(ISSCAAP_Group_En == "Carps, barbels and other cyprinids" & is.na(stressor_group), "oth_carp", stressor_group)) %>%
+  mutate(stressor_group = ifelse(ISSCAAP_Group_En == "Tilapias and other cichlids" & is.na(stressor_group), "tilapia", stressor_group)) %>%
+ # mutate(stressor_group = ifelse(taxa_name %in% c("Asian clam", "Chinese pond mussel") & is.na(stressor_group), "bivalves", stressor_group))
+  mutate(stressor_group = ifelse(ISSCAAP_Group_En == "Miscellaneous freshwater fishes" & is.na(stressor_group), "catfish", stressor_group)) %>%  # most are catfish, see Jessica note in issue
+  mutate(stressor_group = ifelse(ISSCAAP_Group_En == "Salmons, trouts, smelts" & is.na(stressor_group), "trout", stressor_group)) %>%
+  mutate(stressor_group = ifelse(taxa_name == "Milkfish" & is.na(stressor_group), "milkfish", stressor_group)) %>%
+  mutate(stressor_group = ifelse(ISSCAAP_Group_En == "Miscellaneous diadromous fishes" & is.na(stressor_group), "misc_diad", stressor_group))
+
+# to explore some of the data
+tmp <- filter(production_update, ISSCAAP_Group_En %in% "Miscellaneous diadromous fishes") %>% data.frame()
+tmp <- filter(production_update, is.na(stressor_group)) %>% 
+  select(ISSCAAP_Group_En) %>% unique()
+
+# see how much of the tonnes_lw data is accounted for in our groupings
+sum(production_update$tonnes_lw[!is.na(production_update$stressor_group)])/sum(production_update$tonnes_lw)
+## accounts for about 91% of production
+
+## summarize by Jessica's groupings
+tonnes_lw <- production_update %>%
+  # remove NA stressor_group rows
+  filter(!is.na(stressor_group)) %>%
+  # for each country and stressor group
+  group_by(iso3c, country_name, stressor_group) %>%
+  # calculate the total tonnes_lw for that group
+  summarize(tonnes_lw = sum(tonnes_lw)) %>%
+  arrange(-tonnes_lw)
+
+```
+
+# Join with on-farm stressors
+Goal is to have stressors into per tonne units. Units here will be kg N/P per tonne, m3 water per tonne, kgC02eq per tonne, m2 per tonne. 
+```{r}
+# read in environmental pressures data for freshwater aquaculture
+pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
+  filter(weight=="live") %>%
+  filter(production=="aquaculture") %>%
+  filter(source == "on-farm") %>%
+  filter(allocation == "mass") %>%
+  # select stressor_group to match with tonnes_lw data, stressor, and median
+  dplyr::select(stressor_group = taxa, stressor, median)
+
+# make df for conversions of stressor data
+conversions <- data.frame(stressor = c("GHG", "N", "P", "Water", "Land"),
+                          conversion = c(0.001, 0.001, 0.001, 1, 0.000001),
+                          pressure = c("GHG", "nutrients", "nutrients", "water", "disturbance"))
+
+# join pressures data with conversions
+pressures_converted <- left_join(pressures, conversions, by = "stressor") %>%
+  # convert pressures data to per_tonne using conversions
+  mutate(pressure_per_tonne = median*conversion) %>%
+  # select the stressor_group (taxa), pressure type, and pressure per tonne
+  select(stressor_group, pressure, pressure_per_tonne) %>%
+  # calculate the pressure_per_tonne total for each stressor group and pressure
+  group_by(stressor_group, pressure) %>%
+  summarize(pressure_per_tonne = sum(pressure_per_tonne)) %>%
+  ungroup()
+
+# using the stressor_group column, join the tonnes_lw data with pressure_per_tonne data
+pressures_lw <- left_join(tonnes_lw, pressures_converted, by="stressor_group") %>%
+  # calculate the stressor value
+  mutate(stressor_value = tonnes_lw*pressure_per_tonne) 
+
+# look at data for each stressor group
+pressures_lw %>%
+  group_by(stressor_group, pressure) %>%
+  summarize(stressor_value = sum(stressor_value)) %>%
+  data.frame()
+
+# Save data
+#write_csv(pressures_lw, paste0(save_path, "fw_aquaculture_pressures.csv"))
+```
+
+#### Should This be where we split up this document?
+
+# Calculate Feed Composition for FW Aquaculture
+## Crop feed composition
+
+- Estimate proportion of oilcrops vs. grains
+Mostly from food_systems/feed/diet_composition_wrangling.xlsx
+For catfish: mostly: https://agric4profits.com/the-ideal-feeds-for-catfish/
+https://thefishsite.com/articles/catfish-nutrition-feeds-and-feed-formulation
+https://www.fao.org/3/Q3567E/q3567e05.htm
+rice bran: https://onlinelibrary.wiley.com/doi/10.1111/J.1365-2109.2011.03048.X
+rice bran: https://fishfeedmachinery.com/Solution/nutritional-fish-feed-formulation.html
+
+For tilapia: https://www.fao.org/fishery/affris/species-profiles/nile-tilapia/feed-formulation/en/
+
+- Ignores animal products (beyond fish oil fish meal)
+
+- Use fofm data from Halley for each group and then distribute based on tonnes of production in each country
+
+- rescale hypoph carps so feed sums to 1
+
+FCR stands for feed conversion ratio and is the amount of crop (ex. kg or tonne) required to produce 1 unit of live weight of fish (in either kg or tonne). It is essentially a unitless ratio, however the fish component needs to be in live weight equivalent.
+```{r}
+taxa_list <- unique(tonnes_lw$stressor_group)
+crop_cats <- read_csv(paste0(fw_data_path, "crop_breakout.csv"))
+# list.files(paste0(pressure_data_path, "fresh_water_aqua_pressures_Jessica/")
+
+feed <- read_csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/aquaculture_group_fcr_feed_averages.csv")) %>%
+  # filter for the fw taxa we are including
+  filter(taxa %in% taxa_list) %>%
+  rowwise() %>%
+  # calculate the total diet allocation for each taxa group
+  mutate(total = feed_soy + feed_crops + feed_fmfo + feed_animal) %>%
+  # calculate the percentage makeup of total feed for each category
+  mutate(feed_soy = feed_soy/total,
+         feed_crops = feed_crops/total,
+         feed_fmfo = feed_fmfo/total,
+         feed_animal = feed_animal/total) %>%
+  # join with crops data
+  left_join(crop_cats, by="taxa") %>%
+  # using the feed_crops category, calculate the makeup of the crops group by oils and grains
+  mutate(feed_grain = feed_crops * grains) %>%
+  mutate(feed_oil = feed_crops * oil_crops) %>%
+  # recalculate the the total diet allocation with the new feed_grain and feed_oil categories
+  mutate(total = feed_soy + feed_grain + feed_oil + feed_fmfo + feed_animal) %>%
+  # select required columns
+  dplyr::select(stressor_group = taxa, fcr, feed_soy,feed_grain, feed_oil, feed_fmfo, total)
+
+```
+
+## Crop feed quantity
+Calculate tonnes of each feed category for each country and taxa group based on fcr, diet composition, and tonnes of production.
+
+```{r}
+# join the tonnes_lw data with the feed data
+feed_tonnes_pre <- left_join(tonnes_lw, feed, by="stressor_group") %>%
+  rowwise() %>%
+  # for each row calculate the tonnes of soy, grain, and oil feed required
+  mutate(tonnes_feed_soy = tonnes_lw * fcr * feed_soy) %>%
+  mutate(tonnes_feed_grain = tonnes_lw * fcr * feed_grain) %>%
+  mutate(tonnes_feed_oil = tonnes_lw * fcr * feed_oil) %>%
+  select(iso3c, country_name, stressor_group, tonnes_feed_soy, tonnes_feed_grain, tonnes_feed_oil) %>%
+  pivot_longer(c("tonnes_feed_soy", "tonnes_feed_grain", "tonnes_feed_oil"), names_to = "feed_type")
+
+```
+
+Correct for averaged loss during processing. This is based on averaged data for each feed category in food_systems/feed/data/feed_extraction_rates.csv. This is a very rough estimate.
+
+```{r}
+# make a data frame of percent of crop lost during processing
+crop_loss <- data.frame(feed_type = c("tonnes_feed_soy", "tonnes_feed_grain", "tonnes_feed_oil"), 
+                        loss_percent = c(3, 2, 9))
+
+# join crop loss with calculated tonnes of feed type to back calculate total crop tonnes required
+crop_feed_tonnes <- left_join(feed_tonnes_pre, crop_loss, by="feed_type") %>%
+  # adjust tonnes_product needed by using loss percentage to increase total by crop lost during processing
+  mutate(tonnes_product = value * 100/(100 - loss_percent)) %>%
+  mutate(feed_category = ifelse(feed_type == "tonnes_feed_soy", "soy", NA)) %>%
+  mutate(feed_category = ifelse(feed_type == "tonnes_feed_grain", "grain", feed_category)) %>%
+  mutate(feed_category = ifelse(feed_type == "tonnes_feed_oil", "oil", feed_category)) %>%
+  select(iso3c, country_name, taxa=stressor_group, feed_category, tonnes=tonnes_product)
+
+#write_csv(crop_feed_tonnes, paste0(save_path, "fw_aqua_crop_feed.csv"))
+```
+
+## fishoil fish meal consumption
+We will use the values from Halley et al. and distribute distribute consumption of fofm based on production.
+
+```{r}
+fofm_reference <- read_csv(paste0(fw_data_path, "msleckman.45.1_fofm_consumption.csv")) %>%
+  filter(!is.na(fw_aquaculture))
+```
+
+
+Need to make a few adjusments to divide categories.
+1. We use catfish pressures for ISSCAAP "Miscellaneous freshwater fishes". These are mostly catfish, and difficult to identify but there is reported aquaculture for: "Miscellaneous coastal fishes" and "Marine fishes not identified", but these end up  being <<1% of total production so we can ignore these contributions. This data check is done below
+
+```{r}
+# filter production data to get 
+fw_fishes_not_inc <- filter(production_update, is.na(stressor_group)) %>%
+  filter(ISSCAAP_Group_En %in% c("Miscellaneous coastal fishes", "Marine fishes not identified"))
+
+fw_fishes_inc <- filter(production_update, ISSCAAP_Group_En %in% c("Miscellaneous coastal fishes", "Marine fishes not identified", "Miscellaneous freshwater fishes"))
+
+sum(fw_fishes_not_inc$tonnes_lw)/sum(fw_fishes_inc$tonnes_lw) # <<1% can assume all fofm goes to catfish
+```
+
+
+2. fofm reference includes diadromous fishes, which the pressures break into two categories: milkfish and misc_diads (Barramundi and a very small amount of striped bass). Data check is done below
+
+```{r}
+# view  makeup diadromous fish groups
+tmp <- filter(production_update, ISSCAAP_Group_En %in% "Miscellaneous diadromous fishes") %>% data.frame()
+
+# make separate for milkfish
+milkfish <- filter(production_update, stressor_group == "milkfish")
+# make separate for mis_diad
+other_diad <- filter(production_update, stressor_group == "misc_diad")
+
+# how much of diadromous fishes is milkfish by live wieght
+sum(milkfish$tonnes_lw)/(sum(milkfish$tonnes_lw)+sum(other_diad$tonnes_lw)) # 90% milkfish!
+
+# but need to take into account proportion fofm and fcr in diet from Jessica's data:
+milkfish_prop <- (sum(milkfish$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "milkfish"]*feed$fcr[feed$stressor_group == "milkfish"])/ ((sum(milkfish$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "milkfish"]*feed$fcr[feed$stressor_group == "milkfish"]) + (sum(other_diad$tonnes_lw) * feed$feed_fmfo[feed$stressor_group == "misc_diad"]*feed$fcr[feed$stressor_group == "misc_diad"])) # 75% fofm by milkfish!
+```
+
+3. Carps were divided into hypoph_carp and other carp
+
+```{r}
+# separate carp taxa
+hypoph_carp <- filter(production_update, stressor_group == "hypoph_carp")
+oth_carp <- filter(production_update, stressor_group == "oth_carp")
+# how much of carp is hypoph_carp
+sum(hypoph_carp$tonnes_lw)/(sum(hypoph_carp$tonnes_lw)+sum(oth_carp$tonnes_lw)) # 28% hypoph_carp
+
+# adjust amount of fofm using pcr and diet quantity
+hypoph_carp_prop <- (sum(hypoph_carp$tonnes_lw) * feed$feed_fmfo[feed$stressor_group == "hypoph_carp"] * feed$fcr[feed$stressor_group == "hypoph_carp"])/ (sum(hypoph_carp$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "hypoph_carp"] * feed$fcr[feed$stressor_group == "hypoph_carp"] + (sum(oth_carp$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "oth_carp"] * feed$fcr[feed$stressor_group == "oth_carp"])) # 4% fofm to hypoph carp
+```
+
+4. need a salmon correction in main data 
+This is super confusing
+```{r}
+698684/sum(c(13930, 2101278, 698684)) # multiply marine salmon by 0.75, given that we only included marine, brackish salmon 
+
+# this also generally matches production
+raw_production <- read_csv(paste0(fao_data_path, "Aquaculture_Quantity.csv")) %>%
+  rename(species_code = "SPECIES.ALPHA_3_CODE") %>%
+  left_join(species, by="species_code") %>%
+  filter(ISSCAAP_Group_En == "Salmons, trouts, smelts") %>%
+  group_by(ENVIRONMENT.ALPHA_2_CODE) %>%
+  summarize(tonnes = sum(VALUE))
+
+salmon_test <- production_update %>%
+  filter(ISSCAAP_Group_En == "Salmons, trouts, smelts") %>% 
+  group_by(taxa_name) %>%
+  summarize(tonnes = sum(tonnes_lw))
+```
+
+Using the above steps, divide up the fofm consumption data based on the species makeup from our data.
+```{r}
+divided_fofm <- data.frame(fw_aquaculture=c("milkfish", "misc_diad", "hypoph_carp", "oth_carp"),
+                           prop =c(milkfish_prop, (1-milkfish_prop), hypoph_carp_prop, (1 - hypoph_carp_prop)))
+
+fofm <- left_join(fofm_reference, divided_fofm, by="fw_aquaculture") %>%
+  mutate(prop = ifelse(is.na(prop), 1, prop)) %>%
+  mutate(taxa_tonnes_fofm_consumption = Current_Mean*prop) %>%
+  select(stressor_group = fw_aquaculture, taxa_tonnes_fofm_consumption)
+
+```
+
+Distribute fofm consumption based on production by country
+
+```{r}
+# using the tonnes_lw production data from above
+fofm_tonnes <- tonnes_lw %>%
+  group_by(stressor_group) %>%
+  # calculate the total tonnes_lw produced for each stressor_group
+  mutate(global_tonnes=sum(tonnes_lw)) %>%
+  ungroup() %>%
+  rowwise() %>%
+  # calculate the proportion of that stressor_group that was produced by that country
+  mutate(prop_prod = tonnes_lw/global_tonnes) %>%
+  # join with tonnes of fofm consumed by each stressor group
+  left_join(fofm, by="stressor_group") %>%
+  # calculate the tonnes_fofm consumed by that country for FW aquaculture
+  mutate(tonnes_fofm = taxa_tonnes_fofm_consumption*prop_prod) %>%
+  select(iso3c, country_name, taxa=stressor_group, tonnes_fofm)  
+
+# take a look at each group to make sure it is the same as the fofm df
+fofm_tonnes %>% 
+  group_by(taxa) %>%
+  summarize(total=sum(tonnes_fofm))
+
+#write_csv(fofm_tonnes, paste0(save_path, "fw_fofm_consumption.csv")) 
+```

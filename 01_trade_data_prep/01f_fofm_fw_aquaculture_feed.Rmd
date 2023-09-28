@@ -18,8 +18,9 @@ File Paths
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/FAO/fao_aquaculture/"
 fw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/fw_aquaculture/"
+aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02ai_fw_aquaculture_pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01f_fofm_fw_aquaculture_feed/"
 ```
 
 
@@ -156,54 +157,24 @@ tonnes_lw <- production_update %>%
 
 ```
 
-# Join with on-farm stressors
-Goal is to have stressors into per tonne units. Units here will be kg N/P per tonne, m3 water per tonne, kgC02eq per tonne, m2 per tonne. 
+# Calculate Feed Composition for FW Aquaculture
+
+## Calculate FW Aquaculture Production
 ```{r}
-# read in environmental pressures data for freshwater aquaculture
-pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
-  filter(weight=="live") %>%
-  filter(production=="aquaculture") %>%
-  filter(source == "on-farm") %>%
-  filter(allocation == "mass") %>%
-  # select stressor_group to match with tonnes_lw data, stressor, and median
-  dplyr::select(stressor_group = taxa, stressor, median)
+# read in all of the fish trade data, these are means of the years 2015-2019
+trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_w_unknowns_allocated.csv")) # read in the updated data
 
-# make df for conversions of stressor data
-conversions <- data.frame(stressor = c("GHG", "N", "P", "Water", "Land"),
-                          conversion = c(0.001, 0.001, 0.001, 1, 0.000001),
-                          pressure = c("GHG", "nutrients", "nutrients", "water", "disturbance"))
+# only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
+fw_trade_clean <- trade_matrix_raw %>% 
+  filter(habitat == "inland" & method == "aquaculture")
 
-# join pressures data with conversions
-pressures_converted <- left_join(pressures, conversions, by = "stressor") %>%
-  # convert pressures data to per_tonne using conversions
-  mutate(pressure_per_tonne = median*conversion) %>%
-  # select the stressor_group (taxa), pressure type, and pressure per tonne
-  select(stressor_group, pressure, pressure_per_tonne) %>%
-  # calculate the pressure_per_tonne total for each stressor group and pressure
-  group_by(stressor_group, pressure) %>%
-  summarize(pressure_per_tonne = sum(pressure_per_tonne)) %>%
-  ungroup()
-
-# using the stressor_group column, join the tonnes_lw data with pressure_per_tonne data
-pressures_lw <- left_join(tonnes_lw, pressures_converted, by="stressor_group") %>%
-  # calculate the stressor value
-  mutate(stressor_value = tonnes_lw*pressure_per_tonne) 
-
-# look at data for each stressor group
-pressures_lw %>%
-  group_by(stressor_group, pressure) %>%
-  summarize(stressor_value = sum(stressor_value)) %>%
-  data.frame()
-
-# Save data
-#write_csv(pressures_lw, paste0(save_path, "fw_aquaculture_pressures.csv"))
+# calculate production by each country for each group
+fw_production <- fw_trade_clean %>% 
+  
 ```
 
-#### Should This be where we split up this document?
 
-# Calculate Feed Composition for FW Aquaculture
 ## Crop feed composition
-
 - Estimate proportion of oilcrops vs. grains
 Mostly from food_systems/feed/diet_composition_wrangling.xlsx
 For catfish: mostly: https://agric4profits.com/the-ideal-feeds-for-catfish/
@@ -222,7 +193,9 @@ For tilapia: https://www.fao.org/fishery/affris/species-profiles/nile-tilapia/fe
 
 FCR stands for feed conversion ratio and is the amount of crop (ex. kg or tonne) required to produce 1 unit of live weight of fish (in either kg or tonne). It is essentially a unitless ratio, however the fish component needs to be in live weight equivalent.
 ```{r}
-taxa_list <- unique(tonnes_lw$stressor_group)
+# taxa list made from step 03a
+taxa_list <- c("oth_carp", "hypoph_carp", "catfish", "tilapia", "trout", "milkfish", "misc_diad")
+
 crop_cats <- read_csv(paste0(fw_data_path, "crop_breakout.csv"))
 # list.files(paste0(pressure_data_path, "fresh_water_aqua_pressures_Jessica/")
 

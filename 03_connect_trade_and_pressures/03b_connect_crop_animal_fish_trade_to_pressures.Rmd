@@ -794,7 +794,7 @@ crop_trade_pressures_clean <- crop_trade_pressures %>%
   # make sure food group is the same for all categories
   mutate(food_group = "crops") %>% 
   # remove SPAM_super and nceas_group
-  select(-SPAM_super, -nceas_group) %>% 
+  select(-nceas_group) %>% 
   # remove pressures per tonne columns
   select(-c(ghg, water, disturbance, nutrient))
 
@@ -805,7 +805,9 @@ livestock_trade_pressures_clean <- livestock_trade_pressures %>%
   # make nceas_group item
   rename(item = nceas_group) %>% 
   # make sure food group is the same for all categories
-  mutate(food_group = "livestock") %>% 
+  mutate(food_group = "livestock",
+         # SPAM_super category used with crops to separate out feed
+         SPAM_super = NA) %>% 
   # remove pressures per tonne columns
   select(-c(ghg, water, disturbance, nutrient))
 
@@ -816,7 +818,9 @@ fish_trade_pressures_clean <- fish_trade_pressures %>%
          # add in water_total columns (will be zero)
          water_total = 0,
          # add in item code column for fisheries and aquaculture, will be NA
-         item_code = NA) %>% 
+         item_code = NA,
+         # SPAM_super category used with crops to separate out feed
+         SPAM_super = NA) %>% 
   # rename consumption_live_weight_t
   rename(traded_tonnes = consumption_live_weight_t,
          # rename nceas_group to item
@@ -828,6 +832,8 @@ fish_trade_pressures_clean <- fish_trade_pressures %>%
 
 ### Freshwater Aquaculture - made in 03a
 fw_aquaculture_trade_pressures_clean <- read.csv(file = paste0(fw_aquaculture_trade_pressures_path, "fw_aquaculture_trade_pressures.csv")) %>% 
+  # SPAM_super category used with crops to separate out feed
+  mutate(SPAM_super = NA) %>% 
   #remove X column that appears
   select(-X)
 

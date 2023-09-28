@@ -56,7 +56,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 Read in trade_pressures data
 ```{r}
 trade_w_pressures_no_feed <- read_csv(paste0(trade_pressure_path, "trade_w_pressures_no_feed.csv")) %>% 
-  # remove weird "...1" column
+  # remove "...1" column
   select(-"...1")
 
 ```

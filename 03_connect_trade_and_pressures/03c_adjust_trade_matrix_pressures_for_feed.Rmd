@@ -343,106 +343,107 @@ fw_aqua_consumption_category_totals <- fw_aqua_consumption_relabel %>%
 tonnes_crop_feed_consumed <- rbind(animal_consumption_category_totals, fw_aqua_consumption_category_totals)
 
 # check data
-tonnes_crop_feed_consumed %>% 
-  group_by(animal_group) %>% 
-  summarise(sum = sum(tonnes_feed)) %>% 
-  left_join(animal_consumption_agg %>% 
-              group_by(animal_agg) %>% 
-              summarise(livestock_sum = sum(tonnes_product)),
-            by = c("animal_group" = "animal_agg")) %>% 
-  left_join(fw_aqua_consumption_relabel %>% 
-              group_by(nceas_group) %>% 
-              summarise(fw_sum = sum(tonnes)),
-            by = c("animal_group" = "nceas_group")) %>% 
-  rowwise() %>% 
-  mutate(change = sum - sum(livestock_sum, fw_sum, na.rm = TRUE))
-# no differences!
+# tonnes_crop_feed_consumed %>% 
+#   group_by(animal_group) %>% 
+#   summarise(sum = sum(tonnes_feed)) %>% 
+#   left_join(animal_consumption_agg %>% 
+#               group_by(animal_agg) %>% 
+#               summarise(livestock_sum = sum(tonnes_product)),
+#             by = c("animal_group" = "animal_agg")) %>% 
+#   left_join(fw_aqua_consumption_relabel %>% 
+#               group_by(nceas_group) %>% 
+#               summarise(fw_sum = sum(tonnes)),
+#             by = c("animal_group" = "nceas_group")) %>% 
+#   rowwise() %>% 
+#   mutate(change = sum - sum(livestock_sum, fw_sum, na.rm = TRUE))
+# no differences in total tonnage after joining!
 ```
 
-## Stopped here!
 ### Calculate proportion of each crop that goes to each animal system within a country
 
 ```{r}
 # calc proportion per animal
-tonnes_feed_consumed_1 <- tonnes_crop_feed_consumed %>% 
-  group_by(iso3c, feed_category) %>% 
-  mutate(total_crop = sum(tonnes_feed)) %>% 
-  ungroup()
+# tonnes_crop_feed_consumed <- tonnes_crop_feed_consumed %>% 
+#   group_by(iso3c, feed_category) %>% 
+#   mutate(total_crop = sum(tonnes_feed)) %>% 
+#   ungroup()
 
 # rows where total crop = 0 means this country doesn't use any of this crop as feed
-tonnes_feed_consumed_3 <- tonnes_feed_consumed_1 %>% 
+crop_feed_animal_proportions <- tonnes_crop_feed_consumed %>% 
+  group_by(iso3c, feed_category) %>% 
+  mutate(total_crop = sum(tonnes_feed)) %>% 
+  ungroup() %>% 
   mutate(prop_crop_feed_per_animal = case_when(!tonnes_feed == 0 ~ tonnes_feed/total_crop,
-                                               TRUE ~ 0))
+                                               TRUE ~ 0)) %>% 
+  # removed tonnage from data source as we were using that to calculate the proportions
+  select(-tonnes_feed, -total_crop)
 
 # check - should all sum to 1 or 0 (country doesn't use any of this crop as feed for any animals)
-check_props <- tonnes_feed_consumed_3 %>% 
+check_props <- crop_feed_animal_proportions %>% 
   group_by(iso3c, feed_category) %>% 
   summarise(sum = sum(prop_crop_feed_per_animal)) %>% 
   ungroup()
 range(check_props$sum)
+
+# pivot crop_feed_animal_proportions to wide for joining
+crop_feed_animal_proportions_wide <- crop_feed_animal_proportions %>% 
+  pivot_wider(names_from = animal_group,
+              values_from = prop_crop_feed_per_animal)
+
+# Pivoting wider produced a lot of NA columns because there no data for some animals and feed_categories
+crop_feed_animal_proportions_wide[is.na(crop_feed_animal_proportions_wide)] <- 0
+
 ```
 
-
-Combine dfs - add variables for animal system and feed proportions per crop to the trade matrix with pressures df (grain producer and grain consumer trade matrix)
+### Join crop proportions per animal with the trade data used for feed
+Combine dfs - add variables for animal system and feed proportions per crop to the trade matrix with pressures df (grain producer and grain consumer trade matrix). By using a left join we may lose data where we have animal proportions for that crop but no trade data of that crop into that country. We are not gapfilling trade data of products so this is just note for methods.
 ```{r}
-feed_crops_w_prop_2 <- feed_crops_w_prop_1 %>% 
-  select(Consumer_ISO3, Producer_ISO3, feed_category, tonnes_feed, cumu_pressure_feed, water_pressure_feed, ghg_pressure_feed, nutrient_pressure_feed, disturbance_pressure_feed)
-summary(feed_crops_w_prop_2) # no NAs
+feed_crops_used_for_feed <- feed_crops_used_for_feed %>% 
+  select(consumer_iso3c, producer_iso3c, feed_category, tonnes_feed, water_pressure_feed, ghg_pressure_feed, nutrient_pressure_feed, disturbance_pressure_feed)
+summary(feed_crops_used_for_feed) # no NAs
 
-tonnes_feed_consumed_4 <- tonnes_feed_consumed_3 %>% 
-  select(iso3c, feed_category, nceas_group, prop_crop_feed_per_animal)
-summary(tonnes_feed_consumed_4) # no NAs
-
-feed_pressures <- full_join(feed_crops_w_prop_2, tonnes_feed_consumed_4, by = c("Consumer_ISO3" = "iso3c", "feed_category" = "feed_category"))
-
-# check NAs
-summary(feed_pressures)
-
-# 2352 NAs in pressures df means we have the proportion of crop that animal consumes in that country, but we don't have any pressures data so it's not included in the crops trade matrix 
-# look at NAs
-check_na <- feed_pressures %>% 
-  filter(is.na(cumu_pressure_feed))
-
-# for about half of these NA values, the prop_crop_feed_per_animal is 0, so there should be no associated feed pressures
-# and we can remove these rows
-feed_pressures_1 <- feed_pressures %>% 
-  filter(!c(is.na(cumu_pressure_feed) & prop_crop_feed_per_animal == 0))
-summary(feed_pressures_1) # 1282 NAs
-
-# missing pressure values are mostly for fish species
-check_na_1 <- feed_pressures_1 %>% 
-  filter(is.na(cumu_pressure_feed))
-table(check_na_1$nceas_group)
+summary(crop_feed_animal_proportions) # no NAs
 
 # we can't do anything without the pressures data, so left_join instead
-feed_pressures_2 <- left_join(feed_crops_w_prop_2, tonnes_feed_consumed_4, by = c("Consumer_ISO3" = "iso3c", "feed_category" = "feed_category"))
-summary(feed_pressures_2) # no NAs
+crop_feed_pressures <- left_join(feed_crops_used_for_feed, crop_feed_animal_proportions_wide, by = c("consumer_iso3c" = "iso3c", "feed_category"))
+
+summary(crop_feed_pressures) # no NAs
+
+# pivot longer to make calculations simple
+crop_feed_pressures <- crop_feed_pressures %>% 
+  pivot_longer(cols = buffaloes_milk:fw_aquaculture_miscellaneous_diadromous_fishes,
+               names_to = "animal_group",
+               values_to = "prop_crop_feed_per_animal")
 
 ```
 
-
+### Calculate tonnes traded and pressures going to feed
 Multiply pressures per aggregated crop (between each pair of trading partners) by proportion feed going to each animal system
 ```{r}
-feed_pressures_3 <- feed_pressures_2 %>% 
+crop_feed_pressures_adjusted <- crop_feed_pressures %>% 
   mutate(tonnes_traded_system_feed = tonnes_feed*prop_crop_feed_per_animal) %>% 
-  mutate(cumu_traded_system_feed = cumu_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(water_traded_system_feed = water_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(nutrient_traded_system_feed = nutrient_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(disturbance_traded_system_feed = disturbance_pressure_feed*prop_crop_feed_per_animal) %>% 
-  mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_crop_feed_per_animal)
+  mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_crop_feed_per_animal) #%>% 
 
-summary(feed_pressures_3) # no NAs
+summary(crop_feed_pressures) # no NAs
 
 # check data - feed_pressures_3 will have slightly lower pressures than originally because the proportions for feed don't sum to 1 in all cases due to missing pressures or trade data
-check_props_1 <- feed_pressures_3 %>% 
-  group_by(Consumer_ISO3, Producer_ISO3, feed_category) %>% 
+check_props_1 <- crop_feed_pressures_adjusted %>% 
+  group_by(consumer_iso3c, producer_iso3c, feed_category) %>% 
   summarise(sum = sum(prop_crop_feed_per_animal)) %>% 
   ungroup()
+range(check_props_1$sum)
 
 check_props_2 <- check_props_1 %>% 
-  select(-Producer_ISO3) %>% 
+  select(-producer_iso3c) %>% 
   unique()
+```
 
+Note: There is some trade and pressures data totals being changed by the proportion allocation. as most of the total change is <.1% we are going to assume for now that it is due to rounding error introduced from R and the proportions.
+
+```{r}
 # wherever check_props_2$sum == 0, there will be a discrepancy with pressures/trade data
 # for example, in tonnes_feed_consumed, for ALB and palmoil, the tonnes_feed is 0 for all animal groups
 # this makes the proportion of palmoil going to animal feed = 0 for each animal group
@@ -458,48 +459,48 @@ check_props_2 <- check_props_1 %>%
 
 
 # what percent of traded tonnes are we missing?
-sum(feed_pressures_3$tonnes_traded_system_feed)
-sum(feed_crops_w_prop_1$tonnes_feed)
-((sum(feed_crops_w_prop_1$tonnes_feed) - sum(feed_pressures_3$tonnes_traded_system_feed))/sum(feed_crops_w_prop_1$tonnes_feed))*100 # 0.52% = less than one percent, ignore this discrepancy
+sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed)
+sum(feed_crops_used_for_feed$tonnes_feed)
+((sum(feed_crops_used_for_feed$tonnes_feed) - sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed))/sum(feed_crops_used_for_feed$tonnes_feed))*100 # 0.61% = less than one percent, ignore this discrepancy
 
-# what percent of pressures are we missing?
-sum(feed_pressures_3$cumu_traded_system_feed)
-sum(feed_crops_w_prop_1$cumu_pressure_feed)
-((sum(feed_crops_w_prop_1$cumu_pressure_feed) - sum(feed_pressures_3$cumu_traded_system_feed))/sum(feed_crops_w_prop_1$cumu_pressure_feed))*100 # 0.057% = very small percent, ignore this discrepancy
+# water
+sum(crop_feed_pressures_adjusted$water_traded_system_feed)
+sum(feed_crops_used_for_feed$water_pressure_feed)
+((sum(feed_crops_used_for_feed$water_pressure_feed) - sum(crop_feed_pressures_adjusted$water_traded_system_feed))/sum(feed_crops_used_for_feed$water_pressure_feed))*100 # 0.039%
 
-sum(feed_pressures_3$water_traded_system_feed)
-sum(feed_crops_w_prop_1$water_pressure_feed)
-((sum(feed_crops_w_prop_1$water_pressure_feed) - sum(feed_pressures_3$water_traded_system_feed))/sum(feed_crops_w_prop_1$water_pressure_feed))*100 # 0.025%
+# ghg
+sum(crop_feed_pressures_adjusted$ghg_traded_system_feed)
+sum(feed_crops_used_for_feed$ghg_pressure_feed)
+((sum(feed_crops_used_for_feed$ghg_pressure_feed) - sum(crop_feed_pressures_adjusted$ghg_traded_system_feed))/sum(feed_crops_used_for_feed$ghg_pressure_feed))*100 # 0.062%
 
-sum(feed_pressures_3$ghg_traded_system_feed)
-sum(feed_crops_w_prop_1$ghg_pressure_feed)
-((sum(feed_crops_w_prop_1$ghg_pressure_feed) - sum(feed_pressures_3$ghg_traded_system_feed))/sum(feed_crops_w_prop_1$ghg_pressure_feed))*100 # 0.055%
+# nutrient
+sum(crop_feed_pressures_adjusted$nutrient_traded_system_feed)
+sum(feed_crops_used_for_feed$nutrient_pressure_feed)
+((sum(feed_crops_used_for_feed$nutrient_pressure_feed) - sum(crop_feed_pressures_adjusted$nutrient_traded_system_feed))/sum(feed_crops_used_for_feed$nutrient_pressure_feed))*100 # 0.061%
 
-sum(feed_pressures_3$nutrient_traded_system_feed)
-sum(feed_crops_w_prop_1$nutrient_pressure_feed)
-((sum(feed_crops_w_prop_1$nutrient_pressure_feed) - sum(feed_pressures_3$nutrient_traded_system_feed))/sum(feed_crops_w_prop_1$nutrient_pressure_feed))*100 # 0.054%
-
-sum(feed_pressures_3$disturbance_traded_system_feed)
-sum(feed_crops_w_prop_1$disturbance_pressure_feed)
-((sum(feed_crops_w_prop_1$disturbance_pressure_feed) - sum(feed_pressures_3$disturbance_traded_system_feed))/sum(feed_crops_w_prop_1$disturbance_pressure_feed))*100 # 0.094%
+# disturbance
+sum(crop_feed_pressures_adjusted$disturbance_traded_system_feed)
+sum(feed_crops_used_for_feed$disturbance_pressure_feed)
+((sum(feed_crops_used_for_feed$disturbance_pressure_feed) - sum(crop_feed_pressures_adjusted$disturbance_traded_system_feed))/sum(feed_crops_used_for_feed$disturbance_pressure_feed))*100 # 0.13%
 ```
 
 
 Investigate where the sum of the pressures are different
 ```{r}
 # sum pressures / animal producing country
-test_1 <- feed_pressures_3 %>% 
-  group_by(Consumer_ISO3) %>% 
+test_1 <- crop_feed_pressures_adjusted %>% 
+  group_by(consumer_iso3c) %>% 
   summarise(sum_water = sum(water_traded_system_feed)) %>% 
   ungroup()
 
-test_2 <- feed_crops_w_prop_1 %>% 
-  group_by(Consumer_ISO3) %>% 
+test_2 <- feed_crops_used_for_feed %>% 
+  group_by(consumer_iso3c) %>% 
   summarise(sum_water_1 = sum(water_pressure_feed)) %>% 
   ungroup()
 
 # most rows are the same, but some are slightly different like BHR
-test_3 <- full_join(test_1, test_2, by = "Consumer_ISO3")
+test_3 <- full_join(test_1, test_2, by = "consumer_iso3c") %>% 
+  mutate(change = sum_water_1 - sum_water)
 
 # plot sum of water pressures
 ggplot(test_3, aes(x = sum_water, y = sum_water_1)) +
@@ -531,6 +532,8 @@ test_5 <- feed_crops_w_prop_1 %>%
 
 test_6 <- full_join(test_4, test_5, by = c("Consumer_ISO3", "feed_category"))
 ```
+
+## Stopped here
 
 Read in animal, fw aquaculture, and fish trade matrices and combine into one.
 These dfs already have the proportions of each animal a country trades with its trading partners.

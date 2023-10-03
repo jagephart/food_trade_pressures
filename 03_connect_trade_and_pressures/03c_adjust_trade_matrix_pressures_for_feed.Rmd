@@ -270,7 +270,7 @@ animal_consumption_agg <- animal_consumption %>%
                                 str_detect(animal_system, regex("(?=.*sheep)(?=.*meat)", ignore_case = TRUE)) ~ "sheep_meat",
                                 str_detect(animal_system, regex("(?=.*sheep)(?=.*milk)", ignore_case = TRUE)) ~ "sheep_milk",
                                 str_detect(animal_system, regex("(?=.*pig)(?=.*meat)", ignore_case = TRUE)) ~ "pigs_meat",
-                                animal_system == "chickens_industrial_eggs" ~ "chicken_eggs",
+                                animal_system == "chickens_industrial_eggs" ~ "chickens_eggs",
                                 animal_system == "chickens_industrial_meat" ~ "chickens_meat",
                                 animal_system == "crustaceans_aquaculture_meat" ~ "crustaceans_mariculture",
                                 animal_system == "marine-fish-general_aquaculture_meat" ~ "marine_fish_general_mariculture",
@@ -417,7 +417,7 @@ crop_feed_pressures <- crop_feed_pressures %>%
 
 ```
 
-### Calculate tonnes traded and pressures going to feed
+### Calculate tonnes traded and pressures going to feed to consuming countries
 Multiply pressures per aggregated crop (between each pair of trading partners) by proportion feed going to each animal system
 ```{r}
 crop_feed_pressures_adjusted <- crop_feed_pressures %>% 
@@ -533,55 +533,56 @@ test_5 <- feed_crops_w_prop_1 %>%
 test_6 <- full_join(test_4, test_5, by = c("Consumer_ISO3", "feed_category"))
 ```
 
-## Stopped here
+#### NOTE: ISO3c "Yem" has the most data that is different, not sure why this is happening and unsure how to check it.
 
-Read in animal, fw aquaculture, and fish trade matrices and combine into one.
-These dfs already have the proportions of each animal a country trades with its trading partners.
+### Join feed traded for pressures with corressponding livestock and fish trade
+
+Filter trade for animal products and calculate proportion of animal trade from producer to consumer so that feed pressures can go with correct animals.
 ```{r}
-# read in animal, fw aquaculture, and fish trade matrices and combine into one
-animals <- read_csv(paste0(animals_pressures_path, "animal_products_trade_matrix_w_pressures.csv"))
-fish <- read_csv(paste0(fish_pressures_path, "capture_and_mariculture_trade_matrix_w_pressures.csv"))
-aqua <- read_csv(paste0(inland_aqua_pressures_path, "inland_aquaculture_products_trade_matrix_w_pressures.csv"))
+# filter for non-crops and remove FOFM
+livestock_fish_trade_raw <- trade_w_pressures_no_feed %>% 
+  filter(food_group != "crops") %>% 
+  filter(item != "fofm")
+  
+livestock_fish_trade_proportions <- livestock_fish_trade_raw %>% 
+  # remove pressures for now
+  select(-c(disturbance_total, water_total, ghg_total, nutrient_total)) %>% 
+  # group by producer country and item to calculate total of item traded by producer
+  group_by(producer_iso3c, item) %>% 
+  mutate(total_item_tonnes = sum(traded_tonnes, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # calculate proportion traded of item to each consuming country from producer
+  mutate(proportion_animal_traded = traded_tonnes/total_item_tonnes) %>% 
+  # select specific columns to join with feed trade
+  select(animal_producer_iso3c = producer_iso3c, 
+         animal_consumer_iso3c = consumer_iso3c, 
+         item, proportion_animal_traded)
 
-# format trade matrices so they can be combined into one df
-animals_1 <- animals %>% 
-  select(Producer_ISO3, Consumer_ISO3, item_FAO, proportion_traded) %>%         # select columns and reorder
-  rename(product = item_FAO)
-
-fish_1 <- fish %>% 
-  select(source_country_iso3c, consumer_iso3c, nceas_group, proportion_traded) %>%  # select columns and reorder
-  rename(Producer_ISO3 = source_country_iso3c,
-         Consumer_ISO3 = consumer_iso3c, 
-         product = nceas_group)
-
-aqua_1 <- aqua %>% 
-  select(source_country_iso3c, consumer_iso3c, nceas_group, proportion_traded) %>% # select columns and reorder
-  rename(Producer_ISO3 = source_country_iso3c,
-         Consumer_ISO3 = consumer_iso3c, 
-         product = nceas_group)
-
-all_animals <- rbind(animals_1, fish_1)
-all_animals_1 <- rbind(all_animals, aqua_1)
-
-# check data - should sum to 1 for each animal producing country
-check <- all_animals_1 %>% 
-   group_by(Producer_ISO3, product) %>% 
-   summarise(sum = sum(proportion_traded))
-range(check$sum)
-
-# make sure the categories match
-table(all_animals_1$product) #includes some wild capture fish that don't eat feed
+# livestock_fish_trade_proportions includes some wild capture fish that don't eat feed
 # that's not an issue though because we're not changing these pressures, we're 
 # just adding new feed pressures on top of these existing animal trade pressures
-table(feed_pressures_3$nceas_group)
-
-all_animals_2 <- all_animals_1 %>% 
-  rename(animal_producing_country = Producer_ISO3,
-         animal_consuming_country = Consumer_ISO3,
-         prop_animal_traded = proportion_traded)
-summary(all_animals_2)
 ```
 
+Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each grain producing, animal producing, and animal consuming country combination).
+```{r}
+# rename variables
+crop_feed_pressures_adjusted_for_join <- crop_feed_pressures_adjusted %>%
+  select(-c(tonnes_feed,
+            water_pressure_feed,
+            ghg_pressure_feed,
+            nutrient_pressure_feed,
+            disturbance_pressure_feed,
+            prop_crop_feed_per_animal)) %>% 
+  rename(animal_producer_iso3c = consumer_iso3c,
+         feed_producer_iso3c = producer_iso3c,
+         product = animal_group)
+
+animal_feed_pressures_trade <- left_join(crop_feed_pressures_adjusted_for_join, 
+                                         livestock_fish_trade_proportions, 
+                                         by = c("animal_producer_iso3c", "product" = "item"))
+```
+
+## Stopped here, having trouble figuring out the best way to adjust feed pressure calculations for animals. TBD on path forward 
 
 Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each grain producing, animal producing, and animal consuming country combination).
 ```{r}

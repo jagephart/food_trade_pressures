@@ -264,16 +264,14 @@ write_csv(crop_feed_tonnes, paste0(save_path, "fw_aqua_crop_feed.csv"))
 ## Fish oil fish meal consumption - fresh water aquaculture
 
 ### Read in FOFM consumption for marine aquaculture
-We will use the values from Halley et al. (https://knb.ecoinformatics.org/view/doi:10.5063/F1T43R7N) as FOFM consumption for species and distribute consumption of fofm based on production data from above. The fofm consumption data is in live weight equivalent tonnes, this could be into true FOFM tonnes with a 28% reduction in processing loss (reference food_pressures paper). however, the FOFM trade data is in live weight equivalents so for now we will keep in true_tonnes_fish for our calculations.
+We will use the values from Halley et al. (https://knb.ecoinformatics.org/view/doi:10.5063/F1T43R7N) as FOFM consumption for species and distribute consumption of fofm based on production data from above. The fofm consumption data is in live weight equivalent tonnes, this could be converted into true FOFM tonnes with a 28% reduction in processing loss (reference food_pressures paper). However, the FOFM trade data is in live weight equivalents so for now we will keep in true_tonnes_fish for our calculations.
 ```{r}
 # fofm consumption reference
 fofm_reference <- read_csv(paste0(fw_data_path, "msleckman.45.1_fofm_consumption.csv")) %>%
   filter(!is.na(fw_aquaculture)) %>% 
   # current mean represents the live weight of fish for fofm consumption
-  # rename current mean to true tonnes of fish 
-  rename(true_tonnes_fish = Current_Mean) %>%
-  # convert live_weight fofm true tonnes fed (28% reduction)
-  mutate(true_tonnes_fofm = true_tonnes_fish*0.28)  
+  # rename current mean to live weight of fish 
+  rename(lw_tonnes_fish = Current_Mean)   
 
 ```
 
@@ -332,8 +330,8 @@ divided_fofm <- data.frame(fw_aquaculture=c("milkfish", "misc_diad", "hypoph_car
 fofm <- left_join(fofm_reference, divided_fofm, by="fw_aquaculture") %>%
   mutate(prop = ifelse(is.na(prop), 1, prop)) %>%
   # use true tonnes fish because trade data is in live weight tonnes
-  mutate(taxa_tonnes_fofm_consumption = true_tonnes_fofm*prop) %>%
-  select(stressor_group = fw_aquaculture, taxa_tonnes_fofm_consumption)
+  mutate(taxa_lw_tonnes_fofm_consumption = lw_tonnes_fish*prop) %>%
+  select(stressor_group = fw_aquaculture, taxa_lw_tonnes_fofm_consumption)
 
 ```
 
@@ -352,8 +350,8 @@ fofm_tonnes <- tonnes_lw %>%
   # join with tonnes of fofm consumed by each stressor group
   left_join(fofm, by="stressor_group") %>%
   # calculate the tonnes_fofm consumed by that country for FW aquaculture
-  mutate(tonnes_fofm = taxa_tonnes_fofm_consumption*prop_prod) %>%
-  select(iso3c, country_name, taxa=stressor_group, tonnes_fofm)  
+  mutate(lw_tonnes_fofm = taxa_lw_tonnes_fofm_consumption*prop_prod) %>%
+  select(iso3c, country_name, taxa=stressor_group, lw_tonnes_fofm)  
 
 write_csv(fofm_tonnes, paste0(save_path, "fw_fofm_consumption.csv")) 
 ```

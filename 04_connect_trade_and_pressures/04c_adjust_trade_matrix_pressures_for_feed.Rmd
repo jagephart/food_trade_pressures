@@ -50,6 +50,7 @@ trade_pressure_path <- "/home/shares/food-systems/social_justice_projects/food_t
 feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
 fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01f_fofm_fw_aquaculture_feed/"
+animal_proportions_for_feed_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calculate_prop_crop_and_fofm_used_for_each_animal/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_adjust_trade_matrix_pressures_for_feed/"
 ```
 
@@ -201,198 +202,20 @@ sum(feed_crops_used_for_feed$disturbance_pressure_feed) + sum(feed_crops_not_use
 ```
 
 
-Note: data are already grouped by consuming country, producing country, and crop and pressures and tonnes going to feed are summed across those categories
+Note: data are already grouped by consuming country, producing country, and crop so pressures and tonnes going to feed are summed across those categories
 
-### Read in and prepare livestock tonnes of crop consumed per animal per country
-Read in tonnes crop consumed per animal group per country data, the data used for this step can be found at the link provided, however it has been saved in the project folder on Aurora: https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
+### Read in crop feed proportions for each animal within a country
 ```{r}
-animal_consumption_raw <- read_csv(paste0(animal_consumption_data_path, "system_country_mapspam_tonnes_consumption.csv"))
-```
-
-
-Subset to 5 feed crop categories we're using and aggregate for grains
-```{r}
-animal_consumption <- animal_consumption_raw %>% 
-  filter(SPAM_super == "barl" | SPAM_super == "maiz" | SPAM_super == "ocer" | SPAM_super == "rice" |
-           SPAM_super == "sorg" | SPAM_super == "whea" | SPAM_super == "xmil" | SPAM_super == "soyb" |
-           SPAM_super == "xoil" | SPAM_super == "oilp" | SPAM_super == "xpul") %>% 
-  mutate(feed_category = case_when(SPAM_super == "barl" ~ "grain",
-                                   SPAM_super == "maiz" ~ "grain",
-                                   SPAM_super == "ocer" ~ "grain",
-                                   SPAM_super == "rice" ~ "grain",
-                                   SPAM_super == "sorg" ~ "grain",
-                                   SPAM_super == "whea" ~ "grain",
-                                   SPAM_super == "xmil" ~ "grain",
-                                   SPAM_super == "soyb" ~ "soybean",
-                                   SPAM_super == "xoil" ~ "oilcrop",
-                                   SPAM_super == "oilp" ~ "palmoil",
-                                   SPAM_super == "xpul" ~ "pulse",
-                                   TRUE ~ as.character(NA)))
-```
-
-
-Match animal categories to what we're using with FAO trade data and the pressures data.
-
-Categories:
-
-Livestock:
-chickens_eggs
-chickens_meat
-cows_meat
-goats_meat
-cows_milk
-pigs_meat
-sheep_meat
-sheep_milk
-buffaloes_milk
-
-Mariculture (we have pressures data for bivalves but no feed data, because they don't need feed because they filter):
-Renamed animal_agg is on the right side of the equations
-crustaceans_aquaculture_meat = crustaceans_aquaculture
-marine-fish-general_aquaculture_meat = marine_fish_general_aquaculture
-salmon_aquaculture_meat = salmonids_aquaculture
-shrimp_aquaculture_meat = shrimps_prawns_aquaculture
-tuna_aquaculture_meat = tuna_aquaculture
-
-```{r}
-# how many rows are 0 tonnes crop product consumed by that animal group?
-length(which(animal_consumption$tonnes_product == 0))
-# 22648 rows have 0 tonnes (63% of data)
-
-table(animal_consumption$animal_system)
-
-# Match animal categories to what we're using with FAO data
-animal_consumption_agg <- animal_consumption %>% 
-  mutate(animal_agg = case_when(str_detect(animal_system, regex("(?=.*cows)(?=.*meat)", ignore_case = TRUE)) ~ "cows_meat",
-                                str_detect(animal_system, regex("(?=.*cows)(?=.*milk)", ignore_case = TRUE)) ~ "cows_milk",
-                                str_detect(animal_system, regex("(?=.*goat)(?=.*meat)", ignore_case = TRUE)) ~ "goats_meat",
-                                str_detect(animal_system, regex("(?=.*buffaloes)(?=.*milk)", ignore_case = TRUE)) ~ "buffaloes_milk",
-                                str_detect(animal_system, regex("(?=.*sheep)(?=.*meat)", ignore_case = TRUE)) ~ "sheep_meat",
-                                str_detect(animal_system, regex("(?=.*sheep)(?=.*milk)", ignore_case = TRUE)) ~ "sheep_milk",
-                                str_detect(animal_system, regex("(?=.*pig)(?=.*meat)", ignore_case = TRUE)) ~ "pigs_meat",
-                                animal_system == "chickens_industrial_eggs" ~ "chickens_eggs",
-                                animal_system == "chickens_industrial_meat" ~ "chickens_meat",
-                                animal_system == "crustaceans_aquaculture_meat" ~ "crustaceans_mariculture",
-                                animal_system == "marine-fish-general_aquaculture_meat" ~ "marine_fish_general_mariculture",
-                                animal_system == "salmon_aquaculture_meat" ~ "salmonids_mariculture",
-                                animal_system == "shrimp_aquaculture_meat" ~ "shrimps_prawns_mariculture",
-                                animal_system == "tuna_aquaculture_meat" ~ "tuna_mariculture",
-                                TRUE ~ animal_system))
-
-table(animal_consumption_agg$animal_agg)
-
-# remove all buffaloes meat and goats milk (not in trade matrix) and chickens_backyard_eggs&meat
-animal_consumption_agg <- animal_consumption_agg %>% 
-  filter(!animal_agg == "buffaloes_grassland_meat") %>% 
-  filter(!animal_agg == "buffaloes_mixed_meat") %>% 
-  filter(!animal_agg == "chickens_backyard_eggs&meat") %>% 
-  filter(!animal_agg == "goats_grassland_milk") %>% 
-  filter(!animal_agg == "goats_mixed_milk") 
-
-table(animal_consumption_agg$animal_agg)
-```
-
-### Read in and prepare fw aquaculture tonnes of crop consumed per animal per country
-Read in inland aquaculture feed consumption data produced in script 02ai.
-```{r}
-fw_aqua_consumption <- read_csv(paste0(fw_aquaculture_consumption_path, "fw_aqua_crop_feed.csv"))
-```
-
-Convert to inland aquaculture trade categories
-
-Key for joining trade and consumption - updated data (left is trade matrix categories, right is pressures categories):
-oth_carp = oth_carp 
-hypoph_carp = hypoph_carp
-miscellaneous diadromous fishes = misc_diad + milkfish
-salmons, trouts, smelts = trout
-miscellaneous freshwater fishes = catfish
-tilapias and other cichlids = tilapia
-
-We are adding "fw_aquaculture" to the beginning of the items to for freshwater aquaculture to make them easily distinguisable from marine fisheries and aquaculture.
-```{r}
-fw_aqua_consumption_relabel <- fw_aqua_consumption %>% 
-  mutate(nceas_group = case_when(taxa == "catfish" ~ "fw_aquaculture_miscellaneous_freshwater_fishes",
-                                 taxa == "hypoph_carp" ~ "fw_aquaculture_hypoph_carp",
-                                 taxa == "milkfish" ~ "fw_aquaculture_miscellaneous_diadromous_fishes",
-                                 taxa == "misc_diad" ~ "fw_aquaculture_miscellaneous_diadromous_fishes",
-                                 taxa == "oth_carp" ~ "fw_aquaculture_oth_carp",
-                                 taxa == "tilapia" ~ "fw_aquaculture_tilapias_and_other_cichlids",
-                                 taxa == "trout" ~ "fw_aquaculture_salmons_trouts_smelts",
-                                 TRUE ~ as.character(NA)))
-summary(fw_aqua_consumption_relabel)
-table(fw_aqua_consumption_relabel$nceas_group)
-```
-
-### Join inland aquaculture, marine fisheries and aquaculture, and livestock crop feed quantities.
-Bind inland aquaculture feed with livestock/mariculture/wild fisheries feed
-```{r}
-animal_consumption_category_totals <- animal_consumption_agg %>% 
-  # calculate tonnes feed consumed per crop, animal system, and country
-  group_by(iso3c, feed_category, animal_agg) %>% 
-  summarise(tonnes_feed = sum(tonnes_product)) %>% 
-  rename(animal_group = animal_agg) %>% 
-  ungroup()
-
-fw_aqua_consumption_category_totals <- fw_aqua_consumption_relabel %>% 
-  # calculate tonnes feed consumed per crop, animal system (aquaculture), and country
-  group_by(iso3c, feed_category, animal_group = nceas_group) %>% 
-  summarise(tonnes_feed = sum(tonnes)) %>% 
-  ungroup()
-
-# combine feed dfs (livestock/fisheries/mariculture and fw aquaculture)
-tonnes_crop_feed_consumed <- rbind(animal_consumption_category_totals, fw_aqua_consumption_category_totals)
-
-# check data
-# tonnes_crop_feed_consumed %>% 
-#   group_by(animal_group) %>% 
-#   summarise(sum = sum(tonnes_feed)) %>% 
-#   left_join(animal_consumption_agg %>% 
-#               group_by(animal_agg) %>% 
-#               summarise(livestock_sum = sum(tonnes_product)),
-#             by = c("animal_group" = "animal_agg")) %>% 
-#   left_join(fw_aqua_consumption_relabel %>% 
-#               group_by(nceas_group) %>% 
-#               summarise(fw_sum = sum(tonnes)),
-#             by = c("animal_group" = "nceas_group")) %>% 
-#   rowwise() %>% 
-#   mutate(change = sum - sum(livestock_sum, fw_sum, na.rm = TRUE))
-# no differences in total tonnage after joining!
-```
-
-### Calculate proportion of each crop that goes to each animal system within a country
-
-```{r}
-# calc proportion per animal
-# tonnes_crop_feed_consumed <- tonnes_crop_feed_consumed %>% 
-#   group_by(iso3c, feed_category) %>% 
-#   mutate(total_crop = sum(tonnes_feed)) %>% 
-#   ungroup()
-
-# rows where total crop = 0 means this country doesn't use any of this crop as feed
-crop_feed_animal_proportions <- tonnes_crop_feed_consumed %>% 
-  group_by(iso3c, feed_category) %>% 
-  mutate(total_crop = sum(tonnes_feed)) %>% 
-  ungroup() %>% 
-  mutate(prop_crop_feed_per_animal = case_when(!tonnes_feed == 0 ~ tonnes_feed/total_crop,
-                                               TRUE ~ 0)) %>% 
-  # removed tonnage from data source as we were using that to calculate the proportions
-  select(-tonnes_feed, -total_crop)
-
-# check - should all sum to 1 or 0 (country doesn't use any of this crop as feed for any animals)
-check_props <- crop_feed_animal_proportions %>% 
-  group_by(iso3c, feed_category) %>% 
-  summarise(sum = sum(prop_crop_feed_per_animal)) %>% 
-  ungroup()
-range(check_props$sum)
-
-# pivot crop_feed_animal_proportions to wide for joining
-crop_feed_animal_proportions_wide <- crop_feed_animal_proportions %>% 
-  pivot_wider(names_from = animal_group,
-              values_from = prop_crop_feed_per_animal)
-
-# Pivoting wider produced a lot of NA columns because there no data for some animals and feed_categories
-crop_feed_animal_proportions_wide[is.na(crop_feed_animal_proportions_wide)] <- 0
-
+crop_feed_animal_proportions_wide <- read.csv(paste0(animal_proportions_for_feed_path, "crop_feed_animal_proportions_wide.csv")) %>% 
+  # make zero_test to mark rows where a country has no animal allocation for that crop 
+  mutate(zero_test = select(., buffaloes_milk:fw_aquaculture_miscellaneous_diadromous_fishes) %>% 
+           rowSums(na.rm = TRUE)) %>% 
+  # if zero_test is equal to 0 then there is no animal specified
+  # and now in our calculation all trade and pressures will go there
+  mutate(no_animal_specified = if_else(zero_test == 0,
+                                       true = 1,
+                                       false = 0)) %>% 
+  select(-zero_test)
 ```
 
 ### Join crop proportions per animal with the trade data used for feed
@@ -400,22 +223,28 @@ Combine dfs - add variables for animal system and feed proportions per crop to t
 ```{r}
 feed_crops_used_for_feed <- feed_crops_used_for_feed %>% 
   select(consumer_iso3c, producer_iso3c, feed_category, tonnes_feed, water_pressure_feed, ghg_pressure_feed, nutrient_pressure_feed, disturbance_pressure_feed)
-summary(feed_crops_used_for_feed) # no NAs
 
-summary(crop_feed_animal_proportions) # no NAs
+#summary(feed_crops_used_for_feed) # no NAs
 
-# we can't do anything without the pressures data, so left_join instead
+#summary(crop_feed_animal_proportions_wide) # no NAs
+
+# we can't do anything without the pressures data, so left_join
+# so any countries where we have feed proportion data but don't 
+# have trade of that crop will be lost
 crop_feed_pressures <- left_join(feed_crops_used_for_feed, crop_feed_animal_proportions_wide, by = c("consumer_iso3c" = "iso3c", "feed_category"))
 
-summary(crop_feed_pressures) # no NAs
+#summary(crop_feed_pressures) # no NAs
 
 # pivot longer to make calculations simple
 crop_feed_pressures <- crop_feed_pressures %>% 
-  pivot_longer(cols = buffaloes_milk:fw_aquaculture_miscellaneous_diadromous_fishes,
+  pivot_longer(cols = buffaloes_milk:no_animal_specified,
                names_to = "animal_group",
-               values_to = "prop_crop_feed_per_animal")
+               values_to = "prop_crop_feed_per_animal") %>% 
+  # remove proportions that are equal to zero
+  filter(prop_crop_feed_per_animal != 0)
 
 ```
+
 
 ### Calculate tonnes traded and pressures going to feed to consuming countries
 Multiply pressures per aggregated crop (between each pair of trading partners) by proportion feed going to each animal system
@@ -427,9 +256,7 @@ crop_feed_pressures_adjusted <- crop_feed_pressures %>%
   mutate(disturbance_traded_system_feed = disturbance_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_crop_feed_per_animal) #%>% 
 
-summary(crop_feed_pressures) # no NAs
-
-# check data - feed_pressures_3 will have slightly lower pressures than originally because the proportions for feed don't sum to 1 in all cases due to missing pressures or trade data
+#check data 
 check_props_1 <- crop_feed_pressures_adjusted %>% 
   group_by(consumer_iso3c, producer_iso3c, feed_category) %>% 
   summarise(sum = sum(prop_crop_feed_per_animal)) %>% 
@@ -439,9 +266,11 @@ range(check_props_1$sum)
 check_props_2 <- check_props_1 %>% 
   select(-producer_iso3c) %>% 
   unique()
+range(check_props_2$sum)
+
 ```
 
-Note: There is some trade and pressures data totals being changed by the proportion allocation. as most of the total change is <.1% we are going to assume for now that it is due to rounding error introduced from R and the proportions.
+Note: The below data check shows there is a small difference between the total water pressures before joining with the animal proportions compared to after. As this is a small value we will assume it is a rounding error introduced from R and the proportions.
 
 ```{r}
 # wherever check_props_2$sum == 0, there will be a discrepancy with pressures/trade data
@@ -458,82 +287,32 @@ Note: There is some trade and pressures data totals being changed by the proport
 # This is probably a bigger assumption than just ignoring those rows though so going with option 1 for now
 
 
-# what percent of traded tonnes are we missing?
+# what percent of traded tonnes changed?
 sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed)
 sum(feed_crops_used_for_feed$tonnes_feed)
-((sum(feed_crops_used_for_feed$tonnes_feed) - sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed))/sum(feed_crops_used_for_feed$tonnes_feed))*100 # 0.61% = less than one percent, ignore this discrepancy
+((sum(feed_crops_used_for_feed$tonnes_feed) - sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed))/sum(feed_crops_used_for_feed$tonnes_feed))*100 # 0!
 
 # water
 sum(crop_feed_pressures_adjusted$water_traded_system_feed)
 sum(feed_crops_used_for_feed$water_pressure_feed)
-((sum(feed_crops_used_for_feed$water_pressure_feed) - sum(crop_feed_pressures_adjusted$water_traded_system_feed))/sum(feed_crops_used_for_feed$water_pressure_feed))*100 # 0.039%
+((sum(feed_crops_used_for_feed$water_pressure_feed) - sum(crop_feed_pressures_adjusted$water_traded_system_feed))/sum(feed_crops_used_for_feed$water_pressure_feed))*100 # -1.675025e-14% we will ignore this.
 
 # ghg
 sum(crop_feed_pressures_adjusted$ghg_traded_system_feed)
 sum(feed_crops_used_for_feed$ghg_pressure_feed)
-((sum(feed_crops_used_for_feed$ghg_pressure_feed) - sum(crop_feed_pressures_adjusted$ghg_traded_system_feed))/sum(feed_crops_used_for_feed$ghg_pressure_feed))*100 # 0.062%
+((sum(feed_crops_used_for_feed$ghg_pressure_feed) - sum(crop_feed_pressures_adjusted$ghg_traded_system_feed))/sum(feed_crops_used_for_feed$ghg_pressure_feed))*100 # 0!
 
 # nutrient
 sum(crop_feed_pressures_adjusted$nutrient_traded_system_feed)
 sum(feed_crops_used_for_feed$nutrient_pressure_feed)
-((sum(feed_crops_used_for_feed$nutrient_pressure_feed) - sum(crop_feed_pressures_adjusted$nutrient_traded_system_feed))/sum(feed_crops_used_for_feed$nutrient_pressure_feed))*100 # 0.061%
+((sum(feed_crops_used_for_feed$nutrient_pressure_feed) - sum(crop_feed_pressures_adjusted$nutrient_traded_system_feed))/sum(feed_crops_used_for_feed$nutrient_pressure_feed))*100 # 0!
 
 # disturbance
 sum(crop_feed_pressures_adjusted$disturbance_traded_system_feed)
 sum(feed_crops_used_for_feed$disturbance_pressure_feed)
-((sum(feed_crops_used_for_feed$disturbance_pressure_feed) - sum(crop_feed_pressures_adjusted$disturbance_traded_system_feed))/sum(feed_crops_used_for_feed$disturbance_pressure_feed))*100 # 0.13%
+((sum(feed_crops_used_for_feed$disturbance_pressure_feed) - sum(crop_feed_pressures_adjusted$disturbance_traded_system_feed))/sum(feed_crops_used_for_feed$disturbance_pressure_feed))*100 # 0!
 ```
 
-
-Investigate where the sum of the pressures are different
-```{r}
-# sum pressures / animal producing country
-test_1 <- crop_feed_pressures_adjusted %>% 
-  group_by(consumer_iso3c) %>% 
-  summarise(sum_water = sum(water_traded_system_feed)) %>% 
-  ungroup()
-
-test_2 <- feed_crops_used_for_feed %>% 
-  group_by(consumer_iso3c) %>% 
-  summarise(sum_water_1 = sum(water_pressure_feed)) %>% 
-  ungroup()
-
-# most rows are the same, but some are slightly different like BHR
-test_3 <- full_join(test_1, test_2, by = "consumer_iso3c") %>% 
-  mutate(change = sum_water_1 - sum_water)
-
-# plot sum of water pressures
-ggplot(test_3, aes(x = sum_water, y = sum_water_1)) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1)
-
-# zoom in to better see variation
-ggplot(test_3[test_3$sum_water < 2000000000,], aes(x = sum_water, y = sum_water_1)) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1)
-
-# zoom in again to better see variation
-ggplot(test_3[test_3$sum_water < 200000000,], aes(x = sum_water, y = sum_water_1)) +
-  geom_point() +
-  geom_abline(intercept = 0, slope = 1)
-
-
-
-# investigate by feed category as well
-test_4 <- feed_pressures_3 %>% 
-  group_by(Consumer_ISO3, feed_category) %>% 
-  summarise(sum_water = sum(water_traded_system_feed)) %>% 
-  ungroup()
-
-test_5 <- feed_crops_w_prop_1 %>% 
-  group_by(Consumer_ISO3, feed_category) %>% 
-  summarise(sum_water_1 = sum(water_pressure_feed)) %>% 
-  ungroup()
-
-test_6 <- full_join(test_4, test_5, by = c("Consumer_ISO3", "feed_category"))
-```
-
-#### NOTE: ISO3c "Yem" has the most data that is different, not sure why this is happening and unsure how to check it.
 
 ### Join feed traded for pressures with corressponding livestock and fish trade
 
@@ -580,6 +359,8 @@ crop_feed_pressures_adjusted_for_join <- crop_feed_pressures_adjusted %>%
 animal_feed_pressures_trade <- left_join(crop_feed_pressures_adjusted_for_join, 
                                          livestock_fish_trade_proportions, 
                                          by = c("animal_producer_iso3c", "product" = "item"))
+no_animal_specified_test <- animal_feed_pressures_trade %>% 
+  filter(product == "no_animal_specified")
 ```
 
 ## Stopped here, having trouble figuring out the best way to adjust feed pressure calculations for animals. TBD on path forward 

@@ -26,11 +26,9 @@ library(tidyverse)
 Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-# trade_pressure_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_connect_crop_livestock_oth_fish_pressures/"
-# feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
 fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01f_fofm_fw_aquaculture_feed/"
-# save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_adjust_trade_matrix_pressures_for_feed/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calculate_prop_crop_and_fofm_used_for_each_animal/"
 ```
 
 ## Crops
@@ -139,7 +137,7 @@ salmons, trouts, smelts = trout
 miscellaneous freshwater fishes = catfish
 tilapias and other cichlids = tilapia
 
-We are adding "fw_aquaculture" to the beginning of the items to for freshwater aquaculture to make them easily distinguisable from marine fisheries and aquaculture.
+We are adding "fw_aquaculture" to the beginning of the items for freshwater aquaculture to make them easily distinguishable from marine fisheries and aquaculture.
 ```{r}
 fw_aqua_consumption_relabel <- fw_aqua_consumption %>% 
   mutate(nceas_group = case_when(taxa == "catfish" ~ "fw_aquaculture_miscellaneous_freshwater_fishes",
@@ -225,7 +223,8 @@ crop_feed_animal_proportions_wide[is.na(crop_feed_animal_proportions_wide)] <- 0
 
 ### Save
 ```{r}
-
+write_csv(x = crop_feed_animal_proportions_wide,
+          file = paste0(save_path, "crop_feed_animal_proportions_wide.csv"))
 ```
 
 ## FOFM
@@ -238,8 +237,171 @@ It was provided by Mel and will require better referencing in the methods sectio
 ```{r}
 FOFM_consumption_raw <- read_csv(paste0(animal_consumption_data_path, "FMFO_country_data.csv"))
 
-salmon_test
+# the data for FOFM consumption for marine salmon aquaculture includes
+# freshwater aquaculture propduction tonnes. Below we will reduce all 
+# salmon consumption values by 25% according to Mel (chicken/salmon paper)
+FOFM_consumption <- FOFM_consumption_raw %>% 
+  mutate(tonnes = if_else(condition = system == "salmon_aquaculture_meat",
+                          # 25% reduction
+                          true = tonnes*.75,
+                          # keep tonnes the same for all other species
+                          false = tonnes))
+
+# check out species included
+unique(FOFM_consumption$system)
 
 ```
 
+Match animal categories to what we're using with FAO trade data and the pressures data. The left side of the equations is how the data is read in and the right side of the equations is the renamed animal_agg group to match the trade and pressures data
+
+Categories from trade included in FOFM feed:
+
+Livestock:
+chickens_industrial_eggs = chickens_eggs
+chickens_industrial_meat = chickens_meat
+pigs_intermediate_meat + pigs_backyard_meat + pigs_industrial_meat = pigs_meat
+
+Mariculture:
+crustaceans_aquaculture_meat = crustaceans_aquaculture
+marine-fish-general_aquaculture_meat = marine_fish_general_aquaculture
+salmon_aquaculture_meat = salmonids_aquaculture
+shrimp_aquaculture_meat = shrimps_prawns_aquaculture
+tuna_aquaculture_meat = tuna_aquaculture
+
+```{r}
+# Match animal categories to what we're using with FAO data
+FOFM_consumption_aggregate <- FOFM_consumption %>% 
+  mutate(animal_aggregate = case_when(str_detect(system, regex("(?=.*pig)(?=.*meat)", ignore_case = TRUE)) ~ "pigs_meat",
+                                      system == "chickens_industrial_eggs" ~ "chickens_eggs",
+                                      system == "chickens_industrial_meat" ~ "chickens_meat",
+                                      system == "crustaceans_aquaculture_meat" ~ "crustaceans_mariculture",
+                                      system == "marine-fish-general_aquaculture_meat" ~ "marine_fish_general_mariculture",
+                                      system == "salmon_aquaculture_meat" ~ "salmonids_mariculture",
+                                      system == "shrimp_aquaculture_meat" ~ "shrimps_prawns_mariculture",
+                                      system == "tuna_aquaculture_meat" ~ "tuna_mariculture",
+                                      TRUE ~ system))
+
+```
+
+### Read in and prepare fw aquaculture tonnes of FOFM consumed per animal per country
+Read in inland aquaculture feed consumption data produced in script 03b.
+```{r}
+fw_aqua_FOFM_consumption <- read_csv(paste0(fw_aquaculture_consumption_path, "fw_fofm_consumption.csv"))
+
+# check out species included
+unique(fw_aqua_FOFM_consumption$taxa)
+```
+
+Match animal categories to what we're using with FAO trade data and the pressures data. The left side of the equations is how the data is read in and the right side of the equations is the renamed animal_agg group to match the trade and pressures data.
+
+FW Aquaculture:
+oth_carp = oth_carp
+hypoph_carp = hypoph_carp
+catfish = miscellaneous_freshwater_fishes
+tilapia = tilapias_and_other_cichlids
+trout = salmons_trouts_smelts
+milkfish + misc_diad = miscellaneous_diadromous_fishes
+
+We are adding "fw_aquaculture" to the beginning of the items for freshwater aquaculture to make them easily distinguishable from marine fisheries and aquaculture.
+```{r}
+fw_aqua_FOFM_consumption_relabel <- fw_aqua_FOFM_consumption %>% 
+  mutate(animal_aggregate = case_when(taxa == "catfish" ~ "fw_aquaculture_miscellaneous_freshwater_fishes",
+                                      taxa == "hypoph_carp" ~ "fw_aquaculture_hypoph_carp",
+                                      taxa == "milkfish" ~ "fw_aquaculture_miscellaneous_diadromous_fishes",
+                                      taxa == "misc_diad" ~ "fw_aquaculture_miscellaneous_diadromous_fishes",
+                                      taxa == "oth_carp" ~ "fw_aquaculture_oth_carp",
+                                      taxa == "tilapia" ~ "fw_aquaculture_tilapias_and_other_cichlids",
+                                      taxa == "trout" ~ "fw_aquaculture_salmons_trouts_smelts",
+                                      TRUE ~ as.character(NA)))
+
+```
+
+### Join inland aquaculture, marine fisheries and aquaculture, and livestock crop feed quantities.
+Bind inland aquaculture feed with livestock/mariculture/wild fisheries feed
+```{r}
+FOFM_consumption_totals <- FOFM_consumption_aggregate %>% 
+  # calculate tonnes fofm feed consumed by, animal system, and country
+  group_by(iso3c, animal_group = animal_aggregate) %>% 
+  summarise(lw_tonnes_fofm = sum(tonnes)) %>% 
+  ungroup()
+
+fw_aqua_FOFM_consumption_totals <- fw_aqua_FOFM_consumption_relabel %>% 
+  # calculate tonnes fofm feed consumed by, animal system, and country
+  group_by(iso3c, animal_group = animal_aggregate) %>% 
+  summarise(lw_tonnes_fofm = sum(lw_tonnes_fofm)) %>% 
+  ungroup()
+
+# combine feed dfs (livestock/fisheries/mariculture and fw aquaculture)
+lw_tonnes_fofm_feed_consumed <- rbind(FOFM_consumption_totals, fw_aqua_FOFM_consumption_totals)
+
+# check data
+# lw_tonnes_fofm_feed_consumed %>%
+#   group_by(animal_group) %>%
+#   summarise(sum = sum(lw_tonnes_fofm)) %>%
+#   left_join(FOFM_consumption_aggregate %>%
+#               group_by(animal_aggregate) %>%
+#               summarise(livestock_sum = sum(tonnes)),
+#             by = c("animal_group" = "animal_aggregate")) %>%
+#   left_join(fw_aqua_FOFM_consumption_relabel %>%
+#               group_by(animal_aggregate) %>%
+#               summarise(fw_sum = sum(lw_tonnes_fofm)),
+#             by = c("animal_group" = "animal_aggregate")) %>%
+#   rowwise() %>%
+#   mutate(change = sum - sum(livestock_sum, fw_sum, na.rm = TRUE))
+# no differences in total tonnage after joining!
+
+# calculate the total lw tonnes consumed by each country
+# this will be used to allocate the correct amount of tonnage 
+# FOFM traded to a country towards feed processes
+lw_tonnes_fofm_feed_consumed_per_country <- lw_tonnes_fofm_feed_consumed %>% 
+  group_by(iso3c) %>% 
+  #calculate the total tonnes of crop a country consumes for feed per this data
+  summarise(total_lw_tonnes_fofm = sum(lw_tonnes_fofm)) %>% 
+  ungroup()
+
+# save total tonnage
+write_csv(x = lw_tonnes_fofm_feed_consumed_per_country,
+          file = paste0(save_path, "lw_tonnes_fofm_feed_consumed_per_country.csv"))
+```
+
+### Calculate proportion of each crop that goes to each animal system within a country
+
+```{r}
+
+# rows where total lw_tonnes_fofm = 0 means this country doesn't use any fofm as feed
+fofm_feed_animal_proportions <- lw_tonnes_fofm_feed_consumed %>% 
+  group_by(iso3c) %>% 
+  #calculate the total tonnes of crop a country consumes for feed per this data
+  mutate(total_lw_fofm = sum(lw_tonnes_fofm)) %>% 
+  ungroup() %>% 
+  # calculate the proportion of each feed crop that goes to each animal
+  mutate(prop_fofm_feed_per_animal = case_when(lw_tonnes_fofm != 0 ~ lw_tonnes_fofm/total_lw_fofm,
+                                               TRUE ~ 0)) %>% 
+  # removed tonnage from data source as we were using that to calculate the proportions
+  select(-lw_tonnes_fofm, -total_lw_fofm)
+
+# check - should all sum to 1 or 0 (country doesn't use any fofm feed for any animals)
+check_props <- fofm_feed_animal_proportions %>% 
+  group_by(iso3c) %>% 
+  summarise(sum = sum(prop_fofm_feed_per_animal)) %>% 
+  ungroup()
+range(check_props$sum)
+
+# pivot crop_feed_animal_proportions to wide for joining
+fofm_feed_animal_proportions_wide <- fofm_feed_animal_proportions %>% 
+  pivot_wider(names_from = animal_group,
+              values_from = prop_fofm_feed_per_animal) %>% 
+  mutate(feed_category = "fofm",
+         .after = iso3c)
+
+# Pivoting wider produced a lot of NA columns because there no data for some animals and feed_categories
+fofm_feed_animal_proportions_wide[is.na(fofm_feed_animal_proportions_wide)] <- 0
+
+```
+
+### Save
+```{r}
+write_csv(x = fofm_feed_animal_proportions_wide,
+          file = paste0(save_path, "fofm_feed_animal_proportions_wide.csv"))
+```
 

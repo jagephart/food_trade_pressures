@@ -356,15 +356,61 @@ crop_feed_pressures_adjusted_for_join <- crop_feed_pressures_adjusted %>%
          feed_producer_iso3c = producer_iso3c,
          product = animal_group)
 
+# left join because this will not discount animal trade but simply directing the feed to the animals it was fed to
 animal_feed_pressures_trade <- left_join(crop_feed_pressures_adjusted_for_join, 
                                          livestock_fish_trade_proportions, 
                                          by = c("animal_producer_iso3c", "product" = "item"))
-no_animal_specified_test <- animal_feed_pressures_trade %>% 
-  filter(product == "no_animal_specified")
+
+# check data
+summary(animal_feed_pressures_trade)
+
+no_feed_data <- animal_feed_pressures_trade %>% 
+  filter(is.na(tonnes_traded_system_feed))
+nrow(no_feed_data)
+# 0 because we did a left join. Otherwise this would show 
+# where we have meat trade between countries but no recorded
+# feed for that animal
+
+no_animal_data <- animal_feed_pressures_trade %>% 
+  filter(is.na(proportion_animal_traded))
+nrow(no_animal_data)
+# 59,817 NAs for proportion_animal_traded - have feed data, but no animal trade data
+# (including what a country produces and keeps)
+
+animal_consumer_na <- animal_feed_pressures_trade %>% 
+  filter(is.na(animal_consumer_iso3c))
 ```
 
-## Stopped here, having trouble figuring out the best way to adjust feed pressure calculations for animals. TBD on path forward 
+Multiply traded feed pressures for each crop, animal system, and trading pair (feed producer and feed consumer) by the proportion of each animal traded between trading pair (animal producer and animal consumer). For the instances where we have no animal traded proportions we will make these zero.
+```{r}
 
+animal_feed_pressures_trade_adjusted <- animal_feed_pressures_trade %>% 
+  mutate(proportion_animal_traded = if_else(condition = is.na(proportion_animal_traded),
+                                            true = 0,
+                                            false = proportion_animal_traded)) %>% 
+  mutate(tonnes_traded_feed_producer_animal_consumer = tonnes_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(water_pressure_feed_producer_animal_consumer = water_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(nutrient_pressure_feed_producer_animal_consumer = nutrient_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(disturbance_pressure_feed_producer_animal_consumer = disturbance_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(ghg_pressure_feed_producer_animal_consumer = ghg_traded_system_feed*proportion_animal_traded)
+
+# check data
+check_1 <- animal_feed_pressures_trade_adjusted %>% 
+  group_by(animal_producer_iso3c, feed_producer_iso3c, feed_category, product, tonnes_traded_system_feed, water_traded_system_feed, nutrient_traded_system_feed, disturbance_traded_system_feed,
+           ghg_traded_system_feed) %>% 
+  summarise(sum_trade = sum(tonnes_traded_feed_producer_animal_consumer),
+            sum_water = sum(water_pressure_feed_producer_animal_consumer),
+            sum_nutrient = sum(nutrient_pressure_feed_producer_animal_consumer),
+            sum_dist = sum(disturbance_pressure_feed_producer_animal_consumer),
+            sum_ghg = sum(ghg_pressure_feed_producer_animal_consumer)) %>% 
+  ungroup()
+
+```
+
+I think the next step is to separate the trade with no animal proportion data from the rest of the trade data and decide how to reintegrate it separately. Then we can follow the rest of the workflow as otherewise presented.
+### Stopped here
+
+## The below is unchanged from original workflow
 Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each grain producing, animal producing, and animal consuming country combination).
 ```{r}
 # rename variables
@@ -379,7 +425,7 @@ feed_pressures_4 <- feed_pressures_3 %>%
          feed_producing_country = Producer_ISO3,
          product = nceas_group)
 
-animal_feed_pressures_tm <- full_join(feed_pressures_4, 
+animal_feed_pressures_tm <- left_join(feed_pressures_4, 
                                       all_animals_2, 
                                       by = c("animal_producing_country", "product"))
 

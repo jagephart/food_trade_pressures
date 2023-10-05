@@ -106,6 +106,7 @@ feed_crops <- feed_crops %>%
 table(feed_crops$feed_category)
 summary(feed_crops)
 
+# calculated the aggregate feed_category group total trade and pressures
 feed_crops_agg <- feed_crops %>% 
   group_by(consumer_country, consumer_iso3c, producer_country, producer_iso3c, feed_category) %>% 
   summarise(traded_tonnes = sum(traded_tonnes, na.rm = TRUE),
@@ -114,7 +115,7 @@ feed_crops_agg <- feed_crops %>%
             disturbance_total = sum(disturbance_total, na.rm = TRUE),
             nutrient_total = sum(nutrient_total, na.rm = TRUE)) %>% 
   ungroup()
-summary(feed_crops_agg)
+#summary(feed_crops_agg)
 
 ## check data
 sum(feed_crops$traded_tonnes)
@@ -138,6 +139,29 @@ sum(feed_crops_agg$water_total, na.rm = TRUE)
 # same
 ```
 
+To turn the feed_crops that will not be used for feed back into their original items we will calculate proportions below of how much each item contributes to the total feed category.
+```{r}
+feed_crops_item_proportions <- feed_crops %>% 
+  group_by(consumer_country, consumer_iso3c, producer_country, producer_iso3c, feed_category) %>% 
+  # calculate the total of each feed_category is traded from producer to consumer
+  mutate(feed_cat_traded_tonnes = sum(traded_tonnes, na.rm = TRUE),
+         feed_cat_water_total = sum(water_total, na.rm = TRUE),
+         feed_cat_ghg_total = sum(ghg_total, na.rm = TRUE),
+         feed_cat_disturbance_total = sum(disturbance_total, na.rm = TRUE),
+         feed_cat_nutrient_total = sum(nutrient_total, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # now calculate the proportion of each item contributes to the feed category traded to the consuming country
+  group_by(consumer_country, consumer_iso3c, producer_country, producer_iso3c, item_code, item, SPAM_super) %>% 
+  summarise(traded_tonnes_proportion = traded_tonnes/feed_cat_traded_tonnes,
+            water_proportion = water_total/feed_cat_water_total,
+            ghg_proportion = ghg_total/feed_cat_ghg_total,
+            disturbance_proportion = disturbance_total/feed_cat_disturbance_total,
+            nutrient_proportion = nutrient_total/feed_cat_nutrient_total) %>% 
+  ungroup()
+  
+```
+
+## I think I need to go back and fix gapfilling before continuing. This seems like a good place to stop. Good progress this week but still plenty to do.
 
 Add column with proportion of each crop each consuming country uses for feed
 ```{r}

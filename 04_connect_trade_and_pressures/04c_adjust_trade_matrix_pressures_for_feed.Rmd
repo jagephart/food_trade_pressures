@@ -56,9 +56,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 Read in trade_pressures data
 ```{r}
-trade_w_pressures_no_feed <- read_csv(paste0(trade_pressure_path, "trade_w_pressures_no_feed.csv")) %>% 
-  # remove "...1" column
-  select(-"...1")
+trade_w_pressures_no_feed <- read_csv(paste0(trade_pressure_path, "trade_w_pressures_no_feed.csv"))
 
 ```
 ## Crops
@@ -150,14 +148,40 @@ feed_crops_item_proportions <- feed_crops %>%
          feed_cat_disturbance_total = sum(disturbance_total, na.rm = TRUE),
          feed_cat_nutrient_total = sum(nutrient_total, na.rm = TRUE)) %>% 
   ungroup() %>% 
-  # now calculate the proportion of each item contributes to the feed category traded to the consuming country
+  # now calculate the proportion of each item contributes to the feed category traded to the consuming country from the specific producer
   group_by(consumer_country, consumer_iso3c, producer_country, producer_iso3c, item_code, item, SPAM_super) %>% 
-  summarise(traded_tonnes_proportion = traded_tonnes/feed_cat_traded_tonnes,
-            water_proportion = water_total/feed_cat_water_total,
-            ghg_proportion = ghg_total/feed_cat_ghg_total,
-            disturbance_proportion = disturbance_total/feed_cat_disturbance_total,
-            nutrient_proportion = nutrient_total/feed_cat_nutrient_total) %>% 
+  # if value is zero make the proportion zero
+  summarise(traded_tonnes_proportion = if_else(condition = traded_tonnes == 0,
+                                               true = 0,
+                                               false = traded_tonnes/feed_cat_traded_tonnes),
+            water_proportion = if_else(condition = water_total == 0,
+                                               true = 0,
+                                               false = water_total/feed_cat_water_total),
+            ghg_proportion = if_else(condition = ghg_total == 0,
+                                               true = 0,
+                                               false = ghg_total/feed_cat_ghg_total),
+            disturbance_proportion = if_else(condition = disturbance_total == 0,
+                                               true = 0,
+                                               false = disturbance_total/feed_cat_disturbance_total),
+            nutrient_proportion = if_else(condition = nutrient_total == 0,
+                                               true = 0,
+                                               false = nutrient_total/feed_cat_nutrient_total)) %>% 
   ungroup()
+
+# add back in feed categories to join with feed_crops_not_used_for_feed
+feed_crops_item_proportions <- feed_crops_item_proportions %>% 
+  mutate(feed_category = case_when(SPAM_super == "barl" ~ "grain",
+                                   SPAM_super == "maiz" ~ "grain",
+                                   SPAM_super == "ocer" ~ "grain",
+                                   SPAM_super == "rice" ~ "grain",
+                                   SPAM_super == "sorg" ~ "grain",
+                                   SPAM_super == "whea" ~ "grain",
+                                   SPAM_super == "xmil" ~ "grain",
+                                   SPAM_super == "soyb" ~ "soybean",
+                                   SPAM_super == "xoil" ~ "oilcrop",
+                                   SPAM_super == "oilp" ~ "palmoil",
+                                   SPAM_super == "xpul" ~ "pulse",
+                                   TRUE ~ as.character(NA)))
   
 ```
 
@@ -222,6 +246,46 @@ sum(feed_crops_used_for_feed$ghg_pressure_feed) + sum(feed_crops_not_used_for_fe
 # same
 sum(feed_crops_w_prop$disturbance_total)
 sum(feed_crops_used_for_feed$disturbance_pressure_feed) + sum(feed_crops_not_used_for_feed$disturbance_pressure_not_feed)
+# same
+```
+
+Convert crops not used for feed back into items
+```{r}
+# join feed category item proportions with crops not used for feed
+feed_crops_not_used_for_feed_back_to_items <- left_join(x = feed_crops_item_proportions,
+                                                        y = feed_crops_not_used_for_feed %>% 
+                                                          # remove extra columns
+                                                          select(-c(traded_tonnes, water_total, ghg_total, disturbance_total, nutrient_total)),
+                                                        by = c("consumer_country", "consumer_iso3c", "producer_country", "producer_iso3c", "feed_category"))
+
+# using the proportions and tonnes/pressures not used for feed calculate the items traded totals
+feed_crops_not_used_for_feed_back_to_items <- feed_crops_not_used_for_feed_back_to_items %>% 
+  mutate(tonnes_traded = traded_tonnes_proportion*tonnes_not_feed,
+         ghg_total = ghg_proportion*ghg_pressure_not_feed,
+         water_total = water_proportion*water_pressure_not_feed,
+         nutrient_total = nutrient_proportion*nutrient_pressure_not_feed,
+         disturbance_total = disturbance_proportion*disturbance_pressure_not_feed) %>%
+  # remove proportions columns
+  select(-c(traded_tonnes_proportion, ghg_proportion, water_proportion, nutrient_proportion, disturbance_proportion),
+         # remove not used for feed columns,
+         -c(tonnes_not_feed, ghg_pressure_not_feed, water_pressure_not_feed, nutrient_pressure_not_feed, disturbance_pressure_not_feed))
+
+# check
+sum(feed_crops_w_prop$traded_tonnes)
+sum(feed_crops_used_for_feed$tonnes_feed) + sum(feed_crops_not_used_for_feed_back_to_items$tonnes_traded)
+# same 
+
+sum(feed_crops_w_prop$water_total)
+sum(feed_crops_used_for_feed$water_pressure_feed) + sum(feed_crops_not_used_for_feed_back_to_items$water_total)
+# same
+sum(feed_crops_w_prop$nutrient_total)
+sum(feed_crops_used_for_feed$nutrient_pressure_feed) + sum(feed_crops_not_used_for_feed_back_to_items$nutrient_total)
+# same
+sum(feed_crops_w_prop$ghg_total)
+sum(feed_crops_used_for_feed$ghg_pressure_feed) + sum(feed_crops_not_used_for_feed_back_to_items$ghg_total)
+# same
+sum(feed_crops_w_prop$disturbance_total)
+sum(feed_crops_used_for_feed$disturbance_pressure_feed) + sum(feed_crops_not_used_for_feed_back_to_items$disturbance_total)
 # same
 ```
 

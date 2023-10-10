@@ -81,6 +81,8 @@ pressures_crops_regions <- pressures_crops_wide %>%
   pivot_longer(cols = c(disturbance, ghg, water, nutrient),
                values_to = "pressure_per_tonne",
                names_to = "pressure") %>% 
+  # add UN_region
+  mutate(UN_region = countrycode(iso3c, 'iso3c', 'un.region.name')) %>% 
   # add subregion
   mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -90,40 +92,40 @@ pressures_crops_regions <- pressures_crops_wide %>%
   mutate(region = case_when(is.na(intermed_region) ~ subregion,
                             TRUE ~ intermed_region))  
 
-# fill in Taiwan Region and subregion
+# fill in Taiwan UN_region, region, and subregion
+pressures_crops_regions$UN_region[pressures_crops_regions$iso3c == "TWN"] <- "Asia"
 pressures_crops_regions$region[pressures_crops_regions$iso3c == "TWN"] <- "Eastern Asia"
-pressures_crops_regions$subregion[pressures_crops_regions$iso3c == "TWN"] <- "Eastern Asia"
 
 # the iso3c code is presumed to be for Kosovo and will therefor have a designation of Southern Europe like neighboring countries
+pressures_crops_regions$UN_region[pressures_crops_regions$iso3c == "XKO"] <- "Europe"
 pressures_crops_regions$region[pressures_crops_regions$iso3c == "XKO"] <- "Southern Europe"
-pressures_crops_regions$subregion[pressures_crops_regions$iso3c == "XKO"] <- "Southern Europe"
 
 na_test <- pressures_crops_regions %>% 
-  filter(is.na(region) | is.na(subregion)) %>% 
+  filter(is.na(UN_region) | is.na(region))%>% 
   mutate(country = countrycode(iso3c, 'iso3c', 'country.name'))
 # no region NAs
 
-# calculate subregion averages
-pressures_crops_subregions <- pressures_crops_regions %>% 
-  group_by(subregion, SPAM_super, pressure) %>% 
+# calculate UN_region averages
+pressures_crops_UN_regions <- pressures_crops_regions %>% 
+  group_by(UN_region, SPAM_super, pressure) %>% 
   # count number of pressures used in calculation
   summarise(n = dplyr::n(),
             # calculate means of groupings 
-            subregion_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
+            UN_region_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
   ungroup() %>% 
   # filter only for regional averages that are made up of more than 1 data point
   filter(n > 1)
 
-pressures_crops_subregions_wide <- pressures_crops_subregions %>% 
+pressures_crops_UN_regions_wide <- pressures_crops_UN_regions %>% 
   # remove count column
   select(-n) %>% 
   # pivot wide to merge with other data easily
   pivot_wider(names_from = pressure,
-              values_from = subregion_pressure_per_tonne) %>% 
-  rename(subregion_ghg = ghg,
-         subregion_disturbance = disturbance,
-         subregion_nutrient = nutrient,
-         subregion_water = water)
+              values_from = UN_region_pressure_per_tonne) %>% 
+  rename(UN_region_ghg = ghg,
+         UN_region_disturbance = disturbance,
+         UN_region_nutrient = nutrient,
+         UN_region_water = water)
 
 # calculate regional averages
 pressures_crops_regions <- pressures_crops_regions %>% 
@@ -194,6 +196,8 @@ pressures_livestock_regions <- pressures_livestock_wide %>%
   pivot_longer(cols = c(disturbance, ghg, water, nutrient),
                values_to = "pressure_per_tonne",
                names_to = "pressure") %>% 
+  # add UN_region
+  mutate(UN_region = countrycode(iso3c, 'iso3c', 'un.region.name')) %>% 
   # add subregion
   mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -203,40 +207,36 @@ pressures_livestock_regions <- pressures_livestock_wide %>%
   mutate(region = case_when(is.na(intermed_region) ~ subregion,
                             TRUE ~ intermed_region))  
 
-# na check
-region_na <- pressures_livestock_regions %>% 
-  filter(is.na(region))
-
-# fill in Taiwan Region
+# fill in Taiwan regions
+pressures_livestock_regions$UN_region[pressures_livestock_regions$iso3c == "TWN"] <- "Asia"
 pressures_livestock_regions$region[pressures_livestock_regions$iso3c == "TWN"] <- "Eastern Asia"
-pressures_livestock_regions$subregion[pressures_livestock_regions$iso3c == "TWN"] <- "Eastern Asia"
 
 na_test <- pressures_livestock_regions %>% 
-  filter(is.na(region)) %>% 
+  filter(is.na(UN_region) | is.na(region)) %>% 
   mutate(country = countrycode(iso3c, 'iso3c', 'country.name'))
 # no region NAs
 
-# calculate subregional averages
-pressures_livestock_subregions <- pressures_livestock_regions %>% 
-  group_by(subregion, item, item_code, pressure) %>% 
+# calculate UN_region averages
+pressures_livestock_UN_regions <- pressures_livestock_regions %>% 
+  group_by(UN_region, item, item_code, pressure) %>% 
   # count number of pressures used in calculation
   summarise(n = dplyr::n(),
             # calculate means of groupings 
-            subregion_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
+            UN_region_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
   ungroup() %>% 
   # only keep means made of more than one value
   filter(n >1)
 
-pressures_livestock_subregions_wide <- pressures_livestock_subregions %>% 
+pressures_livestock_UN_regions_wide <- pressures_livestock_UN_regions %>% 
   # remove count column
   select(-n) %>% 
   # pivot wide to merge with other data easily
   pivot_wider(names_from = pressure,
-              values_from = subregion_pressure_per_tonne) %>% 
-  rename(subregion_ghg = ghg,
-         subregion_disturbance = disturbance,
-         subregion_nutrient = nutrient,
-         subregion_water = water)
+              values_from = UN_region_pressure_per_tonne) %>% 
+  rename(UN_region_ghg = ghg,
+         UN_region_disturbance = disturbance,
+         UN_region_nutrient = nutrient,
+         UN_region_water = water)
 
 # calculate regional averages
 pressures_livestock_regions <- pressures_livestock_regions %>% 
@@ -300,6 +300,8 @@ pressures_fish_regions <- pressures_fish_wide %>%
   pivot_longer(cols = c(disturbance, ghg, nutrient),
                values_to = "pressure_per_tonne",
                names_to = "pressure") %>%  
+  # add UN_region
+  mutate(UN_region = countrycode(iso3c, 'iso3c', 'un.region.name')) %>% 
   # add subregion
   mutate(subregion = countrycode(iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -311,40 +313,41 @@ pressures_fish_regions <- pressures_fish_wide %>%
 
 # na check
 region_na <- pressures_fish_regions %>% 
-  filter(is.na(region))
+  filter(is.na(UN_region) | is.na(region))
 
-# fill in Taiwan Region
+# fill in Taiwan region
+pressures_fish_regions$UN_region[pressures_fish_regions$iso3c == "TWN"] <- "Asia"
 pressures_fish_regions$region[pressures_fish_regions$iso3c == "TWN"] <- "Eastern Asia"
-pressures_fish_regions$subregion[pressures_fish_regions$iso3c == "TWN"] <- "Eastern Asia"
 
 # the iso3c code is presumed to be for Kosovo and will therefor have a designation of Southern Europe like neighboring countries
+pressures_fish_regions$UN_region[pressures_fish_regions$iso3c == "XKO"] <- "Europe"
 pressures_fish_regions$region[pressures_fish_regions$iso3c == "XKO"] <- "Southern Europe"
-pressures_fish_regions$subregion[pressures_fish_regions$iso3c == "XKO"] <- "Southern Europe"
-
 
 na_test <- pressures_fish_regions %>% 
-  filter(is.na(region)) %>% 
+  filter(is.na(UN_region) | is.na(region)) %>% 
   mutate(country = countrycode(iso3c, 'iso3c', 'country.name'))
 # no region NAs
 
-# calculate subregional averages
-pressures_fish_subregions <- pressures_fish_regions %>% 
-  group_by(subregion, nceas_group, pressure) %>% 
+# calculate UN_region averages
+pressures_fish_UN_regions <- pressures_fish_regions %>% 
+  group_by(UN_region, nceas_group, pressure) %>% 
   # count number of pressures used in calculation
   summarise(n = dplyr::n(),
             # calculate means of groupings 
-            subregion_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
-  ungroup() 
+            UN_region_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # filter only for regional averages that are made up of more than 1 data point
+  filter(n > 1)
 
-pressures_fish_subregions_wide <- pressures_fish_subregions %>% 
+pressures_fish_UN_regions_wide <- pressures_fish_UN_regions %>% 
   # remove count column
   select(-n) %>% 
   # pivot wide to merge with other data easily
   pivot_wider(names_from = pressure,
-              values_from = subregion_pressure_per_tonne) %>% 
-  rename(subregion_ghg = ghg,
-         subregion_disturbance = disturbance,
-         subregion_nutrient = nutrient)
+              values_from = UN_region_pressure_per_tonne) %>% 
+  rename(UN_region_ghg = ghg,
+         UN_region_disturbance = disturbance,
+         UN_region_nutrient = nutrient)
 
 # calculate regional averages
 pressures_fish_regions <- pressures_fish_regions %>% 
@@ -353,7 +356,9 @@ pressures_fish_regions <- pressures_fish_regions %>%
   summarise(n = dplyr::n(),
             # calculate means of groupings 
             region_pressure_per_tonne = mean(pressure_per_tonne, na.rm = TRUE)) %>% 
-  ungroup() 
+  ungroup() %>% 
+  # filter only for regional averages that are made up of more than 1 data point
+  filter(n > 1)
 
 pressures_fish_regions_wide <- pressures_fish_regions %>% 
   # remove count column
@@ -560,6 +565,8 @@ crop_trade_pressures_missing <- crop_trade_pressures %>%
   # Filter for rows with missing pressures
   filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance) | is.na(water)) %>% 
   # add in regional ids
+  # add UN_region
+  mutate(producer_UN_region = countrycode(producer_iso3c, 'iso3c', 'un.region.name')) %>%
   # add subregion
   mutate(subregion = countrycode(producer_iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -571,8 +578,11 @@ crop_trade_pressures_missing <- crop_trade_pressures %>%
   select(-c(subregion, intermed_region, disturbance_total, water_total, ghg_total, nutrient_total))
 
 # fill in Taiwan Region
+crop_trade_pressures_missing$producer_UN_region[crop_trade_pressures_missing$producer_iso3c == "TWN"] <- "Asia"
 crop_trade_pressures_missing$producer_region[crop_trade_pressures_missing$producer_iso3c == "TWN"] <- "Eastern Asia"
+
 # the iso3c code is presumed to be for Kosovo and will therefor have a designation of Southern Europe like neighboring countries
+crop_trade_pressures_missing$producer_UN_region[crop_trade_pressures_missing$producer_iso3c == "XKO"] <- "Europe"
 crop_trade_pressures_missing$producer_region[crop_trade_pressures_missing$producer_iso3c == "XKO"] <- "Southern Europe"
 
 # join with regions
@@ -581,7 +591,11 @@ crop_trade_pressures_gapfilled <- left_join(x = crop_trade_pressures_missing,
                                             by = c("producer_region" = "region",
                                                    # for crops we join by the SPAM_super category
                                                    "SPAM_super")) %>% 
-  # gapfill
+  left_join( y = pressures_crops_UN_regions_wide,
+             by = c("producer_UN_region" = "UN_region",
+                    # for crops we join by the SPAM_super category
+                    "SPAM_super")) %>% 
+  # gapfill using region first
   mutate(ghg = if_else(condition = is.na(ghg),
                        true = region_ghg,
                        false = ghg),
@@ -594,8 +608,22 @@ crop_trade_pressures_gapfilled <- left_join(x = crop_trade_pressures_missing,
          nutrient = if_else(condition = is.na(nutrient),
                        true = region_nutrient,
                        false = nutrient)) %>% 
+  # gapfill using UN_region next
+  mutate(ghg = if_else(condition = is.na(ghg),
+                       true = UN_region_ghg,
+                       false = ghg),
+         disturbance = if_else(condition = is.na(disturbance),
+                       true = UN_region_disturbance,
+                       false = disturbance),
+         water = if_else(condition = is.na(water),
+                       true = UN_region_water,
+                       false = water),
+         nutrient = if_else(condition = is.na(nutrient),
+                       true = UN_region_nutrient,
+                       false = nutrient)) %>% 
   # remove extra columns for joining back with other data
-  select(-c( region_disturbance, region_ghg, region_nutrient, region_water)) %>% 
+  select(-c( producer_region, region_disturbance, region_ghg, region_nutrient, region_water),
+         -c( producer_UN_region, UN_region_disturbance, UN_region_ghg, UN_region_nutrient, UN_region_water)) %>% 
   # calculate the total pressure traded by multiplying traded_tonnes by the pressure efficiency
   mutate(disturbance_total = disturbance*traded_tonnes,
          water_total = water*traded_tonnes,
@@ -604,21 +632,30 @@ crop_trade_pressures_gapfilled <- left_join(x = crop_trade_pressures_missing,
 
 remaining_na <- crop_trade_pressures_gapfilled %>% 
   # Filter for rows with missing pressures
-  filter(is.na(ghg) & is.na(nutrient) & is.na(disturbance) & is.na(water))
+  filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance) | is.na(water))
 
 nrow(remaining_na)/nrow(crop_trade_matrix_test)
-# about 1.5% of the original rows of data
+# about 0.5% of the original rows of data
 
 # by volume?
 sum(remaining_na$traded_tonnes)/sum(crop_trade_matrix_test$traded_tonnes)
-# about 0.7% of total tonnes traded.
+# about 0.1% of total tonnes traded.
 
-# unique(remaining_na$SPAM_super)
+unique(remaining_na$SPAM_super)
 ```
+We still have missing pressures for trade of crops but it is a small amount so we will just filter these out.
+
+```{r}
+crop_trade_pressures_gapfilled <- crop_trade_pressures_gapfilled %>% 
+  # Filter out rows with missing pressures
+  filter(!is.na(ghg) | !is.na(nutrient) | !is.na(disturbance) | !is.na(water))
+```
+
+
 
 #### Rejoin gapfilled data
 ```{r}
-# record the number of rows to ensure bind does not result in lost data 
+# record the number of rows to ensure bind does not result in lost data besides few remaining NA
 nrow(crop_trade_pressures)
 sum(crop_trade_pressures$traded_tonnes)
 
@@ -626,10 +663,10 @@ crop_trade_pressures <- crop_trade_pressures %>%
   # Filter for rows with no missing pressures
   filter(!is.na(ghg) & !is.na(nutrient) & !is.na(disturbance) & !is.na(water)) 
 
-nrow(crop_trade_pressures) + nrow(crop_trade_pressures_gapfilled)
+nrow(crop_trade_pressures) + nrow(crop_trade_pressures_gapfilled) + nrow(remaining_na)
 
 crop_trade_pressures <- rbind(crop_trade_pressures, crop_trade_pressures_gapfilled)
-sum(crop_trade_pressures$traded_tonnes)
+sum(crop_trade_pressures$traded_tonnes) + sum(remaining_na$traded_tonnes)
 
 # no loses, crops are done!
 ```
@@ -703,6 +740,8 @@ livestock_trade_pressures_missing <- livestock_trade_pressures %>%
   # Filter for rows with missing pressures
   filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance) | is.na(water)) %>% 
   # add in regional ids
+  # add UN_region
+  mutate(producer_UN_region = countrycode(producer_iso3c, 'iso3c', 'un.region.name')) %>%
   # add subregion
   mutate(subregion = countrycode(producer_iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -721,7 +760,13 @@ livestock_trade_pressures_gapfilled <- left_join(x = livestock_trade_pressures_m
                                                  by = c("producer_region" = "region",
                                                         # for livestock we join by the item_code column
                                                         "item_code")) %>% 
-  # gapfill
+  left_join( y = pressures_livestock_UN_regions_wide %>% 
+               # remove item column
+               select(-item),
+             by = c("producer_UN_region" = "UN_region",
+                    # for livestock we join by the item_code column
+                    "item_code")) %>%
+  # gapfill using region first
   mutate(ghg = if_else(condition = is.na(ghg),
                        true = region_ghg,
                        false = ghg),
@@ -734,8 +779,22 @@ livestock_trade_pressures_gapfilled <- left_join(x = livestock_trade_pressures_m
          nutrient = if_else(condition = is.na(nutrient),
                        true = region_nutrient,
                        false = nutrient)) %>% 
+  # gapfill using UN_region next
+  mutate(ghg = if_else(condition = is.na(ghg),
+                       true = UN_region_ghg,
+                       false = ghg),
+         disturbance = if_else(condition = is.na(disturbance),
+                       true = UN_region_disturbance,
+                       false = disturbance),
+         water = if_else(condition = is.na(water),
+                       true = UN_region_water,
+                       false = water),
+         nutrient = if_else(condition = is.na(nutrient),
+                       true = UN_region_nutrient,
+                       false = nutrient)) %>% 
   # remove extra columns for joining back with other data
-  select(-c(producer_region, region_disturbance, region_ghg, region_nutrient, region_water)) %>% 
+  select(-c(producer_region, region_disturbance, region_ghg, region_nutrient, region_water),
+         -c(producer_UN_region, UN_region_disturbance, UN_region_ghg, UN_region_nutrient, UN_region_water)) %>% 
   # calculate the total pressure traded by multiplying traded_tonnes by the pressure efficiency
   mutate(disturbance_total = disturbance*traded_tonnes,
          water_total = water*traded_tonnes,
@@ -744,14 +803,14 @@ livestock_trade_pressures_gapfilled <- left_join(x = livestock_trade_pressures_m
 
 remaining_na <- livestock_trade_pressures_gapfilled %>% 
   # Filter for rows with missing pressures
-  filter(is.na(ghg) & is.na(nutrient) & is.na(disturbance) & is.na(water))
+  filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance) | is.na(water))
 
 nrow(remaining_na)/nrow(livestock_trade_countries)
-# less than 0.01% of rows
+# no further missing data!
 
 # by volume?
 sum(remaining_na$traded_tonnes)/sum(livestock_trade_countries$traded_tonnes)
-# less than 0.01% of total tonnes traded.
+# no further missing data!
 
 unique(remaining_na$item_code)
 ```
@@ -846,6 +905,8 @@ fish_trade_pressures_missing <- fish_trade_pressures %>%
   # Filter for rows with missing pressures
   filter(is.na(ghg) | is.na(nutrient) | is.na(disturbance)) %>% 
   # add in regional ids
+  # add UN_region
+  mutate(producer_UN_region = countrycode(producer_iso3c, 'iso3c', 'un.region.name')) %>%
   # add subregion
   mutate(subregion = countrycode(producer_iso3c, 'iso3c', 'un.regionsub.name')) %>% 
   # add intermediate region
@@ -862,7 +923,11 @@ fish_trade_pressures_gapfilled <- left_join(x = fish_trade_pressures_missing,
                                             by = c("producer_region" = "region",
                                                    # for fish we join by the nceas_group column
                                                    "nceas_group")) %>% 
-  # gapfill
+  left_join( y = pressures_fish_UN_regions_wide,
+             by = c("producer_UN_region" = "UN_region",
+                    # for fish we join by the nceas_group column
+                    "nceas_group")) %>%
+  # gapfill region first
   mutate(ghg = if_else(condition = is.na(ghg),
                        true = region_ghg,
                        false = ghg),
@@ -872,8 +937,19 @@ fish_trade_pressures_gapfilled <- left_join(x = fish_trade_pressures_missing,
          nutrient = if_else(condition = is.na(nutrient),
                        true = region_nutrient,
                        false = nutrient)) %>% 
+  # gapfill using UN_region next
+  mutate(ghg = if_else(condition = is.na(ghg),
+                       true = UN_region_ghg,
+                       false = ghg),
+         disturbance = if_else(condition = is.na(disturbance),
+                       true = UN_region_disturbance,
+                       false = disturbance),
+         nutrient = if_else(condition = is.na(nutrient),
+                       true = UN_region_nutrient,
+                       false = nutrient)) %>% 
   # remove extra columns for joining back with other data
-  select(-c(producer_region, region_disturbance, region_ghg, region_nutrient)) %>% 
+  select(-c(producer_region, region_disturbance, region_ghg, region_nutrient),
+         -c(producer_UN_region, UN_region_disturbance, UN_region_ghg, UN_region_nutrient)) %>% 
   # calculate the total pressure traded by multiplying traded_tonnes by the pressure efficiency
   mutate(disturbance_total = disturbance*consumption_live_weight_t,
          ghg_total = ghg*consumption_live_weight_t,
@@ -884,11 +960,19 @@ remaining_na <- fish_trade_pressures_gapfilled %>%
   filter(is.na(ghg) & is.na(nutrient) & is.na(disturbance))
 
 nrow(remaining_na)/nrow(fish_trade_pressures)
-# 2.9% of rows
+# less than 0.01% of rows.
 
 # by volume?
 sum(remaining_na$consumption_live_weight_t)/sum(fish_trade_pressures$consumption_live_weight_t)
-# less than 1% of total tonnes traded.
+# less than 0.01% of total tonnes traded.
+```
+
+We still have missing pressures for trade of fish but it is a small amount so we will just filter these out.
+
+```{r}
+fish_trade_pressures_gapfilled <- fish_trade_pressures_gapfilled %>% 
+  # Filter out rows with missing pressures
+  filter(!is.na(ghg) | !is.na(nutrient) | !is.na(disturbance))
 ```
 
 #### Rejoin gapfilled data
@@ -901,10 +985,10 @@ fish_trade_pressures <- fish_trade_pressures %>%
   # Filter for rows with no missing pressures
   filter(!is.na(ghg) & !is.na(nutrient) & !is.na(disturbance)) 
 
-nrow(fish_trade_pressures) + nrow(fish_trade_pressures_gapfilled)
+nrow(fish_trade_pressures) + nrow(fish_trade_pressures_gapfilled) + nrow(remaining_na)
 
 fish_trade_pressures <- rbind(fish_trade_pressures, fish_trade_pressures_gapfilled)
-sum(fish_trade_pressures$consumption_live_weight_t)
+sum(fish_trade_pressures$consumption_live_weight_t) + sum(remaining_na$consumption_live_weight_t)
 
 # no loses, crops are done!
 ```
@@ -971,7 +1055,7 @@ trade_pressures_final <- rbind(crop_trade_pressures_clean,
 ## Save
 Note this saved file does not have pressures allocated to animals for feed yet. That will be done in the next step.
 ```{r}
-write.csv(x = trade_pressures_final,
+write_csv(x = trade_pressures_final,
           file = paste0(save_path, "trade_w_pressures_no_feed.csv"))
 ```
 

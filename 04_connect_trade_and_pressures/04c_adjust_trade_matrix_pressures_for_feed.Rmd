@@ -46,10 +46,10 @@ library(tidyverse)
 Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-trade_pressure_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_connect_crop_livestock_oth_fish_pressures/"
-feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
+trade_pressure_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04b_connect_crop_livestock_oth_fish_pressures/"
+feed_prop_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
-fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01f_fofm_fw_aquaculture_feed/"
+fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_fofm_fw_aquaculture_feed/"
 animal_proportions_for_feed_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calculate_prop_crop_and_fofm_used_for_each_animal/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04c_adjust_trade_matrix_pressures_for_feed/"
 ```

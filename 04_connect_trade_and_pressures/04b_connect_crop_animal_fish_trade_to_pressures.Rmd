@@ -21,12 +21,12 @@ library(countrycode)
 Filepaths
 ```{r}
 trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
-fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01e_allocate_unknown_trade_fmfo_consumption/"
+fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_allocate_unknown_trade_fmfo_consumption/"
 fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 fw_aquaculture_trade_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_connect_fw_aquaculture_pressures/"
 pressure_efficiency_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_connect_crop_livestock_oth_fish_pressures/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04b_connect_crop_livestock_oth_fish_pressures/"
 ```
 
 ## Pressure Efficiency Data

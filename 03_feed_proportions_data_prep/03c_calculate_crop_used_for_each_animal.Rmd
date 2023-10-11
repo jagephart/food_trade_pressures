@@ -27,7 +27,7 @@ Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
-fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01f_fofm_fw_aquaculture_feed/"
+fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_fofm_fw_aquaculture_feed/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calculate_prop_crop_and_fofm_used_for_each_animal/"
 ```
 

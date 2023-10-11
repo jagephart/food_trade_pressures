@@ -58,8 +58,7 @@ raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressu
 FAO_path <- paste0(raw_path, "FAO/")
 kastner_path <- paste0(raw_path, "kastner_2022/")
 fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
-feed_1d_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 ```
 
 

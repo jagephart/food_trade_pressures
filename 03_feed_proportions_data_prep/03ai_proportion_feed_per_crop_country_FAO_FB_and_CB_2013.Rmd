@@ -50,7 +50,7 @@ library(countrycode)
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
-save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_calc_proportion_feed_per_crop_country/"
+save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 kastner_path <- paste0(raw_path, "kastner_2022/")
 fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
 ```

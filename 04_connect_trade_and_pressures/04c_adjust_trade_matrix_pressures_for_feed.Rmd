@@ -185,8 +185,6 @@ feed_crops_item_proportions <- feed_crops_item_proportions %>%
   
 ```
 
-## I think I need to go back and fix gapfilling before continuing. This seems like a good place to stop. Good progress this week but still plenty to do.
-
 Add column with proportion of each crop each consuming country uses for feed
 ```{r}
 # Read in proportion aggregated crops used as feed by country
@@ -525,45 +523,79 @@ So now feed crop tonnage and pressures traded from a crop producing country to a
 ### Join non-feed crops (non_feed_crops) and feed crops used not as feed (feed_crops_not_used_for_feed)
 Joining this data back together is all crops traded and not used for feed purposes
 
-## Stopped here, haven't changed this yet as going back to update the feed_crops_not_used_for_feed to go back to their orginal items
 ```{r}
 # format data so they can be row bound (rbind)
-non_feed_crops_1 <- non_feed_crops %>% 
-  select(Consumer_ISO3, Producer_ISO3, tonnes_fao_item_traded, Item,  
-         trade_cumu_pressure, trade_ghg, trade_water, trade_nutrient, trade_disturbance)
+non_feed_crops <- non_feed_crops %>% 
+  select(consumer_iso3c, producer_iso3c, item, SPAM_super, food_group, traded_tonnes, ghg_total, water_total, nutrient_total, disturbance_total)
 
-feed_crops_not_used_for_feed_1 <- feed_crops_not_used_for_feed %>% 
-  select(Consumer_ISO3, Producer_ISO3, tonnes_not_feed, feed_category, cumu_pressure_not_feed,
-         ghg_pressure_not_feed, water_pressure_not_feed, nutrient_pressure_not_feed,
-         disturbance_pressure_not_feed)
-
-# add feed to item description name and rename variables
-feed_crops_not_used_for_feed_2 <- feed_crops_not_used_for_feed_1 %>% 
-  rename(tonnes_traded = tonnes_not_feed,
-         Item = feed_category,
-         trade_cumu_pressure = cumu_pressure_not_feed,
-         trade_ghg = ghg_pressure_not_feed,
-         trade_water = water_pressure_not_feed,
-         trade_nutrient = nutrient_pressure_not_feed,
-         trade_disturbance = disturbance_pressure_not_feed)
-
-# rename variable
-non_feed_crops_2 <- non_feed_crops_1 %>% 
-  rename(tonnes_traded = tonnes_fao_item_traded)
+feed_crops_not_used_for_feed_back_to_items <- feed_crops_not_used_for_feed_back_to_items %>% 
+  select(consumer_iso3c, producer_iso3c, item, SPAM_super, traded_tonnes = tonnes_traded, ghg_total, water_total, nutrient_total, disturbance_total) %>% 
+  mutate(food_group = "crops", .after = SPAM_super)
 
 # bind together
-non_feed_crops_tm <- rbind(non_feed_crops_2, feed_crops_not_used_for_feed_2)
+non_feed_crops_joined <- rbind(non_feed_crops, feed_crops_not_used_for_feed_back_to_items)
 
-#clean names to lower snake case
-
-# save csv
-# write_csv(non_feed_crops_tm %>% 
-#             rename(producer_iso3 = Producer_ISO3,  #clean names to lower snake case
-#                    consumer_iso3 = Consumer_ISO3,
-#                    item = Item), 
-#           paste0(save_path, "non_feed_crops_trade_matrix_w_pressures.csv"))
 ```
 
+### Combine non-feed crops trade, animal feed trade, and animal (capture fisheries, mariculture, aquaculture, livestock) trade into one trade matrix that accounts for traded feed pressures.
+```{r}
+# non_feed_crops_joined
+# animal_feed_pressures_trade_totals
+# livestock_fish_trade_raw
+
+# format data so we can rbind it
+# order = producer, consumer, item, food_group, tonnes traded, ghg, water, nutrient, disturbance
+
+## crop items not used for feed
+non_feed_crops_trade_pressures_for_final <- non_feed_crops_joined %>% 
+  select(producer_iso3c, consumer_iso3c, item, food_group,
+         tonnes_traded = traded_tonnes, 
+         ghg_traded = ghg_total, 
+         water_traded = water_total,
+         nutrient_traded = nutrient_total, 
+         disturbance_traded = disturbance_total)
+
+summary(non_feed_crops_trade_pressures) # no NAs
+
+## crops used for animal feed per animal
+animal_feed_pressures_trade_for_final <- animal_feed_pressures_trade_totals %>% 
+  mutate(item = paste0(feed_category, "_feed_for_", animal_product),
+         food_group = "crop_feed") %>% 
+  select(-c(feed_category, animal_product)) %>% 
+  select(producer_iso3c = feed_producer_iso3c,
+         consumer_iso3c = animal_consumer_iso3c,
+         item, food_group,
+         tonnes_traded = sum_trade,
+         ghg_traded = sum_ghg,
+         water_traded = sum_water,
+         nutrient_traded = sum_nutrient,
+         disturbance_traded = sum_disturbance) 
+
+summary(animal_feed_pressures_trade_for_final)
+
+## livestock and fish trade - no FOFM for now because tbd how to divide up
+livestock_fish_trade_pressures_for_final <- livestock_fish_trade_raw %>% 
+  select(producer_iso3c, consumer_iso3c, item, food_group,
+         tonnes_traded = traded_tonnes, 
+         ghg_traded = ghg_total, 
+         water_traded = water_total,
+         nutrient_traded = nutrient_total, 
+         disturbance_traded = disturbance_total)
+summary(livestock_fish_trade_pressures_for_final)
+
+# rbind dfs together
+trade_matrix_w_pressures_accounting_for_feed <- rbind(non_feed_crops_trade_pressures, animal_feed_pressures_trade_for_final, livestock_fish_trade_pressures_for_final)
+
+# check data - close to 4! We lost some pressures for which we didn't have trade/production data.
+check_trade <- trade_w_pressures_no_feed %>% 
+  filter(item != "fofm")
+
+sum(trade_matrix_w_pressures_accounting_for_feed$tonnes_traded)
+sum(check_trade$traded_tonnes)
+
+# save csv
+write_csv(trade_matrix_w_pressures_accounting_for_feed, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
+```
 ## The below is unchanged from original workflow
 Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each grain producing, animal producing, and animal consuming country combination).
 

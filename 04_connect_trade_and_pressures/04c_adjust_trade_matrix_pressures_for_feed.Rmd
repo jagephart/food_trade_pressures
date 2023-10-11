@@ -555,7 +555,7 @@ non_feed_crops_trade_pressures_for_final <- non_feed_crops_joined %>%
          nutrient_traded = nutrient_total, 
          disturbance_traded = disturbance_total)
 
-summary(non_feed_crops_trade_pressures) # no NAs
+summary(non_feed_crops_trade_pressures_for_final) # no NAs
 
 ## crops used for animal feed per animal
 animal_feed_pressures_trade_for_final <- animal_feed_pressures_trade_totals %>% 
@@ -584,7 +584,7 @@ livestock_fish_trade_pressures_for_final <- livestock_fish_trade_raw %>%
 summary(livestock_fish_trade_pressures_for_final)
 
 # rbind dfs together
-trade_matrix_w_pressures_accounting_for_feed <- rbind(non_feed_crops_trade_pressures, animal_feed_pressures_trade_for_final, livestock_fish_trade_pressures_for_final)
+trade_matrix_w_pressures_accounting_for_feed <- rbind(non_feed_crops_trade_pressures_for_final, animal_feed_pressures_trade_for_final, livestock_fish_trade_pressures_for_final)
 
 # check data - exclude FOFM for now because we are determining how to procede with feed allocation
 check_trade <- trade_w_pressures_no_feed %>% 

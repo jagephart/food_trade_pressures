@@ -23,7 +23,7 @@ Filepaths
 trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
 fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_allocate_unknown_trade_fmfo_consumption/"
 fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
-fw_aquaculture_trade_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_connect_fw_aquaculture_pressures/"
+fw_aquaculture_trade_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_connect_fw_aquaculture_pressures/"
 pressure_efficiency_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/Codes/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04b_connect_crop_livestock_oth_fish_pressures/"
@@ -395,7 +395,7 @@ livestock_trade_matrix <- crop_livestock_trade_matrix %>%
   filter(item_code >= 866)
 
 fish_marine_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv")) %>% 
-  # remove freshwater aquaculture since it is handled in step 03a
+  # remove freshwater aquaculture since it is handled in step 04a
   filter(habitat == "marine")
 
 inland_capture_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_trade_matrix_w_unknowns_allocated.csv")) %>% 
@@ -1037,7 +1037,7 @@ fish_trade_pressures_clean <- fish_trade_pressures %>%
   # remove pressures per tonne columns
   select(-c(ghg, disturbance, nutrient))
 
-### Freshwater Aquaculture - made in 03a
+### Freshwater Aquaculture - made in 04a
 fw_aquaculture_trade_pressures_clean <- read.csv(file = paste0(fw_aquaculture_trade_pressures_path, "fw_aquaculture_trade_pressures.csv")) %>% 
   # SPAM_super category used with crops to separate out feed
   mutate(SPAM_super = NA) %>% 

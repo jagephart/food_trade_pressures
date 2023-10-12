@@ -61,12 +61,12 @@ trade_w_pressures_no_feed <- read_csv(paste0(trade_pressure_path, "trade_w_press
 ```
 ## FOFM
 
-FOFM trade is currently all from trade code 230120 which is specified as "unfit for human consumption." Therefore we will assume that all FOFM is currently used for feed of livestock and fish. 
+FOFM trade is currently broken up by the item description "fofm" and "fofm_feed". "fofm_feed" is all from trade code 230120 which is specified as "unfit for human consumption." Therefore we will assume that all FOFM from that trade is all used for feed of livestock and fish. 
 
 ### Separate FOFM from trade data
 ```{r}
 fofm_trade_no_feed_adjustment <-  trade_w_pressures_no_feed %>%
-  filter(item == "fofm")
+  filter(item == "fofm_feed")
 ```
 
 ### Read in fofm feed proportions for each animal within a country
@@ -80,7 +80,9 @@ fofm_feed_animal_proportions_wide <- read.csv(paste0(animal_proportions_for_feed
   mutate(no_animal_specified = if_else(zero_test == 0,
                                        true = 1,
                                        false = 0)) %>% 
-  select(-zero_test)
+  select(-zero_test) %>% 
+  # make feed category "fofm_feed"
+  mutate(feed_category = "fofm_feed")
 
 proportions_test <- fofm_feed_animal_proportions_wide %>% 
   pivot_longer(cols = chickens_eggs:fw_aquaculture_miscellaneous_diadromous_fishes,
@@ -117,7 +119,7 @@ fofm_trade_feed_pressures <- fofm_trade_feed_pressures %>%
   mutate(no_animal_specified = if_else(condition = is.na(no_animal_specified),
                                        true = 1,
                                        false = no_animal_specified)) %>% 
-  pivot_longer(cols = chickens_eggs:fw_aquaculture_miscellaneous_diadromous_fishes,
+  pivot_longer(cols = chickens_eggs:no_animal_specified,
                names_to = "animal_group",
                values_to = "prop_fofm_feed_per_animal") %>% 
   # remove proportions that are equal to zero or NA
@@ -145,11 +147,132 @@ range(check_props_1$sum)
 check_props_2 <- check_props_1 %>% 
   select(-producer_iso3c) %>% 
   unique()
-range(check_props_2$sum)
 
 ```
 
-### Stopped here, looks like there are duplicates of trade we need to sum
+### Join feed traded for pressures with corressponding livestock and fish trade
+
+Filter trade for animal products and calculate proportion of animal trade from producer to consumer so that fofm feed pressures can go with correct animals.
+```{r}
+# filter for non-crops and remove FOFM and fofm_feed
+livestock_fish_trade_raw <- trade_w_pressures_no_feed %>% 
+  filter(food_group != "crops") %>% 
+  filter(item != "fofm",
+         item != "fofm_feed")
+  
+livestock_fish_trade_proportions <- livestock_fish_trade_raw %>% 
+  # remove pressures for now
+  select(-c(disturbance_total, water_total, ghg_total, nutrient_total)) %>% 
+  # group by producer country and item to calculate total of item traded by producer
+  group_by(producer_iso3c, item) %>% 
+  mutate(total_item_tonnes = sum(traded_tonnes, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  # calculate proportion traded of item to each consuming country from producer
+  mutate(proportion_animal_traded = traded_tonnes/total_item_tonnes) %>% 
+  # select specific columns to join with feed trade
+  select(animal_producer_iso3c = producer_iso3c, 
+         animal_consumer_iso3c = consumer_iso3c, 
+         item, proportion_animal_traded)
+
+# livestock_fish_trade_proportions includes some wild capture fish that don't eat feed
+# that's not an issue though because we're not changing these pressures, we're 
+# just adding new feed pressures on top of these existing animal trade pressures
+```
+
+Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each fofm producing, animal producing, and animal consuming country combination).
+```{r}
+# rename variables
+fofm_trade_feed_pressures_adjusted_for_join <- fofm_trade_feed_pressures_adjusted %>%
+  select(-c(tonnes_feed,
+            water_pressure_feed,
+            ghg_pressure_feed,
+            nutrient_pressure_feed,
+            disturbance_pressure_feed,
+            prop_fofm_feed_per_animal)) %>% 
+  rename(animal_producer_iso3c = consumer_iso3c,
+         feed_producer_iso3c = producer_iso3c,
+         product = animal_group)
+
+# left join because this will not discount animal trade but simply directing the feed to the animals it was fed to
+fofm_animal_feed_pressures_trade <- left_join(fofm_trade_feed_pressures_adjusted_for_join, 
+                                              livestock_fish_trade_proportions, 
+                                              by = c("animal_producer_iso3c", "product" = "item"))
+
+# check data
+summary(fofm_animal_feed_pressures_trade)
+
+no_feed_data <- fofm_animal_feed_pressures_trade %>% 
+  filter(is.na(tonnes_traded_system_feed))
+nrow(no_feed_data)
+# 0 because we did a left join. Otherwise this would show 
+# where we have meat trade between countries but no recorded
+# feed for that animal
+
+no_animal_data <- fofm_animal_feed_pressures_trade %>% 
+  filter(is.na(proportion_animal_traded))
+nrow(no_animal_data)
+# 64,304 NAs for proportion_animal_traded - have feed data, but no animal trade data
+# (including what a country produces and keeps)
+(sum(no_animal_data$tonnes_traded_system_feed)/sum(fofm_animal_feed_pressures_trade$tonnes_traded_system_feed))*100
+# this amounts to 0.31% of total trade data.
+# we will assume that all of this data stays in the feed consuming country
+
+fofm_animal_feed_pressures_trade <- fofm_animal_feed_pressures_trade %>% 
+  # if animal consumer is NA make it the same as feed consumer
+  mutate(animal_consumer_iso3c = if_else(condition = is.na(animal_consumer_iso3c),
+                                         true = animal_producer_iso3c,
+                                         false = animal_consumer_iso3c)) %>% 
+  # if animal consumer was NA make 100% of trade within that country
+  mutate(proportion_animal_traded = if_else(condition = is.na(proportion_animal_traded),
+                                            true = 1,
+                                            false = proportion_animal_traded)) 
+
+
+```
+
+### Adjust feed trade to follow animals trade from animal producing country
+Multiply traded feed pressures for each fofm, animal system, and trading pair (feed producer and feed consumer) by the proportion of each animal traded between trading pair (animal producer and animal consumer). As stated above, we are assuming that all feed trade data that does not have matching animal trade data by the feed consuming country will stay within that country for the animal system. This is 0.31% of the total tonnes traded so it is unlikely to have a large impact on overall trends.
+
+```{r}
+fofm_animal_feed_pressures_trade_adjusted <- fofm_animal_feed_pressures_trade  %>% 
+  mutate(tonnes_traded_feed_producer_animal_consumer = tonnes_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(water_pressure_feed_producer_animal_consumer = water_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(nutrient_pressure_feed_producer_animal_consumer = nutrient_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(disturbance_pressure_feed_producer_animal_consumer = disturbance_traded_system_feed*proportion_animal_traded) %>% 
+  mutate(ghg_pressure_feed_producer_animal_consumer = ghg_traded_system_feed*proportion_animal_traded)
+
+# quick visual check data - sum columns made here should be the same
+# as corresponding system_feed columns
+check_1 <- fofm_animal_feed_pressures_trade_adjusted %>% 
+  group_by(animal_producer_iso3c, feed_producer_iso3c, feed_category, product, tonnes_traded_system_feed, water_traded_system_feed, nutrient_traded_system_feed, disturbance_traded_system_feed,
+           ghg_traded_system_feed) %>% 
+  summarise(sum_trade = sum(tonnes_traded_feed_producer_animal_consumer),
+            sum_water = sum(water_pressure_feed_producer_animal_consumer),
+            sum_nutrient = sum(nutrient_pressure_feed_producer_animal_consumer),
+            sum_dist = sum(disturbance_pressure_feed_producer_animal_consumer),
+            sum_ghg = sum(ghg_pressure_feed_producer_animal_consumer)) %>% 
+  ungroup()
+
+```
+
+Time to take out the middle man. 
+Group by feed producing country, feed_category, animal category, and animal_consuming country and sum pressures
+```{r}
+# rename product to animal product
+fofm_animal_feed_pressures_trade_totals <- fofm_animal_feed_pressures_trade_adjusted %>% 
+  rename(animal_product = product) %>%  
+  group_by(feed_producer_iso3c, animal_consumer_iso3c, feed_category, animal_product) %>% 
+  summarise(sum_trade = sum(tonnes_traded_feed_producer_animal_consumer),
+            sum_water = sum(water_pressure_feed_producer_animal_consumer),
+            sum_ghg = sum(ghg_pressure_feed_producer_animal_consumer),
+            sum_nutrient = sum(nutrient_pressure_feed_producer_animal_consumer),
+            sum_disturbance = sum(disturbance_pressure_feed_producer_animal_consumer)) %>% 
+  ungroup()
+```
+
+So now feed fofm tonnage and pressures traded from a fofm producing country to an animal producing country and used for feed are traded to the country that consumes that animal.
+
+### Stopped here
 
 ## Crops
 
@@ -499,7 +622,8 @@ Filter trade for animal products and calculate proportion of animal trade from p
 # filter for non-crops and remove FOFM
 livestock_fish_trade_raw <- trade_w_pressures_no_feed %>% 
   filter(food_group != "crops") %>% 
-  filter(item != "fofm")
+  filter(item != "fofm",
+         item != "fofm_feed")
   
 livestock_fish_trade_proportions <- livestock_fish_trade_raw %>% 
   # remove pressures for now
@@ -629,11 +753,12 @@ non_feed_crops_joined <- rbind(non_feed_crops, feed_crops_not_used_for_feed_back
 
 ```
 
-### Combine non-feed crops trade, animal feed trade, and animal (capture fisheries, mariculture, aquaculture, livestock) trade into one trade matrix that accounts for traded feed pressures.
+## Combine fofm feed, non-feed crops trade, animal feed trade, and animal (capture fisheries, mariculture, aquaculture, livestock) trade into one trade matrix that accounts for traded feed pressures.
 ```{r}
 # non_feed_crops_joined
 # animal_feed_pressures_trade_totals
 # livestock_fish_trade_raw
+# fofm_animal_feed_pressures_trade_totals
 
 # format data so we can rbind it
 # order = producer, consumer, item, food_group, tonnes traded, ghg, water, nutrient, disturbance
@@ -648,6 +773,22 @@ non_feed_crops_trade_pressures_for_final <- non_feed_crops_joined %>%
          disturbance_traded = disturbance_total)
 
 summary(non_feed_crops_trade_pressures_for_final) # no NAs
+
+## fofm used for feed
+fofm_animal_feed_pressures_trade_for_final <- fofm_animal_feed_pressures_trade_totals %>% 
+  mutate(item = paste0(feed_category, "_for_", animal_product),
+         food_group = "fofm_feed") %>% 
+  select(-c(feed_category, animal_product)) %>% 
+  select(producer_iso3c = feed_producer_iso3c,
+         consumer_iso3c = animal_consumer_iso3c,
+         item, food_group,
+         tonnes_traded = sum_trade,
+         ghg_traded = sum_ghg,
+         water_traded = sum_water,
+         nutrient_traded = sum_nutrient,
+         disturbance_traded = sum_disturbance) 
+
+summary(fofm_animal_feed_pressures_trade_for_final)
 
 ## crops used for animal feed per animal
 animal_feed_pressures_trade_for_final <- animal_feed_pressures_trade_totals %>% 
@@ -676,15 +817,45 @@ livestock_fish_trade_pressures_for_final <- livestock_fish_trade_raw %>%
 summary(livestock_fish_trade_pressures_for_final)
 
 # rbind dfs together
-trade_matrix_w_pressures_accounting_for_feed <- rbind(non_feed_crops_trade_pressures_for_final, animal_feed_pressures_trade_for_final, livestock_fish_trade_pressures_for_final)
+trade_matrix_w_pressures_accounting_for_feed <- rbind(non_feed_crops_trade_pressures_for_final, animal_feed_pressures_trade_for_final, livestock_fish_trade_pressures_for_final, fofm_animal_feed_pressures_trade_for_final)
 
-# check data - exclude FOFM for now because we are determining how to procede with feed allocation
-check_trade <- trade_w_pressures_no_feed %>% 
-  filter(item != "fofm")
+# check data - exclude FOFM for now because we are determining how to proceed with feed allocation
+check_trade <- trade_w_pressures_no_feed 
 
 sum(trade_matrix_w_pressures_accounting_for_feed$tonnes_traded)
-sum(check_trade$traded_tonnes)
+sum(check_trade$traded_tonnes) - sum(trade_matrix_w_pressures_accounting_for_feed$tonnes_traded)
 
+```
+
+```{r}
+fofm_check <- trade_matrix_w_pressures_accounting_for_feed %>% 
+  filter(str_detect(string = item,
+                    pattern = "fofm"))
+
+raw_fofm <- trade_w_pressures_no_feed %>% 
+  filter(str_detect(string = item,
+                    pattern = "fofm"))
+
+sum(fofm_check$tonnes_traded)
+sum(raw_fofm$traded_tonnes) - sum(fofm_check$tonnes_traded)
+# there is more fofm in the original trade data than our new data
+
+# fofm_feed check shows that there is no difference between raw data vs new data
+
+fofm_check <- trade_matrix_w_pressures_accounting_for_feed %>% 
+  filter(item == "fofm")
+
+raw_fofm <- trade_w_pressures_no_feed %>% 
+  filter(item == "fofm")
+
+sum(raw_fofm$traded_tonnes) - sum(fofm_check$tonnes_traded)
+
+```
+
+## difference is partially from FOFM non-feed. Will explore tomorrow!
+
+## Save!
+```{r}
 # save csv
 write_csv(trade_matrix_w_pressures_accounting_for_feed, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 ```

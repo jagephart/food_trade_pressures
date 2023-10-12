@@ -403,20 +403,25 @@ inland_capture_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_tra
   filter(habitat == "inland" & method == "capture")
 
 # join marine trade and inland capture trade
+# important note, the FOFM from this trade is not for animal consumption
 fish_trade_matrix <- rbind(fish_marine_trade_matrix, inland_capture_trade_matrix) %>% 
   # we have no pressures data for jellyfish so filter out completely
   filter(nceas_group != "jellyfish")
 
 # the FOFM trade matrix will be joined with the fish_trade_matrix
 # the below code sets this up
+# important note, the FOFM from this trade is for animal consumption
 fofm_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_w_unknowns_allocated.csv")) %>% 
+  group_by(consumer_iso3c, source_country_iso3c) %>% 
+  summarise(consumption_live_weight_t = sum(consumption_live_weight_t)) %>% 
   # add nceas_group, habitat, and method column
+  # fofm for nceas_group is to join for pressures
   mutate(nceas_group = "fofm",
-         habitat = "fofm",
-         method = "fofm") %>% 
-  # remove dom_source column
-  select(-dom_source)
-
+         # we will use habitat and method as fofm_feed later to distinguish 
+         # fofm for feed vs not for feed
+         habitat = "fofm_feed",
+         method = "fofm_feed")
+  
 #old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
 ```
@@ -1020,6 +1025,11 @@ livestock_trade_pressures_clean <- livestock_trade_pressures %>%
 
 ### Fish
 fish_trade_pressures_clean <- fish_trade_pressures %>% 
+  # use the habitat column to change the nceas_group name of fofm
+  # that should be only used for feed
+  mutate(nceas_group = if_else(condition = habitat == "fofm_feed",
+                               true = "fofm_feed",
+                               false = nceas_group)) %>% 
   # make sure food group is the same for all categories
   mutate(food_group = "fisheries and aquaculture",
          # add in water_total columns (will be zero)

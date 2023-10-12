@@ -59,6 +59,98 @@ Read in trade_pressures data
 trade_w_pressures_no_feed <- read_csv(paste0(trade_pressure_path, "trade_w_pressures_no_feed.csv"))
 
 ```
+## FOFM
+
+FOFM trade is currently all from trade code 230120 which is specified as "unfit for human consumption." Therefore we will assume that all FOFM is currently used for feed of livestock and fish. 
+
+### Separate FOFM from trade data
+```{r}
+fofm_trade_no_feed_adjustment <-  trade_w_pressures_no_feed %>%
+  filter(item == "fofm")
+```
+
+### Read in fofm feed proportions for each animal within a country
+```{r}
+fofm_feed_animal_proportions_wide <- read.csv(paste0(animal_proportions_for_feed_path, "fofm_feed_animal_proportions_wide.csv")) %>% 
+  # make zero_test to mark rows where a country has no animal allocation for that crop 
+  mutate(zero_test = select(., chickens_eggs:fw_aquaculture_miscellaneous_diadromous_fishes) %>% 
+           rowSums(na.rm = TRUE)) %>% 
+  # if zero_test is equal to 0 then there is no animal specified
+  # and now in our calculation all trade and pressures will go there
+  mutate(no_animal_specified = if_else(zero_test == 0,
+                                       true = 1,
+                                       false = 0)) %>% 
+  select(-zero_test)
+
+proportions_test <- fofm_feed_animal_proportions_wide %>% 
+  pivot_longer(cols = chickens_eggs:fw_aquaculture_miscellaneous_diadromous_fishes,
+               names_to = "animal_group",
+               values_to = "prop_fofm_feed_per_animal") %>% 
+  group_by(iso3c) %>% 
+  summarise(sum_test = sum(prop_fofm_feed_per_animal))
+```
+
+### Join fofm proportions per animal with the trade data used for feed
+Combine dfs - add variables for animal system and feed proportions per crop to the trade matrix with pressures df (fofm producer and fofm consumer trade matrix). By using a left join we may lose data where we have animal proportions for that crop but no trade data of that crop into that country. We are not gapfilling trade data of products so this is just note for methods.
+
+```{r}
+fofm_trade_feed <- fofm_trade_no_feed_adjustment %>% 
+  select(consumer_iso3c, producer_iso3c, feed_category = item, tonnes_feed = traded_tonnes, 
+         water_pressure_feed = water_total, ghg_pressure_feed = ghg_total, 
+         nutrient_pressure_feed = nutrient_total, disturbance_pressure_feed = disturbance_total)
+
+summary(fofm_trade_feed) # no NAs
+
+summary(fofm_feed_animal_proportions_wide) # no NAs
+
+# we can't do anything without the pressures data, so left_join
+# so any countries where we have feed proportion data but don't 
+# have trade of that crop will be lost
+fofm_trade_feed_pressures <- left_join(fofm_trade_feed, fofm_feed_animal_proportions_wide, by = c("consumer_iso3c" = "iso3c", "feed_category"))
+
+summary(fofm_trade_feed_pressures) # NAs for 5 rows
+# these rows will have fofm go to no_animal_specified
+
+# pivot longer to make calculations simple
+fofm_trade_feed_pressures <- fofm_trade_feed_pressures %>% 
+  # mutate to make any column with NA in no_animal_specified to 1
+  mutate(no_animal_specified = if_else(condition = is.na(no_animal_specified),
+                                       true = 1,
+                                       false = no_animal_specified)) %>% 
+  pivot_longer(cols = chickens_eggs:fw_aquaculture_miscellaneous_diadromous_fishes,
+               names_to = "animal_group",
+               values_to = "prop_fofm_feed_per_animal") %>% 
+  # remove proportions that are equal to zero or NA
+  filter(prop_fofm_feed_per_animal != 0 | !is.na(prop_fofm_feed_per_animal))
+
+```
+
+### Calculate tonnes traded and pressures going to feed to consuming countries
+Multiply FOFM pressures (between each pair of trading partners) by proportion feed going to each animal system
+```{r}
+fofm_trade_feed_pressures_adjusted <- fofm_trade_feed_pressures %>% 
+  mutate(tonnes_traded_system_feed = tonnes_feed*prop_fofm_feed_per_animal) %>% 
+  mutate(water_traded_system_feed = water_pressure_feed*prop_fofm_feed_per_animal) %>% 
+  mutate(nutrient_traded_system_feed = nutrient_pressure_feed*prop_fofm_feed_per_animal) %>% 
+  mutate(disturbance_traded_system_feed = disturbance_pressure_feed*prop_fofm_feed_per_animal) %>% 
+  mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_fofm_feed_per_animal) 
+
+#check data 
+check_props_1 <- fofm_trade_feed_pressures_adjusted %>% 
+  group_by(consumer_iso3c, producer_iso3c, feed_category) %>% 
+  summarise(sum = sum(prop_fofm_feed_per_animal)) %>% 
+  ungroup()
+range(check_props_1$sum)
+
+check_props_2 <- check_props_1 %>% 
+  select(-producer_iso3c) %>% 
+  unique()
+range(check_props_2$sum)
+
+```
+
+### Stopped here, looks like there are duplicates of trade we need to sum
+
 ## Crops
 
 ### Separate Crops into feed and not feed from trade
@@ -340,7 +432,7 @@ crop_feed_pressures_adjusted <- crop_feed_pressures %>%
   mutate(water_traded_system_feed = water_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(nutrient_traded_system_feed = nutrient_pressure_feed*prop_crop_feed_per_animal) %>% 
   mutate(disturbance_traded_system_feed = disturbance_pressure_feed*prop_crop_feed_per_animal) %>% 
-  mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_crop_feed_per_animal) #%>% 
+  mutate(ghg_traded_system_feed = ghg_pressure_feed*prop_crop_feed_per_animal) 
 
 #check data 
 check_props_1 <- crop_feed_pressures_adjusted %>% 

@@ -826,16 +826,56 @@ unique(remaining_na$item_code)
 nrow(livestock_trade_pressures)
 sum(livestock_trade_pressures$traded_tonnes)
 
-livestock_trade_pressures <- livestock_trade_pressures %>% 
+livestock_trade_pressures_new <- livestock_trade_pressures %>% 
   # Filter for rows with no missing pressures
   filter(!is.na(ghg) & !is.na(nutrient) & !is.na(disturbance) & !is.na(water)) 
 
-nrow(livestock_trade_pressures) + nrow(livestock_trade_pressures_gapfilled)
+nrow(livestock_trade_pressures_new) + nrow(livestock_trade_pressures_gapfilled)
 
-livestock_trade_pressures <- rbind(livestock_trade_pressures, livestock_trade_pressures_gapfilled)
+livestock_trade_pressures_new <- rbind(livestock_trade_pressures_new, livestock_trade_pressures_gapfilled)
+sum(livestock_trade_pressures_new$traded_tonnes)
+# no loses, livestock is done except for housekeeping below!
+
+# there are a few item codes that are missing nceas groups and items
+na_items <- livestock_trade_pressures_new %>% 
+  filter(is.na(item) | is.na(nceas_group))
+
+na_item_codes <- unique(na_items$item_code)
+
+# we fix the NA items here
+# setup
+livestock_items_nceas_group <- livestock_trade_pressures_new %>% 
+  select(item_code, item, nceas_group) %>% 
+  distinct() %>% 
+  filter(!is.na(item),
+         !is.na(nceas_group))
+
+livestock_trade_pressures_new <- livestock_trade_pressures_new %>% 
+  mutate(item = case_when(item_code == 867 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 867],
+                          item_code == 882 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 882],
+                          item_code == 951 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 951],
+                          item_code == 977 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 977],
+                          item_code == 982 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 982],
+                          item_code == 1017 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 1017],
+                          item_code == 1035 ~ livestock_items_nceas_group$item[livestock_items_nceas_group$item_code == 1035],
+                          TRUE ~ item)) %>% 
+  mutate(nceas_group = case_when(item_code == 867 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 867],
+                                 item_code == 882 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 882],
+                                 item_code == 951 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 951],
+                                 item_code == 977 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 977],
+                                 item_code == 982 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 982],
+                                 item_code == 1017 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 1017],
+                                 item_code == 1035 ~ livestock_items_nceas_group$nceas_group[livestock_items_nceas_group$item_code == 1035],
+                                 TRUE ~ nceas_group))
+  
+na_items <- livestock_trade_pressures_new %>% 
+  filter(is.na(item) | is.na(nceas_group))
+# no NAs anymore!
+
+# another quick check
+sum(livestock_trade_pressures_new$traded_tonnes)
 sum(livestock_trade_pressures$traded_tonnes)
-
-# no loses, livestock is done!
+# no changes! Good to go
 ```
 
 ### Fish and FOFM
@@ -1011,7 +1051,7 @@ crop_trade_pressures_clean <- crop_trade_pressures %>%
   select(-c(ghg, water, disturbance, nutrient))
 
 ### Livestock
-livestock_trade_pressures_clean <- livestock_trade_pressures %>%
+livestock_trade_pressures_clean <- livestock_trade_pressures_new %>%
   # remove item column 
   select(-item) %>% 
   # make nceas_group item

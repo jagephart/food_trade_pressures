@@ -154,13 +154,15 @@ check_props_2 <- check_props_1 %>%
 
 Filter trade for animal products and calculate proportion of animal trade from producer to consumer so that fofm feed pressures can go with correct animals.
 ```{r}
-# filter for non-crops and remove FOFM and fofm_feed
+# filter for non-crops and remove FOFM
 livestock_fish_trade_raw <- trade_w_pressures_no_feed %>% 
-  filter(food_group != "crops") %>% 
+  filter(food_group != "crops") 
+
+livestock_fish_trade_no_fofm_for_proportions <- livestock_fish_trade_raw %>% 
   filter(item != "fofm",
          item != "fofm_feed")
   
-livestock_fish_trade_proportions <- livestock_fish_trade_raw %>% 
+livestock_fish_trade_proportions <- livestock_fish_trade_no_fofm_for_proportions %>% 
   # remove pressures for now
   select(-c(disturbance_total, water_total, ghg_total, nutrient_total)) %>% 
   # group by producer country and item to calculate total of item traded by producer
@@ -621,11 +623,13 @@ Filter trade for animal products and calculate proportion of animal trade from p
 ```{r}
 # filter for non-crops and remove FOFM
 livestock_fish_trade_raw <- trade_w_pressures_no_feed %>% 
-  filter(food_group != "crops") %>% 
+  filter(food_group != "crops") 
+
+livestock_fish_trade_no_fofm_for_proportions <- livestock_fish_trade_raw %>% 
   filter(item != "fofm",
          item != "fofm_feed")
   
-livestock_fish_trade_proportions <- livestock_fish_trade_raw %>% 
+livestock_fish_trade_proportions <- livestock_fish_trade_no_fofm_for_proportions %>% 
   # remove pressures for now
   select(-c(disturbance_total, water_total, ghg_total, nutrient_total)) %>% 
   # group by producer country and item to calculate total of item traded by producer
@@ -808,6 +812,8 @@ summary(animal_feed_pressures_trade_for_final)
 
 ## livestock and fish trade - no FOFM for now because tbd how to divide up
 livestock_fish_trade_pressures_for_final <- livestock_fish_trade_raw %>% 
+  # remove fofm_feed item as it has been accounted for elsewhere
+  filter(item != "fofm_feed") %>% 
   select(producer_iso3c, consumer_iso3c, item, food_group,
          tonnes_traded = traded_tonnes, 
          ghg_traded = ghg_total, 
@@ -830,32 +836,49 @@ sum(check_trade$traded_tonnes) - sum(trade_matrix_w_pressures_accounting_for_fee
 ```{r}
 fofm_check <- trade_matrix_w_pressures_accounting_for_feed %>% 
   filter(str_detect(string = item,
-                    pattern = "fofm"))
+                    pattern = "fofm_feed"))
 
 raw_fofm <- trade_w_pressures_no_feed %>% 
   filter(str_detect(string = item,
-                    pattern = "fofm"))
+                    pattern = "fofm_feed"))
 
 sum(fofm_check$tonnes_traded)
 sum(raw_fofm$traded_tonnes) - sum(fofm_check$tonnes_traded)
 # there is more fofm in the original trade data than our new data
 
 # fofm_feed check shows that there is no difference between raw data vs new data
+# fofm check shows that there is 269811.3 tonnes missing in the new data
+# livestock check shows 150598.9 tonnes missing in the new data
 
-fofm_check <- trade_matrix_w_pressures_accounting_for_feed %>% 
-  filter(item == "fofm")
+new_check <- livestock_fish_trade_pressures_for_final %>% 
+  filter(food_group == "livestock") %>% 
+  group_by(item) %>% 
+  summarise(tonnes_traded_new = sum(tonnes_traded))
 
-raw_fofm <- trade_w_pressures_no_feed %>% 
-  filter(item == "fofm")
+old_check <- trade_w_pressures_no_feed %>% 
+  filter(food_group == "livestock") %>% 
+  group_by(item) %>% 
+  summarise(tonnes_traded_old = sum(traded_tonnes))
 
-sum(raw_fofm$traded_tonnes) - sum(fofm_check$tonnes_traded)
+check_diffs <- left_join(new_check, old_check) %>% 
+  mutate(diff = tonnes_traded_old - tonnes_traded_new)
+
+#livestock_fish_trade_pressures_for_final
+
+new_check <- livestock_fish_trade_pressures_for_final %>% 
+  filter(food_group == "livestock") 
+
+old_check <- trade_w_pressures_no_feed %>% 
+  filter(food_group == "livestock") %>% 
+  filter(is.na(item))
+sum(old_check$traded_tonnes) - sum(new_check$tonnes_traded)
 
 ```
 
-## difference is partially from FOFM non-feed. Will explore tomorrow!
+## difference is from livestock. 
 
 ## Save!
 ```{r}
 # save csv
-write_csv(trade_matrix_w_pressures_accounting_for_feed, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
+#write_csv(trade_matrix_w_pressures_accounting_for_feed, paste0(save_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 ```

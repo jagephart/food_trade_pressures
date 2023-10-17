@@ -5,7 +5,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-Objective: Format the 2017 FAO production, commodity balances, and detailed trade matrix datasets to match Kastner's data that is input into the trade matrix script.
+Objective: Format the 2015-2019 FAO production, commodity balances, and detailed trade matrix datasets to match Kastner's data that is input into the trade matrix script.
  
 Update: Formatted data for 2015, 2016, 2017, 2018, and 2019 on June 29, 2023.
 

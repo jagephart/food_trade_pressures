@@ -8,9 +8,7 @@ date: "2023-05-17"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Objective: The fish trade matrix for human consumption has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
-
-Additionally, the fish meal fish oil trade data needs to averages across years and saved so that pressures can be applied.
+Similar to the other fish trade, fish oil and fish meal (FOFM) trade had unknown source countries. Following the same method as discussed above, we proportionately bumped up all known FOFM traded to a country from the unknown source trade. 
 
 ## Setup
 ```{r}
@@ -159,7 +157,7 @@ fmfo_check <- fmfo_matrix_mean %>%
 
 ```
 
-Any differences in tonnage between the the original data and new data is extremely small (e+-14), this is likely due to rounding of precise numbers in R so nothing to worry about.
+Any differences in tonnage between the the original data and new data is extremely small (e-14), this is likely due to rounding of precise numbers in R so nothing to worry about.
 
 ###  Save
 ```{r}

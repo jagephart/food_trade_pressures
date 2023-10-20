@@ -14,7 +14,7 @@ Crops we need to calculate proportions for using 2013 data:
 - palm kernel
 - oilcrops (groundnuts, sunflower seed, rape and mustardseed, sesame seed, cottonseed, other oilcrops = cakes)
 
-We need to use 2013 data to determine the proportions of these crops because after 2013 FAO swtiched their data methods. After 2013 there is no breakdown of how much of these crops was going towards feed vs other uses.
+We need to use 2013 data to determine the proportions of these crops because after 2013 FAO switched their data methods. After 2013 there is no breakdown of how much of these crops was going towards feed vs other uses.
 
 We are using 2017 Food Balances data (prop going to feed) for:
 - grains (barl, maiz, ocer, rice, sorg, whea, mil)
@@ -140,9 +140,9 @@ soy_cake_cb_wide <- soy_cb %>%
 
 # calculate proportion DSQ of cake going to feed
 # This serves as a data check and is not used again
-# soy_cb_cake_feed <- soy_cake_cb_wide %>% 
-#   mutate(prop_cake_feed = Feed/`Domestic supply quantity`) %>% 
-#   select(Area, prop_cake_feed)
+soy_cb_cake_feed <- soy_cake_cb_wide %>%
+  mutate(prop_cake_feed = Feed/`Domestic supply quantity`) %>%
+  select(Area, prop_cake_feed)
 ```
 
 The above chunk shows that most domestic supply of soy cake is from feed with the lowest proportion for a country being 80%. We will therefore assume all dsq of soy cake is for feed.
@@ -339,8 +339,9 @@ pk_cake <- cb %>%
   pivot_wider(names_from = Element, values_from = Value)
 
 # how much pk cake going to feed?
-# pk_cake_feed <- pk_cake %>% 
-#   summarise(perc_cake_to_feed = Feed/`Domestic supply quantity`)
+pk_cake_feed <- pk_cake %>%
+  group_by(Area) %>% 
+  summarise(perc_cake_to_feed = Feed/`Domestic supply quantity`)
 ```
 At least 96% of palm oil cake going to feed except in one country where it was 77%. For our purposes then we will assume that all palmkernel cake is being used for feed by countries.
 
@@ -519,7 +520,7 @@ region_test <- pk_region %>%
   select(Area, region, region_prop = pk_prop_feed)
 ```
 
-Using `region_test` we can see that there are a number of regions that have NA values. As palm kernal and palm cake productions is highly concentrated in certain parts of the world this is not completely surprusing. However, we know that there is some production in these areas so we will need to gapfill this data with continent level averages. The regions we are missing data for or they have low DSQ are:
+Using `region_test` we can see that there are a number of regions that have NA values. As palm kernel and palm cake productions is highly concentrated in certain parts of the world this is not completely surprising. However, we know that there is some production in these areas so we will need to gapfill this data with continent level averages. The regions we are missing data for or they have low DSQ are:
 
 - Australia and NZ
 - Central Asia

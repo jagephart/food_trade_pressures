@@ -36,11 +36,6 @@ Pulses (xpul - one MapSPAM category):
 - Peas
 - Pulses, Other and products (Default composition: 181 Broad beans, horse beans, dry, 191 Chick peas, 195 Cow peas, dry, 197 Pigeon peas, 201 Lentils, 203 Bambara beans, 205 Vetches, 210 Lupins, 211 Pulses, nes, 212 Flour, pulses, 213 Bran, pulses)
 
-Notes about other crops:
-- sugb (sugar beets) - 0 tonnes (out of 31,096,000 tonnes) in US go to feed. Across the world, 14,405,000/304,420,000 tonnes (5%) go to feed. Sugar is also quite complicated because it combines sugar beet and cane, so probably want to not factor in feed.
-- cass (cassava and products) 86,615,000/281,449,000 tonnes (31%) in world go to feed. Maybe include this?
-- bana (bananas) 1,011,000/112,069,000 tonnes (0.9%) in world go to feed, so don't include this because it's such a small amount.
-
 
 MapSPAM to FAO - to compare categories you can look at this df
 https://github.com/OHI-Science/food_systems/blob/master/feed/data/MapSPAM_to_FAO_v2.csv

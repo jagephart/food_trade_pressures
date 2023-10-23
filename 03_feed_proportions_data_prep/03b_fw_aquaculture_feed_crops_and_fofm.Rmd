@@ -6,7 +6,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-GOAL: Calculate pressures for freshwater aquaculture by country and taxa group.
+GOAL: Calculate crop and FOFM consumption by freshwater aquaculture by country and taxa group.
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(here)
@@ -199,7 +199,7 @@ For tilapia: https://www.fao.org/fishery/affris/species-profiles/nile-tilapia/fe
 
 FCR stands for feed conversion ratio and is the amount of crop (ex. kg or tonne) required to produce 1 unit of live weight of fish (in either kg or tonne). It is essentially a unitless ratio, however the fish component needs to be in live weight equivalent.
 ```{r}
-# taxa list made from step 03a
+# taxa list of our groupings
 taxa_list <- c("oth_carp", "hypoph_carp", "catfish", "tilapia", "trout", "milkfish", "misc_diad")
 
 crop_cats <- read_csv(paste0(fw_data_path, "crop_breakout.csv"))

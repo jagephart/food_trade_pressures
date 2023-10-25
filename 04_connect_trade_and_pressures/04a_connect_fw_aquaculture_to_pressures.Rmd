@@ -23,7 +23,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 
 Method:
-The trade data contains the source country, consumer country, habitat, fishing method, nceas group, and the live weight traded between each country. The pressures data has the environmental pressure produced per tonne live weight of a given species. The pressures data is a global average for freshwater aquaculture so we only need to match the species traded with each pressure and multiple the two to get the total environmental pressure for the consuming country.
+The trade data contains the source country, consumer country, habitat, fishing method, nceas group, and the live weight traded between each country. The pressures data has the environmental pressure produced per tonne live weight of a given species. The pressures data is a global average for freshwater aquaculture so we only need to match the species traded with each pressure and multiply the two to get the total environmental pressure for the consuming country.
 
 ## Read in the two data streams
 

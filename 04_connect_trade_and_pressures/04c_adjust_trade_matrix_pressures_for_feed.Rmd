@@ -573,22 +573,9 @@ range(check_props_2$sum)
 
 ```
 
-Note: The below data check shows there is a small difference between the total water pressures before joining with the animal proportions compared to after. As this is a small value we will assume it is a rounding error introduced from R and the proportions.
+Note: The below data check explores if there is a difference between the total pressures and tonnage traded before joining with the animal proportions compared to after.
 
 ```{r}
-# wherever check_props_2$sum == 0, there will be a discrepancy with pressures/trade data
-# for example, in tonnes_feed_consumed, for ALB and palmoil, the tonnes_feed is 0 for all animal groups
-# this makes the proportion of palmoil going to animal feed = 0 for each animal group
-# so when we combine it with pressures, which say 21.933962% of palmoil goes to feed in Albania (in feed_crop_w_prop_1)
-# and has associated pressures, those pressures are deleted when we multiply by 0% of each animal system
-# consuming the palm oil
-
-# Options:
-# 1. Calculate what percent of the pressures we're losing and if it's small, then ignore these rows
-# 2. For all rows where check_props_2$sum == 0, assume each animal group is consuming an equal
-# proportion of the crops (e.g., cows consume 33% of grains, chickens consume 33% of grains, pigs consume 33% of grains)
-# This is probably a bigger assumption than just ignoring those rows though so going with option 1 for now
-
 
 # what percent of traded tonnes changed?
 sum(crop_feed_pressures_adjusted$tonnes_traded_system_feed)
@@ -598,7 +585,7 @@ sum(feed_crops_used_for_feed$tonnes_feed)
 # water
 sum(crop_feed_pressures_adjusted$water_traded_system_feed)
 sum(feed_crops_used_for_feed$water_pressure_feed)
-((sum(feed_crops_used_for_feed$water_pressure_feed) - sum(crop_feed_pressures_adjusted$water_traded_system_feed))/sum(feed_crops_used_for_feed$water_pressure_feed))*100 # -1.675025e-14% we will ignore this.
+((sum(feed_crops_used_for_feed$water_pressure_feed) - sum(crop_feed_pressures_adjusted$water_traded_system_feed))/sum(feed_crops_used_for_feed$water_pressure_feed))*100 # -1.675025e-14% we will ignore this as it is likely a rounding error from R
 
 # ghg
 sum(crop_feed_pressures_adjusted$ghg_traded_system_feed)

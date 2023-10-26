@@ -19,6 +19,7 @@ library(tidyverse)
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 matrix_path <- paste0(raw_data_path, "trade/aquatic_food_trade/")
+production_path <- paste0(raw_data_path, "FAO/production_data/FI_Trade_PP_2023.1.0/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_allocate_unknown_trade_fmfo_consumption/"
 ```
 
@@ -165,4 +166,54 @@ Any differences in tonnage between the the original data and new data is extreme
 write_csv(fmfo_matrix_new, paste0(save_path, "fmfo_trade_matrix_w_unknowns_allocated.csv"))
 
 ```
+
+## FOFM Production Data 
+This section will prepare the FOFM production data as the trade data does not cover this well.
+
+```{r}
+production_raw <- read.csv(file = paste0(production_path, "TRADE_PP_QUANTITY.csv"))
+
+commodity_list <- read.csv(file = paste0(production_path, "CL_FI_COMMODITY_ISSCFC.csv")) %>% 
+  # keep code cololumn and english name
+  select(Code, Name_En) %>% 
+  filter(str_detect(string = Name_En, pattern = "meal") | str_detect(Name_En, pattern = "oil"),
+         # don't include boiled products
+         !str_detect(Name_En, pattern = "boil"),
+         # do not include not minced products that are preserved in oil
+         !str_detect(Name_En, pattern = "not minced")) %>% 
+  # rename Name_en to product
+  rename(product = Name_En,
+         product_code = Code)
+
+country_list <- read.csv(file = paste0(production_path, "CL_FI_COUNTRY_GROUPS.csv")) %>%
+  # keep UN code, iso3c, and english name
+  select(UN_Code, ISO3_Code, country_name = Name_En)
+
+production_clean <- production_raw %>% 
+  # filter for 2015-2019
+  filter(PERIOD %in% c(2015, 2016, 2017, 2018, 2019)) %>% 
+  # rename to match commodity list
+  rename(product_code = COMMODITY.FAO_CODE,
+         UN_Code = COUNTRY.UN_CODE) %>% 
+  left_join(y = commodity_list,
+            by = "product_code") %>% 
+  # filter out NAs (not our products)
+  filter(!is.na(product)) %>% 
+  #join country names
+  left_join(y = country_list,
+            by = "UN_Code") %>% 
+  # remove production code
+  select(-PPRODUCTION_ELEMENT.ALPHA_CODE, -STATUS) %>% 
+  relocate(ISO3_Code, country_name, .before = UN_Code)
+```
+
+Average production over years
+```{r}
+production_average <- production_clean %>% 
+  group_by(ISO3_Code, country_name, product, product_code) %>% 
+  summarise(tonnes_product_weight = mean(VALUE))
+```
+
+
+
 

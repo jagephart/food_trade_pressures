@@ -7,6 +7,7 @@ editor_options:
   chunk_output_type: console
 ---
 
+### Setup
 Objective:
 The purpose of this script is to calculate a global trade matrix in primary product equivalents based on the country of product origin (where the primary product was grown, not where it was last processed). This [script](https://zenodo.org/record/5751294#.YrrrmXZByMo) is from [Schwarzmueller & Kastner 2022](https://link.springer.com/article/10.1007/s11625-022-01138-7#Sec2).
 
@@ -97,7 +98,7 @@ cat(paste("Working directory", directory, "\n", sep=" "), file = log.filename, a
 cat("\n", file = log.filename, append=T)
 ```
 
-
+#### Read in trade data
 Read in the trade data from [FAO detailed trade matrix](https://www.fao.org/faostat/en/#data/TM).
 This data includes how much (tonnes) was traded between every country and product.
 For example - tonnes of refined sugar traded between Algeria and Albania.
@@ -143,7 +144,7 @@ names(raw.trade.data)<- str_replace_all(names(raw.trade.data),c(" " = "_"))
 cat(paste("Trade data file:",trade.data.file,file.info(trade.data.file)$mtime,"\n"), file = log.filename, append = T)
 ```
 
-
+#### Read in reporting data
 Read in the reporting data using `read_xls` since it is an Excel file rather than csv, 
 which probably has something to do with the data formatting.
 Information on when each country started and stopped reporting trade data.
@@ -162,7 +163,7 @@ names(reporting.date)<- str_replace_all(names(reporting.date), c(" " = "_"))
 cat(paste("Reporting dates file:", reporting.data.file,file.info(reporting.data.file)$mtime,"\n"), file = log.filename, append = T)
 ```
 
-
+#### Read in item information and conversions data
 Read in the primary item data.
 This includes information on processed products and their FAO codes and the primary items they are 
 associated with and their FAO codes. 
@@ -213,7 +214,7 @@ names(units) <- names(content.factors)
 cat(paste("Converting to primary items using file:", content.factors.file, file.info(content.factors.file)$mtime,"\n"), file = log.filename, append = T)
 ```
 
-
+#### Production Data
 Read in productions crop data.
 These data include: for each country, the area harvested, yield, and production
 for each crop for all years.
@@ -252,7 +253,6 @@ names(production.animals)<- str_replace_all(names(production.animals), c(" " = "
 # update text file
 cat(paste("Production livestock file:", production.animals.file, file.info(production.animals.file)$mtime,"\n"), file = log.filename, append = T)
 ```
-
 
 Read in offals data.
 Offals = the entrails and internal organs of an animal used as food.
@@ -326,7 +326,7 @@ cat("\n", file = log.filename, append=T)
 cat(paste("Conversion opinion:", conversion_opt, "in", select(units,conversion_opt),"\n"), file = log.filename, append = T)
 ```
 
-
+#### Sugar conversions data
 Read in the sugar conversion data.
 These data include: for each country, all elements (e.g., production, import quantity, export quantity,
 domestic supply quantity, waste, etc.) for every product (apples, barley, etc.) in tonnes.
@@ -344,7 +344,7 @@ names(sugar.processing)<- str_replace_all(names(sugar.processing),c(" "="_"))
 
 ```
 
-
+### Conduct import and export dataframes
 Create import and export dataframes.
 ```{r}
 #### harmonize import and export data ####
@@ -363,7 +363,7 @@ data.import <- select(raw.trade.data, Reporter_Country_Code, Partner_Country_Cod
 # rm(raw.trade.data)
 ```
 
-
+#### Remove dates function
 Create function to eliminate years without reports. They are using data back to the 1980s,
 since we'll only be using 2017 data, we likely won't need to do this.
 ```{r}
@@ -393,7 +393,7 @@ eliminate.dates <- function(fun.data){
 }
 ```
 
-
+#### Remove zeros and where imports == exports country
 Set years without reports to 0 (set Value to 0). - no change in the number of rows in df
 ```{r}
 # run import and export dataframes through function that converts years without data reported to 0
@@ -433,7 +433,7 @@ data.import <- filter(data.import, Value_average !=0)
 #data.export <- filter(data.export, Value !=0)
 ```
 
-
+#### Rename variables where necessary
 NOTE: We aren't doing this code chunk below because we only have import data. We will update our column names
 like they do here so that they match for the rest of the script.
 
@@ -501,6 +501,8 @@ Sort the `trade.data` by numbers in ascending order, first by the consumer count
 trade.data <- arrange(trade.data, Consumer_Country_Code, Producer_Country_Code)
 ```
 
+### Primary product conversion
+
 function to create conversion factors for each product - divide processed products dry matter content by their primary products
 dry matter content. For example, wheat would be 0.86/0.86 = 1, wheat flour would be 0.88/0.86 = 1.02.
 ```{r}
@@ -541,7 +543,7 @@ primary.conversion <- function(conversion_map, conversion_option, display){
 }
 ```
 
-
+#### Convert trade data to primary products
 Join the trade data with the conversion factor data (get this from `primary.conversion` function)
 ```{r}
 #### map to primary equivalents ####
@@ -583,6 +585,8 @@ primary.data <- trade.data %>%
 # rm(trade.data)
 ```
 
+### Sugar Conversion Setup
+Note this is orginal from the Schwarzmueller et al. 2022 script and parts are not being included in our data structure as we do not have sugar beet pressures available. These code chunks are commented out but remain here to maintain more of the original script. Th econversion from sugar cane and beet to sugar aggregate remains uncommented.
 Calculate how much sugar (beets and cane separate) is produced by each country
 ```{r}
 #### calculate sugar production and sugar production shares ####
@@ -592,14 +596,14 @@ sugar.crop.codes <- c(156,157)
 
 # filter production data (tonnes production for each country) to only include sugar products
 # join filtered production data with the conversion factor data (get this from `primary.conversion` function)
-sugar.production <- left_join(filter(production.all, 
-                                     Item_Code %in% sugar.crop.codes), 
-                              primary.conversion(conversion_map = item.map, 
-                                                 conversion_option = conversion_opt, 
-                                                 display = F), 
+sugar.production <- left_join(filter(production.all,
+                                     Item_Code %in% sugar.crop.codes),
+                              primary.conversion(conversion_map = item.map,
+                                                 conversion_option = conversion_opt,
+                                                 display = F),
                               by = c("Item_Code" = "FAO_code"))
 
-# Create a new column in the sugar data called `Value.new`, which is the value of 
+# Create a new column in the sugar data called `Value.new`, which is the value of
 # traded sugar (tonnes) times the conversion factor.
 sugar.production$Value.new <- sugar.production$Value_average * sugar.production$Conversion_factor
 ```
@@ -608,17 +612,17 @@ sugar.production$Value.new <- sugar.production$Value_average * sugar.production$
 Calculate the proportion of sugar production that comes from beets vs cane in each country.
 This will be used later.
 ```{r}
-sugar.shares <- sugar.production %>%
-  # group by area code (aka country) and year
-  group_by(Area_Code, Year) %>%
-  # create new column called share that is proportion of sugar produced by each product (beets and sugar cane)
-  # for example, in Afghanistan, beets = 0.14 and cane = 0.86, totaling 1
-  mutate(share = Value_average/sum(Value_average, na.rm=T)) %>%
-  ungroup() %>%
-  # only keep some values
-  select(Area_Code, Year, Item_Code, share) %>%
-  # remove rows where the share = 0 (no instances where share < 0, so must just be when NA or 0)
-  filter(share > 0)
+# sugar.shares <- sugar.production %>%
+#   # group by area code (aka country) and year
+#   group_by(Area_Code, Year) %>%
+#   # create new column called share that is proportion of sugar produced by each product (beets and sugar cane)
+#   # for example, in Afghanistan, beets = 0.14 and cane = 0.86, totaling 1
+#   mutate(share = Value_average/sum(Value_average, na.rm=T)) %>%
+#   ungroup() %>%
+#   # only keep some values
+#   select(Area_Code, Year, Item_Code, share) %>%
+#   # remove rows where the share = 0 (no instances where share < 0, so must just be when NA or 0)
+#   filter(share > 0)
 ```
 
 
@@ -649,6 +653,8 @@ production.all <- rbind(production.all, sugar.production)
 # rm(list = c("sugar.production"))
 ```
 
+### Matrix operation
+#### Matrix function setup
 For the `matrix.operation` function to work properly the year values need to be single years or possible to be numerical values. Currently our data is "2015-2019" to denote that it is an average over that time span. The below code chunk will mutate the year column to just be 2017 so the rest of the operations can work as expected.
 ```{r}
 primary.data <- primary.data %>% 
@@ -696,6 +702,7 @@ setkey(production.all, "Item_Code",  "Year", "Element_Code") # () removed becaus
 cat("Calculating trade matrix \n", file=log.filename, append=T)
 ```
 
+#### Matrix Function
 Function with lots of matrix calculations to calculate consumption data for each country
 according to the country of origin - country of origin being where the product was actually produced,
 not just the last country it passed through for processing.
@@ -913,6 +920,7 @@ matrix.operation <- function(item_Code, year){
 
 ```
 
+#### Conduct matrix operation
 Calculate consumption for each product/country based on country of product origin
 ```{r}
 # for loop for each row in q (each primary item code traded in selected year)
@@ -935,7 +943,7 @@ transformed.data$Consumer_Country_Code <- as.numeric(as.character(transformed.da
 transformed.data$Producer_Country_Code <- as.numeric(as.character(transformed.data$Producer_Country_Code))
 ```
 
-
+#### Identify missing products after matrix operation
 Identify items that are produced but not traded and add them to the country consumption trade df created in 
 previous code chunk.
 ```{r}
@@ -963,128 +971,135 @@ add.data <- missing.prod.data %>%
 transformed.data <- rbind(transformed.data, add.data)
 ```
 
+### Sugar Cane vs. Sugar Beet Processing
+Sugar cane vs. sugar beet processing conversions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures. The code for this processing is commented out but will remain in this section as it is part of the original script from Schwarzmueller et al. 2022.
 
 Create df with proportion of beets vs cane a country produces and proportion of 
 beets vs cane a country processes into sugar
 ```{r}
-#### calculate and add sugar data ####
-
-# select sugar aggregate from consumption trade df
-sugar.trade.data <- filter(transformed.data, Item_Code==2545)
-
-# select beet sugar and cane sugar from sugar.processing df , and select element code 5131 (processing)
-# (NOTE: processing code was 5130 for FAO commodity balances previously, but was changed)
-# remove large area codes that denote groupings of countries (e.g., EU), and only include values > 0 (sugar processing occurs in that country)
-sugar.processing <- filter(sugar.processing, Item_Code %in% c(2536,2537), Element_Code==5131, Area_Code<300, Value_average>0)
-
-# subtract 2380 from item code (turns to 156, 157) - this makes sugar beet and sugar cane match the FAO code
-sugar.processing$Item_Code <- sugar.processing$Item_Code - 2380
-
-# join sugar processing df with the conversion factors from primary to processed products
-sugar.processing <- left_join(sugar.processing, primary.conversion(item.map, "dry_matter", F), by = c("Item_Code"="FAO_code"))
-
-# multiply tonnes of sugar beets and cane processed by a country by the conversion factor to get tonnes 
-# of beets and cane needed to produce beets and cane (lose tonnes in processing)
-sugar.processing$Value.new <- sugar.processing$Value_average * sugar.processing$Conversion_factor
-
-# calculate percent of sugar that is processed from beets vs cane in each country
-# if they only process beets or cane, this value (processing_share) will be 1
-sugar.processing <- sugar.processing %>%
-  group_by(Area_Code, Year) %>%
-  mutate(processing_share = Value.new/sum(Value.new)) %>%
-  ungroup() %>%
-  select(Area_Code, Year, Item_Code, processing_share)
-
-# join sugar share (proportion of sugar production that comes from beets vs cane) with sugar 
-# processing (proportions of beets vs cane they process to sugar)
-sugar.crop.share <- left_join(sugar.shares, sugar.processing, by=c("Area_Code", "Year", "Item_Code"))
+# #### calculate and add sugar data ####
+# 
+# # select sugar aggregate from consumption trade df
+# sugar.trade.data <- filter(transformed.data, Item_Code==2545)
+# 
+# # select beet sugar and cane sugar from sugar.processing df , and select element code 5131 (processing)
+# # (NOTE: processing code was 5130 for FAO commodity balances previously, but was changed)
+# # remove large area codes that denote groupings of countries (e.g., EU), and only include values > 0 (sugar processing occurs in that country)
+# sugar.processing <- filter(sugar.processing, Item_Code %in% c(2536,2537), Element_Code==5131, Area_Code<300, Value_average>0)
+# 
+# # subtract 2380 from item code (turns to 156, 157) - this makes sugar beet and sugar cane match the FAO code
+# sugar.processing$Item_Code <- sugar.processing$Item_Code - 2380
+# 
+# # join sugar processing df with the conversion factors from primary to processed products
+# sugar.processing <- left_join(sugar.processing, primary.conversion(item.map, "dry_matter", F), by = c("Item_Code"="FAO_code"))
+# 
+# # multiply tonnes of sugar beets and cane processed by a country by the conversion factor to get tonnes 
+# # of beets and cane needed to produce beets and cane (lose tonnes in processing)
+# sugar.processing$Value.new <- sugar.processing$Value_average * sugar.processing$Conversion_factor
+# 
+# # calculate percent of sugar that is processed from beets vs cane in each country
+# # if they only process beets or cane, this value (processing_share) will be 1
+# sugar.processing <- sugar.processing %>%
+#   group_by(Area_Code, Year) %>%
+#   mutate(processing_share = Value.new/sum(Value.new)) %>%
+#   ungroup() %>%
+#   select(Area_Code, Year, Item_Code, processing_share)
+# 
+# # join sugar share (proportion of sugar production that comes from beets vs cane) with sugar 
+# # processing (proportions of beets vs cane they process to sugar)
+# sugar.crop.share <- left_join(sugar.shares, sugar.processing, by=c("Area_Code", "Year", "Item_Code"))
 ```
 
+More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 
 Add new column (control) that indicates whether crop is produced in a country but not processed in that country.
 If a crop is processed but not produced in a country, set control to 0 (rather than  NA)
 ```{r}
 # check if a crop does not have any processing data
-sugar.crop.share <- sugar.crop.share %>%
-  # Make year 2017 so it matches the rest of the data
-  mutate(Year = 2017) %>% 
-  group_by(Area_Code, Year) %>%
-  mutate(control=sum(processing_share, na.rm=T)) %>%
-  ungroup()
-
-# if that is the case, set the control column to zero (rather than NA)
-sugar.crop.share[which(is.na(sugar.crop.share$processing_share) & sugar.crop.share$control==1), 5] <-0
+# sugar.crop.share <- sugar.crop.share %>%
+#   # Make year 2017 so it matches the rest of the data
+#   mutate(Year = 2017) %>% 
+#   group_by(Area_Code, Year) %>%
+#   mutate(control=sum(processing_share, na.rm=T)) %>%
+#   ungroup()
+# 
+# # if that is the case, set the control column to zero (rather than NA)
+# sugar.crop.share[which(is.na(sugar.crop.share$processing_share) & sugar.crop.share$control==1), 5] <-0
 ```
 
+More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 
 If country does not have sugar processing data, assume that they process beets vs cane in the same proportion they
 produce beets vs cane
 ```{r}
-# for all cases where there is no processing data (NA), set the processing shares to production shares
-# assume they process the same proportion beets vs cane that they grow
-sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 5] <- sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 4]
+# # for all cases where there is no processing data (NA), set the processing shares to production shares
+# # assume they process the same proportion beets vs cane that they grow
+# sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 5] <- sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 4]
 ```
 
+More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 
 Join with trade data 
 ```{r}
-# rename variable and add item code column
-sugar.crop.share <- sugar.crop.share %>%
-  rename(Sugar_Crop_Code=Item_Code) %>%
-  mutate(Item_Code=2545)
-
-# add proportions of beets v cane produced and processed per country 
-# to the conversion factor df by the FAO code
-sugar.crop.share <- left_join(sugar.crop.share, primary.conversion(item.map, "dry_matter", F), by=c("Sugar_Crop_Code" = "FAO_code"))
-
-# join sugar trade data with the proportion of beets vs cane each country produces and processes
-sugar.data <- left_join(sugar.trade.data, sugar.crop.share, by=c("Year", "Item_Code", "Producer_Country_Code" = "Area_Code"))
-
-# multiply tonnes crops (beets or cane) traded b/w 2 countries by proportion beets 
-# vs cane processed  by the producing country and divide by the conversion factors
-# now we have tonnes of processed sugar equivalent traded between 2 counties?
-sugar.data <- mutate(sugar.data, Value.new=(Value*processing_share)/Conversion_factor)
-
-# subset to certain variables
-sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, Value=Value.new, Item_Code=Sugar_Crop_Code, Year)
+# # rename variable and add item code column
+# sugar.crop.share <- sugar.crop.share %>%
+#   rename(Sugar_Crop_Code=Item_Code) %>%
+#   mutate(Item_Code=2545)
+# 
+# # add proportions of beets v cane produced and processed per country 
+# # to the conversion factor df by the FAO code
+# sugar.crop.share <- left_join(sugar.crop.share, primary.conversion(item.map, "dry_matter", F), by=c("Sugar_Crop_Code" = "FAO_code"))
+# 
+# # join sugar trade data with the proportion of beets vs cane each country produces and processes
+# sugar.data <- left_join(sugar.trade.data, sugar.crop.share, by=c("Year", "Item_Code", "Producer_Country_Code" = "Area_Code"))
+# 
+# # multiply tonnes crops (beets or cane) traded b/w 2 countries by proportion beets 
+# # vs cane processed  by the producing country and divide by the conversion factors
+# # now we have tonnes of processed sugar equivalent traded between 2 counties?
+# sugar.data <- mutate(sugar.data, Value.new=(Value*processing_share)/Conversion_factor)
+# 
+# # subset to certain variables
+# sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, Value=Value.new, Item_Code=Sugar_Crop_Code, Year)
 ```
 
-
+More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 ```{r}
-# adjust domestic component (diagonal in the trade matrix)
-
-# filter production data to only include the sugar crop codes for beets and cane (156 and 157)
-sugar.production <- filter(production.all, Item_Code %in% sugar.crop.codes) %>% 
-  rename(national_production = Value_average)
-
-# sum total sugar beets and sugar cane crops (separately) that a country produces in a year
-sugar.data <- sugar.data %>%
-  group_by(Producer_Country_Code, Year, Item_Code) %>%
-  mutate(sugar_crop_total=sum(Value))%>%
-  ungroup()
-
-# join sugar.data with sugar.production
-sugar.data <- left_join(sugar.data, sugar.production, by=c("Producer_Country_Code"="Area_Code", "Year", "Item_Code"))
-
-# create a new column called Value.new that is the sum of Value (amount of crop traded b/w 2 counties) plus
-# national_production (how much a country produces in sugar crops - sugar beet and sugar cane) minus
-# sugar_crop_total (how much a country produces in sugar crops - sugar beet and sugar cane but slightly different)
-# national_production and sugar_crop_total are pretty much the same values, but one came from the production dataset
-# and the other came from the trade dataset
-# this must be checking that how they calculate production from trade/matrix stuff is the same as what FAOSTAT
-# reports for production
-sugar.data$Value.new <- sugar.data$Value + sugar.data$national_production - sugar.data$sugar_crop_total
-
-# when the producer and consumer countries are the same, set Value to Value.new
-sugar.data[which(sugar.data$Producer_Country_Code==sugar.data$Consumer_Country_Code),]$Value <- sugar.data[which(sugar.data$Producer_Country_Code==sugar.data$Consumer_Country_Code),]$Value.new
-
-# select variables
-sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, Value, Item_Code,Year)
-
-# bind transformed.data (excluding sugar item code) with sugar.data
-transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.data)
+# # adjust domestic component (diagonal in the trade matrix)
+# 
+# # filter production data to only include the sugar crop codes for beets and cane (156 and 157)
+# sugar.production <- filter(production.all, Item_Code %in% sugar.crop.codes) %>% 
+#   rename(national_production = Value_average)
+# 
+# # sum total sugar beets and sugar cane crops (separately) that a country produces in a year
+# sugar.data <- sugar.data %>%
+#   group_by(Producer_Country_Code, Year, Item_Code) %>%
+#   mutate(sugar_crop_total=sum(Value))%>%
+#   ungroup()
+# 
+# # join sugar.data with sugar.production
+# sugar.data <- left_join(sugar.data, sugar.production, by=c("Producer_Country_Code"="Area_Code", "Year", "Item_Code"))
+# 
+# # create a new column called Value.new that is the sum of Value (amount of crop traded b/w 2 counties) plus
+# # national_production (how much a country produces in sugar crops - sugar beet and sugar cane) minus
+# # sugar_crop_total (how much a country produces in sugar crops - sugar beet and sugar cane but slightly different)
+# # national_production and sugar_crop_total are pretty much the same values, but one came from the production dataset
+# # and the other came from the trade dataset
+# # this must be checking that how they calculate production from trade/matrix stuff is the same as what FAOSTAT
+# # reports for production
+# sugar.data$Value.new <- sugar.data$Value + sugar.data$national_production - sugar.data$sugar_crop_total
+# 
+# # when the producer and consumer countries are the same, set Value to Value.new
+# sugar.data[which(sugar.data$Producer_Country_Code==sugar.data$Consumer_Country_Code),]$Value <- sugar.data[which(sugar.data$Producer_Country_Code==sugar.data$Consumer_Country_Code),]$Value.new
+# 
+# # select variables
+# sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, Value, Item_Code,Year)
+# 
+# # bind transformed.data (excluding sugar item code) with sugar.data
+# transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.data)
 ```
 
+
+### Remove Negative Trade and Save
 Due to discrepancies in production and trade data, along with variability in primary commodity conversion factors, there are cases where exports exceed production and imports. This results in negative consumption values. Across all producing to consuming country flows by food item, there are are 2.78% percent of observations with a value less than -1 t, representing less than 0.3% of volume, and 0.66% of observations with less than -100 t. Since negative consumption is not possible, we replace all negative values with zero.
 ```{r}
 transformed.data <- transformed.data %>% 
@@ -1100,7 +1115,7 @@ Save the trade matrix data results that is an average of 2015-2019 data and remo
 fwrite(transformed.data, "output_data/01b_calc_trade_matrix_2017/trade_matrix_by_country_of_origin_2015_2019_import.csv")
 ```
 
-
+### Data Checks Not Originally in Schwarzmueller et al. 2022 
 Code below is checking Kastner calculations with FAO production data.
 This is all code I (Haley) wrote, none of this is from the Kastner paper.
 

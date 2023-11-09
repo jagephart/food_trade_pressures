@@ -35,8 +35,6 @@ We need to convert the pressures to match the units of the other pressure effici
 - tonnes C02eq per tonne (GHG) - 1000 kg / tonne
 - km2 per tonne (disturbance) - 1000000 m2 / km2
 
-For now, we are excluding the milkfish pressure values as they are quite different compared to other misc diadromous fishes.
-
 ```{r}
 # read in environmental pressures data for freshwater aquaculture
 pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Jessica/SI_stressor_results_on_off_farm.csv")) %>%
@@ -44,8 +42,6 @@ pressures <- read.csv(paste0(pressures_data_path, "fresh_water_aqua_pressures_Je
   filter(production=="aquaculture") %>%
   filter(source == "on-farm") %>%
   filter(allocation == "mass") %>%
-  # for now remove milkfish
-  filter(taxa != "milkfish") %>% 
   # select stressor_group to match with tonnes_lw data, stressor, and median
   dplyr::select(stressor_group = taxa, stressor, median)
 

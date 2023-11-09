@@ -25,7 +25,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 Method:
 The trade data contains the source country, consumer country, habitat, fishing method, nceas group, and the live weight traded between each country. The pressures data has the environmental pressure produced per tonne live weight of a given species. The pressures data is a global average for freshwater aquaculture so we only need to match the species traded with each pressure and multiply the two to get the total environmental pressure for the consuming country.
 
-## Read in the two data streams
+## Read in the two data sources
 
 Trade data - from step 01c
 ```{r}
@@ -83,12 +83,10 @@ salmon <- trade_matrix_raw %>%
 ```
 Salmonids are all marine aquaculture, so Salmons, trouts, smelts is probably just inland.
 
-Reminder from `02b_fw_aqua_pressures.Rmd`, we have excluded milkfish pressures for now and all miscellaneous diadromous fish (misc_diad) trade will be categorized as this stressor. 
-
 Mel's key - updated data (left is trade matrix categories, right is pressures categories):
 oth_carp = oth_carp 
 hypoph_carp = hypoph_carp
-miscellaneous diadromous fishes = misc_diad (+ milkfish if pressure is reintroduced)
+miscellaneous diadromous fishes = misc_diad 
 salmons, trouts, smelts = trout
 miscellaneous freshwater fishes = catfish
 tilapias and other cichlids = tilapia
@@ -98,7 +96,6 @@ Re-label pressures data to categories used in trade data (pressures data is more
 pressure_relabel <- pressure %>% 
   mutate(nceas_group = case_when(stressor_group == "catfish" ~ "miscellaneous freshwater fishes",
                                  stressor_group == "hypoph_carp" ~ "hypoph_carp",
-                                 #stressor_group == "milkfish" ~ "miscellaneous diadromous fishes",
                                  stressor_group == "misc_diad" ~ "miscellaneous diadromous fishes",
                                  stressor_group == "oth_carp" ~ "oth_carp",
                                  stressor_group == "tilapia" ~ "tilapias and other cichlids",

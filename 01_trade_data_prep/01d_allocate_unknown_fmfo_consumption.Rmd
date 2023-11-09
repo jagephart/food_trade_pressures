@@ -168,19 +168,19 @@ write_csv(fmfo_matrix_new, paste0(save_path, "fmfo_trade_matrix_w_unknowns_alloc
 ```
 
 ## FOFM Production Data 
-This section will prepare the FOFM production data as the trade data does not cover this well.
+This section will prepare the FOFM production data as the trade data does not include internal production of FOFM products. [Need Jessica to write a better explanation as to why we need to do this step.]
 
+The FAO commodity code for the fish oil and fishmeal products we are interested in start with "081.42". We will filter the commodity list to only include products with this code at the begining of the code.
+
+### Read in Production data and codes
 ```{r}
 production_raw <- read.csv(file = paste0(production_path, "TRADE_PP_QUANTITY.csv"))
 
 commodity_list <- read.csv(file = paste0(production_path, "CL_FI_COMMODITY_ISSCFC.csv")) %>% 
-  # keep code cololumn and english name
+  # keep code column and English name
   select(Code, Name_En) %>% 
-  filter(str_detect(string = Name_En, pattern = "meal") | str_detect(Name_En, pattern = "oil"),
-         # don't include boiled products
-         !str_detect(Name_En, pattern = "boil"),
-         # do not include not minced products that are preserved in oil
-         !str_detect(Name_En, pattern = "not minced")) %>% 
+  # filter for our product codes
+  filter(str_detect(string = Code, pattern = "081.42")) %>% 
   # rename Name_en to product
   rename(product = Name_En,
          product_code = Code)
@@ -188,7 +188,10 @@ commodity_list <- read.csv(file = paste0(production_path, "CL_FI_COMMODITY_ISSCF
 country_list <- read.csv(file = paste0(production_path, "CL_FI_COUNTRY_GROUPS.csv")) %>%
   # keep UN code, iso3c, and english name
   select(UN_Code, ISO3_Code, country_name = Name_En)
+```
 
+### Clean up production data
+```{r}
 production_clean <- production_raw %>% 
   # filter for 2015-2019
   filter(PERIOD %in% c(2015, 2016, 2017, 2018, 2019)) %>% 
@@ -207,13 +210,66 @@ production_clean <- production_raw %>%
   relocate(ISO3_Code, country_name, .before = UN_Code)
 ```
 
-Average production over years
+### Average Production data
+Average production of all FOFM products over years
 ```{r}
 production_average <- production_clean %>% 
-  group_by(ISO3_Code, country_name, product, product_code) %>% 
-  summarise(tonnes_product_weight = mean(VALUE))
+  # first sum total production of all production across each year
+  group_by(ISO3_Code, country_name, PERIOD, MEASURE) %>% 
+  summarise(tonnes_annual_production = sum(VALUE)) %>% 
+  ungroup() %>% 
+  # next average the annual tonnes produced
+  group_by(ISO3_Code, country_name, MEASURE) %>% 
+  summarise(tonnes_annual_production = mean(tonnes_annual_production, na.rm = TRUE)) %>% 
+  ungroup()
+
+```
+
+Now to convert tonnes product weight to liveweight equivalent we need to multiply the Tonnage by 2.975207 per IFFO, 2009 https://essopenarchive.org/doi/full/10.22541/essoar.167590829.99780929
+
+```{r}
+conversion_value <- 2.975207
+
+production_average_converted <- production_average %>% 
+  mutate(production_live_weight_t = tonnes_annual_production * conversion_value) %>% 
+  select(-MEASURE, -tonnes_annual_production) %>% 
+  filter(production_live_weight_t != 0)
+  
 ```
 
 
+to get liveweight equivalent multiply products weight by 2.975207 and is from IFFO, 2009 https://essopenarchive.org/doi/full/10.22541/essoar.167590829.99780929
+OR from Jackson, A. Fish in-Fish out. Ratios Explain. 34, (2009).
+```{r}
+fm_rate <- .225
+fo_rate <- .05
 
+1/(fm_rate+fo_rate) * (fm_rate/(fm_rate+fo_rate))
+```
+
+## Join Production and Trade
+```{r}
+fmfo_imports <- fmfo_matrix_new %>% 
+  group_by(consumer_iso3c) %>% 
+  summarise(import_live_weight_t = sum(consumption_live_weight_t)) %>% 
+  ungroup() 
+
+imports_production <- full_join(x = production_average_converted, y = fmfo_imports,
+                                by = c("ISO3_Code" = "consumer_iso3c"))
+
+# make NAs equal to zero and remove country name column and calculate proportion
+imports_production <- imports_production %>% 
+  select(-country_name) %>% 
+  mutate(production_live_weight_t = if_else(condition = is.na(production_live_weight_t),
+                                             true = 0,
+                                             false = production_live_weight_t),
+         import_live_weight_t = if_else(condition = is.na(import_live_weight_t),
+                                             true = 0,
+                                             false = import_live_weight_t)) 
+
+import_proportion <- imports_production %>% 
+  mutate(total_tonnes_supply = import_live_weight_t + production_live_weight_t,
+         proportion_imported = import_live_weight_t/total_tonnes_supply)
+
+```
 

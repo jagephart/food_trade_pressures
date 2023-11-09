@@ -192,7 +192,7 @@ Note: The original consumption does not match the disaggregated consumption 1:1 
 ## Final cleaning
 ```{r}
 seafood_matrix_new <- seafood_matrix_new %>%
-  # Remove fmfo as this is handled separately
+  # Remove fofm from this source as we are only including FOFM unfit for human consumption
   filter(nceas_group != "fomf") %>%
   # Remove NAs produced where there were no known species to reallocate to
   filter(!is.na(consumption_live_weight_t)) %>%

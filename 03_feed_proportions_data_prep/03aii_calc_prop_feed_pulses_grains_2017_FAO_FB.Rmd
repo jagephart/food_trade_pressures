@@ -211,9 +211,9 @@ grain_region_fb <- region_fb %>%
 
 ```
 
-Based on `grain_region_fb` the only region that has no feed data is Micronesia. As Polynesia and Melanesia are the closest regions to Micronesia geographically and culturally we will use an average of their feed proportions for Micronesia.
+Based on `grain_region_fb` the only region that has no feed data is Micronesia. As it is part of Oceania we will use its feed proportion for Micronesia.
 ```{r}
-grain_region_fb$total_prop_feed[grain_region_fb$Area == "Micronesia"] <- mean(grain_region_fb$total_prop_feed[grain_region_fb$Area == "Polynesia"], grain_region_fb$total_prop_feed[grain_region_fb$Area == "Melanesia"])
+grain_region_fb$total_prop_feed[grain_region_fb$Area == "Micronesia"] <- grain_region_fb$total_prop_feed[grain_region_fb$Area == "Oceania"]
 ```
 
 
@@ -257,6 +257,8 @@ Now gapfill using the regional data!
 grain_region_fb <- grain_region_fb %>% 
   select(region = Area, region_prop_feed = total_prop_feed)
 
+# calculate how many countries are gapfilled
+nrow(grains_countries %>% filter(total_prop_feed == 0 | is.na(total_prop_feed)))/nrow(grains_countries)
 
 grains_gap_filled <- left_join(grains_countries, grain_region_fb) %>% 
   # gapfill when total_prop_feed is 0 or NA, otherwise use regional average
@@ -346,17 +348,16 @@ pulse_region_fb <- region_fb %>%
 
 ```
 
-Based on `pulse_region_fb` the only regions that have no feed data are Micronesia, Polynesia, and Melanesia. As New Zealand and Australia make up the rest of the Oceania region and their proportions are the higher end of the spectrum it would be more conservative to use the world average rather than the regional average. Also the economies of New Zealand and Australia are quite different than Micronesia, Polynesia, and Melanesia.
+Based on `pulse_region_fb` the only regions that have no feed data are Micronesia, Polynesia, and Melanesia. We will use the Oceania average to gapfill these as this is the larger continent these are a part of.
 
 ```{r}
-pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Micronesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
-pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Polynesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
-pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Melanesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "World"]
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Micronesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Oceania"]
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Polynesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Oceania"]
+pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Melanesia"] <- pulse_region_fb$total_prop_feed[pulse_region_fb$Area == "Oceania"]
 
 ```
 
-
-Merge pulses df with list of countries from trade matrices to ensure all countries are gapfilled even if there wasn't any FAO FB or CB data for them. Add in the subregion and intermediate regions for the countries
+Merge pulses df with list of countries from trade matrices to ensure all countries are gapfilled even if there wasn't any FAO FB or CB data for them. Add in the subregion and intermediate regions for the countries.
 ```{r}
 # add iso3 to pulses
 pulses_countries<- pulses %>% 
@@ -396,6 +397,8 @@ Now gapfill using the regional data!
 pulse_region_fb <- pulse_region_fb %>% 
   select(region = Area, region_prop_feed = total_prop_feed)
 
+# calculate how many countries are gapfilled
+nrow(pulses_countries %>% filter(total_prop_feed <= 0 | is.na(total_prop_feed) | total_prop_feed > 1))/nrow(pulses_countries)
 
 pulses_gap_filled <- left_join(pulses_countries, pulse_region_fb) %>% 
   # gapfill when total_prop_feed is -1, 0,  or NA using regional average. If > 1 make proportion 1 

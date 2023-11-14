@@ -248,7 +248,6 @@ soy_regions <- soy %>%
   # make a region column for when there is no intermediate region use the subregion
   mutate(region = case_when(is.na(intermed_region) ~ subregion,
                             TRUE ~ intermed_region))  
-# more countries are matched with region when we use country name instead of iso3 codes
 
 # fill in Taiwan 
 soy_regions$region[soy_regions$Area == "Taiwan"] <- "Eastern Asia"
@@ -270,9 +269,18 @@ region_test <- soy_regions %>%
   filter(Area == region) %>% 
   select(region, region_prop = soy_prop_feed)
 
+# how much data needs to be gapfilled?
+soy_missing <- soy_regions %>% filter(Area != region,
+                                      soy_prop_feed == 0 | is.na(soy_prop_feed) | is.infinite(soy_prop_feed)) 
+
+soy_not_missing <- soy_regions %>% filter(Area != region,
+                                          soy_prop_feed > 0,
+                                          !is.infinite(soy_prop_feed))
+
+nrow(soy_missing)/(nrow(soy_missing) + nrow(soy_not_missing))
 ```
 
-Melanesia, Micronesia, and Polynesia regions have NA for their soy_prop_feed. To gapfill these regions we will use the Small Island Developing States average. One could also use Oceania average, however this is includes data from Australia and New Zealand which are different economies than these regions that have no data.
+Melanesia, Micronesia, and Polynesia regions have NA for their soy_prop_feed. To gapfill these regions we will use Oceania as it is part of this greater region. 
 
 ```{r}
 # replace NAs and 0s with region values (0s include NAs because of how this was previously calculated)
@@ -286,9 +294,9 @@ soy_gap_filled <- soy_regions %>%
   ungroup()
 
 soy_gap_filled <- soy_gap_filled %>% 
-  # use "small Island Developing States" average for missing regions 
+  # use "Oceania" average for missing regions 
   mutate(soy_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
-                                    true = soy_gap_filled$soy_prop_feed[soy_gap_filled$Area == "Small Island Developing States"],
+                                    true = soy_gap_filled$soy_prop_feed[soy_gap_filled$Area == "Oceania"],
                                     false = soy_prop_feed_gf)) %>% 
   # select only the columns we need
   select(Area, iso3, region, soy_prop_feed_gf)
@@ -296,17 +304,17 @@ soy_gap_filled <- soy_gap_filled %>%
 
 Below is a check to make sure that the above gapfilling works as intended. The only `data_test` value that should not be zero are Melanesia, Micronesia, and Polynesia regions but that is because they were originally NA and we fixed that in the above. This is shown by the value in the `soy_prop_feed_gf` column.
 ```{r}
-# gf_data_to_test <- soy_gap_filled %>%
-#   select(Area, soy_prop_feed_gf)
-# 
-# # check to make sure the above worked
-# test_gf <- soy_regions %>%
-#   filter(soy_prop_feed %in% c(0, NA, NaN, Inf)) %>%
-#   select(Area, region, soy_prop_feed) %>%
-#   left_join(gf_data_to_test, by = "Area") %>%
-#   left_join(region_test, by = "region") %>%
-#   mutate(data_test = soy_prop_feed_gf - region_prop)
-# # end check
+gf_data_to_test <- soy_gap_filled %>%
+  select(Area, soy_prop_feed_gf)
+
+# check to make sure the above worked
+test_gf <- soy_regions %>%
+  filter(soy_prop_feed %in% c(0, NA, NaN, Inf)) %>%
+  select(Area, region, soy_prop_feed) %>%
+  left_join(gf_data_to_test, by = "Area") %>%
+  left_join(region_test, by = "region") %>%
+  mutate(data_test = soy_prop_feed_gf - region_prop)
+# end check
 ```
 
 Save the new data
@@ -497,7 +505,6 @@ pk_region <- pk %>%
   # when there is not an intermediate region make it equivalent to the subregion
   mutate(region = case_when(is.na(intermed_region) ~ subregion,
                             TRUE ~ intermed_region))  
-# more countries are matched with region when we use country name instead of iso3 codes
 
 # fill in Taiwan region
 pk_region$region[pk_region$Area == "Taiwan"] <- "Eastern Asia"
@@ -507,7 +514,8 @@ pk_region$region[pk_region$Area == "Taiwan"] <- "Eastern Asia"
 # when trying to add the region column with the countrycode package,
 # copy their region name into the region column
 pk_region <- pk_region %>% 
-  mutate(region = case_when(is.na(region) ~ Area, TRUE ~ region))
+  mutate(region = case_when(is.na(region) ~ Area, 
+                            TRUE ~ region))
 
 # remove extra columns and reorder
 pk_region <- pk_region %>% 
@@ -518,6 +526,16 @@ pk_region <- pk_region %>%
 region_test <- pk_region %>% 
   filter(Area == region) %>% 
   select(Area, region, region_prop = pk_prop_feed)
+
+# how much data needs to be gapfilled?
+pk_missing <- pk_region %>% filter(Area != region,
+                                      pk_prop_feed == 0 | is.na(pk_prop_feed) | is.infinite(pk_prop_feed)) 
+
+pk_not_missing <- pk_region %>% filter(Area != region,
+                                          pk_prop_feed > 0,
+                                          !is.infinite(pk_prop_feed))
+
+nrow(pk_missing)/(nrow(pk_missing) + nrow(pk_not_missing))
 ```
 
 Using `region_test` we can see that there are a number of regions that have NA values. As palm kernel and palm cake productions is highly concentrated in certain parts of the world this is not completely surprising. However, we know that there is some production in these areas so we will need to gapfill this data with continent level averages. The regions we are missing data for or they have low DSQ are:
@@ -1170,9 +1188,18 @@ region_test <- oil_regions %>%
   filter(Area == region) %>% 
   select(region, region_prop = oil_prop_feed)
 
+# how much data needs to be gapfilled?
+oil_missing <- oil_regions %>% filter(Area != region,
+                                      oil_prop_feed == 0 | is.na(oil_prop_feed) | is.infinite(oil_prop_feed))
+
+oil_not_missing <- oil_regions %>% filter(Area != region,
+                                          oil_prop_feed > 0,
+                                          !is.infinite(oil_prop_feed))
+
+nrow(oil_missing)/(nrow(oil_missing) + nrow(oil_not_missing))
 ```
 
-Melanesia, Micronesia, and Polynesia regions have zero for their oil_prop_feed. To gapfill these regions we will use the Small Island Developing States average. One could also use Oceania average, however this is includes data from Australia and New Zealand which are different economies than these regions that have no data.
+Melanesia, Micronesia, and Polynesia regions have zero for their oil_prop_feed. To gapfill these regions we will use Oceania. 
 
 ```{r}
 # replace NAs and 0s with region values (0s include NAs because of how this was previously calculated)
@@ -1189,7 +1216,7 @@ oil_gap_filled <- oil_regions %>%
 oil_gap_filled <- oil_gap_filled %>% 
   # use "small Island Developing States" average for missing regions 
   mutate(oil_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
-                                    true = oil_gap_filled$oil_prop_feed[oil_gap_filled$Area == "Small Island Developing States"],
+                                    true = oil_gap_filled$oil_prop_feed[oil_gap_filled$Area == "Oceania"],
                                     false = oil_prop_feed_gf)) %>% 
   # select only the columns we need
   select(Area, iso3, region, oil_prop_feed_gf)

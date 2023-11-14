@@ -72,7 +72,7 @@ feed$pk_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$pk_prop_feed_gf[feed$regio
 
 ```
 
-We are interested in the country values so we will filet out the regional proportions and save the data frame
+We are interested in the country values so we will filter out the regional proportions and save the data frame
 ```{r}
 feed_countries <- feed %>% 
   filter(Area != region)

@@ -25,9 +25,9 @@ fb_data_path <- paste0(raw_folder_path, "FAO/food_balance_sheets/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01a_format_fao_trade/"
 ```
 
-### Detailed trade matrix
+### Detailed trade data
 
-Bulk download of trade matrix data from FAO was used and subset to years of interest. We need to gapfill missing trade data with trading partners (FAO does this for some, but not all).
+Bulk download of trade data from FAO was used and subset to years of interest. We need to gapfill missing trade data with trading partners (FAO does this for some, but not all).
 
 This chunk reads in the Schwarzmueller et al 2022 trade matrix as an example of how to format the trade data to propoerly feed it into the trade matrix formula.
 ```{r}
@@ -44,7 +44,7 @@ Trade data from FAO - Gapfill imports with export data
 #read in recently downloaded FAO detailed trade matrix data
 fao_trade_matrix_raw <- fread(paste0(fao_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv"))
 
-# Function to subset trade matrix by year of interest
+# Function to subset trade data by year of interest
 fao_trade_quantity_gapfill <- function(fao_trade_matrix_raw, year) {
   # subset columns to match Schwarzmueller data columns
   trade_matrix <- fao_trade_matrix_raw %>% 
@@ -201,7 +201,7 @@ Crop and livestock statistics are recorded for 278 products, covering the follow
 
 Production data units from FAO match the Schwarzmueller production data as both originate from FAO
 
-Based on the variable names, it looks like Schwarzmueller did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. We will replicate this process below and subset for our years of interest.
+Based on the variable names, it looks like Schwarzmueller did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. We will replicate this process below and subset for our years of interest.Schwarzmueller et al. 2022 appears to exclude processed crop production from the trade matrix input, as we are using the same methods we will repeat that process here and simply separate the processed products.
 
 The below chunk reads in the 2017 production data from Schwarzmueller to be able to match the FAO data columns by name for feeding into the matrix operation.
 ```{r}

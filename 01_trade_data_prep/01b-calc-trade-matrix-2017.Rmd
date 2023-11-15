@@ -531,7 +531,7 @@ Multiple processed products from the same primary product (e.g., apple juice, co
 Offals are removed at this stage since they have a conversion value of zero and will not be included in our output anyways.
 ```{r}
 primary.data <- trade.data %>%
-  group_by(Consumer_Country_Code, Producer_Country_Code, Year, primary_item) %>% # () removed because of averaging
+  group_by(Consumer_Country_Code, Producer_Country_Code, Year, primary_item) %>% 
   summarise(Value.Sum = sum(primary.Value)) %>%
   ungroup() %>%
   filter(primary_item != 0, Value.Sum !="NaN")

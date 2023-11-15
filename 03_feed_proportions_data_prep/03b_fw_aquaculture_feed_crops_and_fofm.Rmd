@@ -182,12 +182,18 @@ tonnes_lw <- production_update %>%
 
 ### Crop feed composition
 - Estimate proportion of oilcrops vs. grains
+
+Note by Joe: seems to mostly come from Final_DietCrop_Numbers.xlsx besides tilapia and put together in 
+crop_breakout.csv
+
+##### Delete from here
 Mostly from food_systems/feed/diet_composition_wrangling.xlsx
 For catfish: mostly: https://agric4profits.com/the-ideal-feeds-for-catfish/
 https://thefishsite.com/articles/catfish-nutrition-feeds-and-feed-formulation
 https://www.fao.org/3/Q3567E/q3567e05.htm
 rice bran: https://onlinelibrary.wiley.com/doi/10.1111/J.1365-2109.2011.03048.X
 rice bran: https://fishfeedmachinery.com/Solution/nutritional-fish-feed-formulation.html
+##### To here
 
 For tilapia: https://www.fao.org/fishery/affris/species-profiles/nile-tilapia/feed-formulation/en/
 

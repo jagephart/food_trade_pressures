@@ -85,6 +85,16 @@ fmfo_unknown_shares <- fmfo_matrix_mean %>%
   group_by(consumer_iso3c) %>%
   mutate(total = sum(consumption_live_weight_t),
          percent = 100*consumption_live_weight_t/total)
+
+total_unknown <- fmfo_unknown_shares %>% 
+  filter(unknown_type == "unknown") %>% 
+  group_by(unknown_type) %>% 
+  summarise(total_unknown = sum(consumption_live_weight_t),
+            total_all = sum(total)) %>% 
+  ungroup() %>% 
+  mutate(percent_unknown = (total_unknown/total_all)*100)
+
+#4.06 % of tonnes traded are unknown
 ```
 
 

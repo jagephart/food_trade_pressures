@@ -20,7 +20,7 @@ library(countrycode)
 
 Filepaths
 ```{r}
-trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
+trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix/"
 fmfo_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_allocate_unknown_trade_fmfo_consumption/"
 fish_trade_matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 fw_aquaculture_trade_pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_connect_fw_aquaculture_pressures/"
@@ -372,7 +372,7 @@ pressures_fish_regions_wide <- pressures_fish_regions %>%
   
 ```
 
-## Trade matrix - crops, animals, and fish
+ ## Trade matrix - crops, animals, and fish
 Read in the trade data and clean if necessary. 
 
 ```{r}
@@ -403,7 +403,6 @@ inland_capture_trade_matrix <- read.csv(paste0(fish_trade_matrix_path, "fish_tra
   filter(habitat == "inland" & method == "capture")
 
 # join marine trade and inland capture trade
-# important note, the FOFM from this trade is not for animal consumption
 fish_trade_matrix <- rbind(fish_marine_trade_matrix, inland_capture_trade_matrix) %>% 
   # we have no pressures data for jellyfish so filter out completely
   filter(nceas_group != "jellyfish")
@@ -417,13 +416,10 @@ fofm_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_
   # add nceas_group, habitat, and method column
   # fofm for nceas_group is to join for pressures
   mutate(nceas_group = "fofm",
-         # we will use habitat and method as fofm_feed later to distinguish 
-         # fofm for feed vs not for feed
+         # we will use habitat and method as placeholders to join with the other fish data
          habitat = "fofm_feed",
          method = "fofm_feed")
   
-#old_trade <- read.csv(paste0(trade_matrix_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
-
 ```
 
 ## Connect trade and pressures
@@ -884,7 +880,7 @@ sum(livestock_trade_pressures$traded_tonnes)
 fish_trade_countries <- fish_trade_matrix %>%
   # rbind with fofm_trade_matrix
   rbind(fofm_trade_matrix) %>% 
-  # filter out NEI iso3c code
+  # filter out NEI iso3c code as it is not in other data sources
   filter(consumer_iso3c != "NEI",
          source_country_iso3c != "NEI") %>% 
   # join with countries data to producer iso3c
@@ -1072,7 +1068,7 @@ fish_trade_pressures_clean <- fish_trade_pressures %>%
                                false = nceas_group)) %>% 
   # make sure food group is the same for all categories
   mutate(food_group = "fisheries and aquaculture",
-         # add in water_total columns (will be zero)
+         # add in water_total columns (will be zero due to nature of food items)
          water_total = 0,
          # add in item code column for fisheries and aquaculture, will be NA
          item_code = NA,

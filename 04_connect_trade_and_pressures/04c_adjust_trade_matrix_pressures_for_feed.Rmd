@@ -274,8 +274,6 @@ fofm_animal_feed_pressures_trade_totals <- fofm_animal_feed_pressures_trade_adju
 
 So now feed fofm tonnage and pressures traded from a fofm producing country to an animal producing country and used for feed are traded to the country that consumes that animal.
 
-### Stopped here
-
 ## Crops
 
 ### Separate Crops into feed and not feed from trade
@@ -752,11 +750,11 @@ non_feed_crops_joined <- rbind(non_feed_crops, feed_crops_not_used_for_feed_back
 # fofm_animal_feed_pressures_trade_totals
 
 # format data so we can rbind it
-# order = producer, consumer, item, food_group, tonnes traded, ghg, water, nutrient, disturbance
+# order = producer, consumer, item, food_group, SPAM_super, tonnes traded, ghg, water, nutrient, disturbance
 
 ## crop items not used for feed
 non_feed_crops_trade_pressures_for_final <- non_feed_crops_joined %>% 
-  select(producer_iso3c, consumer_iso3c, item, food_group,
+  select(producer_iso3c, consumer_iso3c, item, food_group, SPAM_super,
          tonnes_traded = traded_tonnes, 
          ghg_traded = ghg_total, 
          water_traded = water_total,
@@ -767,12 +765,15 @@ summary(non_feed_crops_trade_pressures_for_final) # no NAs
 
 ## fofm used for feed
 fofm_animal_feed_pressures_trade_for_final <- fofm_animal_feed_pressures_trade_totals %>% 
-  mutate(item = paste0(feed_category, "_for_", animal_product),
+  # add in SPAM_super column
+  mutate(SPAM_super = NA,
+         # make item column
+         item = paste0(feed_category, "_for_", animal_product),
          food_group = "fofm_feed") %>% 
   select(-c(feed_category, animal_product)) %>% 
   select(producer_iso3c = feed_producer_iso3c,
          consumer_iso3c = animal_consumer_iso3c,
-         item, food_group,
+         item, food_group, SPAM_super,
          tonnes_traded = sum_trade,
          ghg_traded = sum_ghg,
          water_traded = sum_water,
@@ -783,12 +784,14 @@ summary(fofm_animal_feed_pressures_trade_for_final)
 
 ## crops used for animal feed per animal
 animal_feed_pressures_trade_for_final <- animal_feed_pressures_trade_totals %>% 
-  mutate(item = paste0(feed_category, "_feed_for_", animal_product),
+  # add in SPAM_super column
+  mutate(SPAM_super = "feed",
+         item = paste0(feed_category, "_feed_for_", animal_product),
          food_group = "crop_feed") %>% 
   select(-c(feed_category, animal_product)) %>% 
   select(producer_iso3c = feed_producer_iso3c,
          consumer_iso3c = animal_consumer_iso3c,
-         item, food_group,
+         item, food_group, SPAM_super,
          tonnes_traded = sum_trade,
          ghg_traded = sum_ghg,
          water_traded = sum_water,
@@ -801,7 +804,7 @@ summary(animal_feed_pressures_trade_for_final)
 livestock_fish_trade_pressures_for_final <- livestock_fish_trade_raw %>% 
   # remove fofm_feed item as it has been accounted for in fofm_animal_feed_pressures_trade_for_final
   filter(item != "fofm_feed") %>% 
-  select(producer_iso3c, consumer_iso3c, item, food_group,
+  select(producer_iso3c, consumer_iso3c, item, food_group, SPAM_super,
          tonnes_traded = traded_tonnes, 
          ghg_traded = ghg_total, 
          water_traded = water_total,

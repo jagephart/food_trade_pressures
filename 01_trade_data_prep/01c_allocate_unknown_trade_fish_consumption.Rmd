@@ -202,8 +202,10 @@ Note: The original consumption does not match the disaggregated consumption 1:1 
 ## Final cleaning
 ```{r}
 seafood_matrix_new <- seafood_matrix_new %>%
-  # Remove fofm from this source as we are only including FOFM unfit for human consumption
-  filter(nceas_group != "fomf") %>%
+  # Remove fofm from this source as we are only including FOFM unfit for human consumption for this study
+  # remove jellyfish as they have no pressures data.
+  filter(nceas_group != "fofm",
+         nceas_group != "jellyfish") %>%
   # Remove NAs produced where there were no known species to reallocate to
   filter(!is.na(consumption_live_weight_t)) %>%
   group_by(consumer_iso3c, source_country_iso3c, habitat, method, nceas_group) %>%

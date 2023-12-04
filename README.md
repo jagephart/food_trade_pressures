@@ -11,9 +11,23 @@ The steps to generate this data output are included in this repository. The data
 
 The details of each step and the files they contained are explained below.
 
-## trade_data_prep
+## 01_trade_data_prep
 Crop and licestock trade flows from producing to consuming country are based on Schwarzmueller et al. (2022) and are combined with fish data from the Aquatic Resource Trade in Species (ARTIS) database.
 
 ### [01a-format-fao-trade.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/01_trade_data_prep/01a-format-fao-trade.Rmd)
 The first step taken in this process is to clean the trade and production data from the FAO so that it matches the input used in the trade matrix operation from Schwarzmueller et al. (2022).
 
+### [01b-calc-trade-matrix-2017.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/01_trade_data_prep/01b-calc-trade-matrix-2017.Rmd)
+The purpose of this script is to calculate a global trade matrix in primary product equivalents based on the country of product origin (where the primary product was grown, not where it was last processed). This [script](https://zenodo.org/record/5751294#.YrrrmXZByMo) is from [Schwarzmueller & Kastner 2022](https://link.springer.com/article/10.1007/s11625-022-01138-7#Sec2). It has been annotated so that details about the steps taken are included.
+
+### [01c_allocate_unknown_trade_fish_consumption.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/01_trade_data_prep/01c_allocate_unknown_trade_fish_consumption.Rmd)
+ARTIS is used for all trade/production data most fish products. Fish meal products have additional steps and are handled in the next processing step. 
+
+The fish trade matrix for human consumption has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
+
+### [01d_allocate_unknown_fmfo_consumption.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/01_trade_data_prep/01d_allocate_unknown_fmfo_consumption.Rmd)
+Similar to the other fish trade, fish meal (FOFM) trade had unknown source countries. Following the same method as step 01c, we proportionately bumped up all known FOFM traded to a country from the unknown source trade. 
+
+In order to distinguish aquatic food trade and consumption from fish meal trade and use, we incorporated information on production of fish meal. This was necessary because production data by species does not distinguish production for direct human consumption from industrial uses, including fish meal. To do this, we first calculated total fishmeal production by country based on the FAO processed products data (FAO Fisheries & Aquaculture). 
+
+## 02_environmental_pressures

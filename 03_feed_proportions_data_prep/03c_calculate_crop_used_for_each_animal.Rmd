@@ -6,16 +6,6 @@ output: html_document
 ---
 
 Objective: Calculate the proportion of crop and fish oil fish meal (FOFM) a country consumes that goes to each animal for feed in a country. 
-
-Steps:
-- Read in trade script by primary product country of origin (from Kastner) for crops and connect to pressures (already completed in script connect_2017_crop_trade_to_pressures)
-- Subset into non-feed type crops (apples, etc.) and feed type crops (grains, etc.)
-- Aggregate grains (oil crops, pulses, soy and palm kernels don't need to be aggregated because they only have one spam super category)
-- Group by consuming and producing countries and then sum tonnes and pressures traded
-- Add column with proportion of each aggregate crop each consuming country uses for feed
-- Multiply proportion used as feed by total pressures (split into 2 dfs - crop trade matrix connected to pressures used as human food and crop trade matrix connected to pressures used as feed)
-Note: data are already grouped by consuming country, producing country, and crop and pressures and tonnes going to feed are summed across those categories
-
 ## Setup
 
 Load libraries

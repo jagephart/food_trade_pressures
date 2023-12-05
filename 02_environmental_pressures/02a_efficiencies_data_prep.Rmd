@@ -9,7 +9,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 Goal of script:
-The pressures data reports the pressure efficiency based on the product group name (ex. cows_meat, yams_produce, soyb_produce, etc.). The trade data reports products in a variety of ways. The goal of this script is to pull in the different product names of from the trade data and pressures data to make a key for the items to be matched appropriately. Inland (freshwater) aquaculture is handled in its own script because the pressures efficiency data are global averages rather than specific to each country. See the script `02b_fw_aqua_pressures.Rmd`.
+This Rmd prepares the data from Halpern et al. (2022) to be joined with the trade data. This source covers the pressures for livestock, crops, wild fisheries, and farmed seafood. The pressures data reports the pressure efficiency based on the product group name (ex. cows_meat, yams_produce, soyb_produce, etc.). The trade data reports products in a variety of ways. The goal of this script is to prepare the pressures data so that it can be easily joined with the trade data.
+
+This script also caps the efficiencies at the third standard deviation from the mean for each product group and pressure to reduce the effect of outliers when calculating total pressures traded. Standard deviations were used to cap efficiencies because we noticed outliers in the pressures data for small scale production systems and did not want those outliers to skew data output when multiplied by traded tonnes.
+
+Inland (freshwater) aquaculture is handled in its own script because the pressures efficiency data are global averages rather than specific to each country. See the script `02b_fw_aqua_pressures.Rmd`.
 
 ## Set Up
 Packages
@@ -23,7 +27,7 @@ File Paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 pressures_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
-matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix_2017/"
+matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01b_calc_trade_matrix/"
 seafood_trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/02a_efficiencies_data_prep/"
 ```
@@ -31,7 +35,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 ## Read in the pressures data and cap at third standard deviation
 ```{r}
 # read in the pressures efficiency data
-pressure_efficiency_raw <- read.csv(file.path(pressures_path, "pressures_efficiencies.csv")) %>% 
+pressure_efficiency_raw <- read.csv(paste0(pressures_path, "pressures_efficiencies.csv")) %>% 
   rename(nceas_group = category1_production)
 
 # cap pressure_per_tonne at the third standard deviation for the nceas_group and pressure
@@ -63,6 +67,7 @@ pressure_efficiency_capped <- pressure_efficiency_raw %>%
 ```
 
 ## Read in and clean trade data to make matching keys
+Crops are matched with their SPAM_super category. Livestock are matched with category names from Halpern et al. (2022) and FAO group names. Marine seafood, marine aquaculture, and freshwater fisheries are matched using species groupings that are outlined below. 
 ```{r}
 # read in the trade data calculated in 01b
 trade_matrix <- read_csv(paste0(matrix_path, "trade_matrix_by_country_of_origin_2015_2019_import.csv"))
@@ -72,7 +77,7 @@ map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects
   select(SPAM_super, SPAM_full_name, FAO_item_code, product_description_FAOSTAT)
 
 # read in the fish trade categories to match with appropriate pressures
-seafood_key <- read.csv(file.path(seafood_trade_path, "20230626_nceas_consumption.csv")) %>% 
+seafood_key <- read.csv(paste0(seafood_trade_path, "20230626_nceas_consumption.csv")) %>% 
   # retrieve the distinct combinations of habitat, method, and nceas_group
   distinct(habitat, method, nceas_group) %>% 
   # remove unknown nceas_group as we took care of these in 01c
@@ -145,6 +150,7 @@ crop_pressure_per_tonne <- pressure_efficiency_capped %>%
          # item = product_description_FAOSTAT, 
          pressure, pressure_per_tonne) %>% 
   # add a food_group column for crops
+  # add in item and item code columns for binding with other data
   mutate(food_group = "crops",
          item = NA,
          item_code = NA) %>% 
@@ -173,6 +179,7 @@ unique(na_test$nceas_group)
 livestock_pressure_per_tonne <- livestock_pressure_per_tonne %>% 
   filter(!is.na(item))
 ```
+
 We have pressures data for goats milk and feed however we have no trade data that matches this. We are doing our own feed pressures calculation and goats milk will have to be excluded since it does not have an appropriate FAO item to match with trade.
 
 ### Fisheries and Mariculture Pressure per Tonne

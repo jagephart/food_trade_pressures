@@ -51,7 +51,7 @@ Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
-kastner_path <- paste0(raw_path, "kastner_2022/")
+Schwarzmueller_path <- paste0(raw_path, "Schwarzmueller_2022/")
 fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 ```
@@ -60,7 +60,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 Read in FAO FB data (2010-)
 Regions are not included in this df, only countries. To gapfill, will also need to calculate these values for regions.
 ```{r}
-fb <- read_csv(paste0(kastner_path, "CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
+fb <- read_csv(paste0(Schwarzmueller_path, "CommodityBalances_Crops_2017_E_All_Data_(Normalized)_7_20_22.csv"))
 
 # only 2017 data? - Yes
 range(fb$Year)
@@ -95,9 +95,9 @@ calc_prop_feed <- function(FAO_name, feed_prop_col_name, dsq_col_name, feed_col_
 
 We need to add in missing countries that are missing from FB and CB data. We will use a combination of FAO country names and additional countries from fisheries trade data. We won't need all of these countries, but it's good to include them all just in case.
 ```{r}
-# rather than reading in the whole FAO country list, we'll just consider countries included in the Kastner trade matrices output
+# rather than reading in the whole FAO country list, we'll just consider countries included in the Schwarzmueller trade matrices output
 # read in FAO country list
-tm_raw <- read_csv(paste0(kastner_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
+tm_raw <- read_csv(paste0(Schwarzmueller_path, "trade_matrix_by_country_of_origin_2017_import.csv"))
 
 tm <- tm_raw %>% 
   # just select the country codes

@@ -59,4 +59,16 @@ The total crop and fishmeal consumption by freshwater aquaculture by country and
 ### [03c_calculate_crop_used_for_each_animal.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03c_calculate_crop_used_for_each_animal.Rmd)
 The totals of feed calculated for freshwater aquaculture in step 03b are joined with the totals used by other animal systems. These are used to calculate the proportion of each crop and fish meal used by each animal system within a country.
 
+## 04_connect_trade_and_pressures
+In these files we first connect the trade (step 01) and pressures (step 02) data into one file and then adjust those pressures base the feed proportions data (step 03). 
+
+### 04a_connect_fw_aquaculture_to_pressures.Rmd
+This script connects the global average pressure efficiencies from Gephart et al. (2021) with the freshwater aquaculture trade from ARTIS. 
+
+### 04b_connect_crop_animal_fish_trade_to_pressures.Rmd
+The goal of this script is to connect the trade data to the environmental efficiency data, from Halpern et al. (2022), to calculate the quantity of the pressures from the producing countries. It also joins the freshwater aquaculture trade data that has been joined with environmental pressures data in step 04a. The final output from this script is adjusts traded pressures according to feed use for animals.
+
+### 04c_adjust_trade_matrix_pressures_for_feed.Rmd
+Here we attribute the consumption pressures of crops and fish meal used for feed to the animal consuming country. This is done using the proportions calculated in step 3 and the trade/pressures data from step 04b. This is the final step to produce our data output.
+
 

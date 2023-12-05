@@ -7,35 +7,6 @@ output: html_document
 
 Objective: Attribute consumption pressures for crops and fofm used as feed to the animal consuming country.
 
-## Old description
-Follow steps outlined in this issue:
-https://github.com/OHI-Science/social_justice_issues/issues/51
-
-Steps:
-- Read in trade script by primary product country of origin (from Kastner) for crops and connect to pressures (already completed in script connect_2017_crop_trade_to_pressures)
-- Subset into non-feed type crops (apples, etc.) and feed type crops (grains, etc.)
-- Aggregate grains (oil crops, pulses, soy and palm kernels don't need to be aggregated because they only have one spam super category)
-- Group by consuming and producing countries and then sum tonnes and pressures traded
-- Add column with proportion of each aggregate crop each consuming country uses for feed
-- Multiply proportion used as feed by total pressures (split into 2 dfs - crop trade matrix connected to pressures used as human food and crop trade matrix connected to pressures used as feed)
-Note: data are already grouped by consuming country, producing country, and crop and pressures and tonnes going to feed are summed across those categories
-
-- Read in tonnes crop consumed per animal group per country data https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
-- Subset to 5 feed crop categories we're using and aggregate the grains
-- Match animal categories and names to what we're using with FAO data (e.g., milk is combined)
-- Group by crop and country and sum tonnes consumption as feed
-- Calculate proportion of each crop's consumption that comes from each animal system
-
-- Combine dfs - add variables for animal system and feed proportions per crop to the trade matrix with pressures df (grain producer and grain consumer trade matrix)
-- Multiply total pressures per aggregated crop (between each pair of trading partners) by proportion feed going to each animal system
-
-- Read in animal, fw aquaculture, and fish trade matrices and combine into one.
-- Merge feed producer/consumer trade matrix with pressures with animal producer/consumer trade matrix with pressures (make sure you have a row for each grain producing, animal producing, and animal consuming country combination)
-- Multiply traded feed pressures for each crop, animal system, and trading pair (feed producer and feed consumer) by the proportion of each animal traded between trading pair (animal producer and animal consumer)
-
-
-- We have 2 dfs that are crops not used for feed (non-feed crops and feed crops not used for feed), we need to put these back together at the end (do we combine these with feed crops after they get correctly distributed?)
-
 ## Setup
 
 Load libraries
@@ -93,7 +64,7 @@ proportions_test <- fofm_feed_animal_proportions_wide %>%
 ```
 
 ### Join fofm proportions per animal with the trade data used for feed
-Combine dfs - add variables for animal system and feed proportions per crop to the trade matrix with pressures df (fofm producer and fofm consumer trade matrix). By using a left join we may lose data where we have animal proportions for that crop but no trade data of that crop into that country. We are not gapfilling trade data of products so this is just note for methods.
+Combine dfs - add variables for animal system and feed proportions for fish meal to the trade matrix with pressures df (fofm producer and fofm consumer trade matrix). By using a left join we may lose data where we have animal proportions for fish meal but no trade data of fish meal into that country. We are not gapfilling trade data of products so this is just note for methods.
 
 ```{r}
 fofm_trade_feed <- fofm_trade_no_feed_adjustment %>% 

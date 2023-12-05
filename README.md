@@ -40,3 +40,23 @@ Efficiency data was provided by Halpern et al. (2022).
 
 ### [02b_fw_aqua_pressures.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/02_environmental_pressures/02b_fw_aqua_pressures.Rmd)
 Freshwater aquaculture environmental pressures data was sourced from Gephart et al. (2021). This script converts the units of the production pressures into the same units from Halpern et al. (2022). These pressures are global averages.
+
+## 03_feed_proportions_data_prep
+Fish meal and various crops are used for animal feed alongside human consumption and industrial uses. Therefore, to capture the full environmental pressures of animals we needed to attribute crop and fish meal pressures to the animal systems consuming that feed. o accomplish this we needed to know the proportion of how much of a crop and fish meal is used for feed by a country. We also needed to know how much of that crop and fish meal used for feed is going to each individual animal system. To calculate the necessary proportions we used a combination of FAOSTAT food balances and animal feed consumption quantities (Schwarzmueller et al. 2022, Halpern et al. 2022). 
+
+### [03ai_proportion_feed_per_crop_country_FAO_FB_and_CB_2013.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03ai_proportion_feed_per_crop_country_FAO_FB_and_CB_2013.Rmd)
+Here we use 2013 data from the FAO Food Balances and Commodity Balances data to determine the proportion of certain crops being used as feed. 2013 FAO data was used for soy, palm oil, and oil crops because that is the most recent year in which data is available from the FAO that breaks down feed usage for these crops. The FAO changed reporting methodologies in 2013, which affected how some crops’ usage was tracked in their data.
+
+### [03aii_calc_prop_feed_pulses_grains_2017_FAO_FB.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03aii_calc_prop_feed_pulses_grains_2017_FAO_FB.Rmd)
+In this script we calculate the proportion of each country's domestic supply quantity that they used as feed for each grains and pulses using 2017 FAO Food Balance data. Grains is an aggregate from the FAO that captures the use of 7 SPAM categories for feed. The FAO methodologies countinued to split up uses of feed for grains and pulses in the 2017 reporting year and after the methodologies were changed in 2013.
+
+### [03aiii_combine_gf_prop_feed_dfs.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03aiii_combine_gf_prop_feed_dfs.Rmd)
+We combine the crop proportions used for feed calculated in steps 03ai and 03aii in this script to have all of the crop proportions in one csv.
+
+### [03b_fw_aquaculture_feed_crops_and_fofm.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03b_fw_aquaculture_feed_crops_and_fofm.Rmd)
+The total crop and fishmeal consumption by freshwater aquaculture by country and taxa group is calculated.
+
+### [03c_calculate_crop_used_for_each_animal.Rmd](https://github.com/jagephart/food_trade_pressures/blob/main/03_feed_proportions_data_prep/03c_calculate_crop_used_for_each_animal.Rmd)
+The totals of feed calculated for freshwater aquaculture in step 03b are joined with the totals used by other animal systems. These are used to calculate the proportion of each crop and fish meal used by each animal system within a country.
+
+

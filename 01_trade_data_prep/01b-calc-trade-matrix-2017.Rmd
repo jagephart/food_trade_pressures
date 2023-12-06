@@ -1078,12 +1078,12 @@ and compare values to FAOSTAT production data
 # sum amount each crop a country trades in the trade matrix
 country_production <- transformed.data %>% 
   group_by(Producer_Country_Code, Item_Code) %>% 
-  mutate(kastner_production = sum(Value)) %>%
+  mutate(Schwarzmueller_production = sum(Value)) %>%
   ungroup()
 
 # subset to producer only country (not consumer) and remove duplicate rows in trade matrix
 country_production_cut <- country_production %>% 
-  select(Producer_Country_Code, Item_Code, kastner_production) %>% 
+  select(Producer_Country_Code, Item_Code, Schwarzmueller_production) %>% 
   unique(.)
 
 
@@ -1095,7 +1095,7 @@ production.FAO.2 <- rbind(production.FAO.1, production.offals, fill=T)
 off <- production.FAO.2 %>% 
   filter(Element_Code == 5511)
 
-# same countries in Kastner trade matrix and FAO production data
+# same countries in Schwarzmueller trade matrix and FAO production data
 diff <- setdiff(country_production_cut$Producer_Country_Code, production.FAO.2$Area_Code)
 
 # select relevant columns from fao data
@@ -1105,69 +1105,69 @@ faostat_cut <- production.FAO.2 %>%
   rename(FAO_production = Value_average)
 
 # join dataframes by area code and item code
-fao_and_kastner_production <- full_join(faostat_cut, country_production_cut, by = c("Area_Code" = "Producer_Country_Code", "Item_Code" = "Item_Code"))
+fao_and_Schwarzmueller_production <- full_join(faostat_cut, country_production_cut, by = c("Area_Code" = "Producer_Country_Code", "Item_Code" = "Item_Code"))
 
 # rename columns
-#fao_and_kastner_production <- fao_and_kastner_production %>% 
+#fao_and_Schwarzmueller_production <- fao_and_Schwarzmueller_production %>% 
 #  rename("area_code" = "Area Code (FAO)") %>% 
 #  rename("item_code" = "Item Code (FAO)")
 
 # remove rows where both values for production are NA (801 rows)
-fao_and_kastner_production_1 <- fao_and_kastner_production %>% 
-  filter(!(is.na(FAO_production) & is.na(kastner_production)))
+fao_and_Schwarzmueller_production_1 <- fao_and_Schwarzmueller_production %>% 
+  filter(!(is.na(FAO_production) & is.na(Schwarzmueller_production)))
 
 # remove rows where one value is NA and the other value is 0 (291 rows)
-fao_and_kastner_production_2 <- fao_and_kastner_production_1 %>% 
-  filter(!(is.na(FAO_production) & kastner_production == 0)) %>% 
-  filter(!(is.na(kastner_production) & FAO_production == 0))
+fao_and_Schwarzmueller_production_2 <- fao_and_Schwarzmueller_production_1 %>% 
+  filter(!(is.na(FAO_production) & Schwarzmueller_production == 0)) %>% 
+  filter(!(is.na(Schwarzmueller_production) & FAO_production == 0))
 
 # China notes:
 # China (Area code 351) and all the subcomponents (HK, Macao, mainland, Taiwan) are included 
 # in the FAO production data, but only the subcomponents are included in the 
-# FAO trade matrix, not just China. Therefore, China is not included in the Kastner
+# FAO trade matrix, not just China. Therefore, China is not included in the Schwarzmueller
 # trade matrix, but is included in the FAO production data we are comparing it to here.
 
 # remove China (351)
-fao_and_kastner_production_3 <- fao_and_kastner_production_2 %>% 
+fao_and_Schwarzmueller_production_3 <- fao_and_Schwarzmueller_production_2 %>% 
   filter(!Area_Code == 351)
 
-# plot - compare FAO and Kastner production with scatterplot - looks great!
-ggplot(fao_and_kastner_production_3, aes(x = FAO_production, y = kastner_production)) +
+# plot - compare FAO and Schwarzmueller production with scatterplot - looks great!
+ggplot(fao_and_Schwarzmueller_production_3, aes(x = FAO_production, y = Schwarzmueller_production)) +
   geom_point() +
-  xlab("FAO production value") + ylab("Kastner production value") +
+  xlab("FAO production value") + ylab("Schwarzmueller production value") +
   theme_bw()
 
 # look for missing values
-length(which(is.na(fao_and_kastner_production_3$FAO_production))) #0
-length(which(is.na(fao_and_kastner_production_3$kastner_production))) #3646
+length(which(is.na(fao_and_Schwarzmueller_production_3$FAO_production))) #0
+length(which(is.na(fao_and_Schwarzmueller_production_3$Schwarzmueller_production))) #2186
 
-# look at NAs in trade matrix - 3,646 rows
-nas <- fao_and_kastner_production_3 %>% 
-  filter(is.na(kastner_production))
+# look at NAs in trade matrix - 2,186 rows
+nas <- fao_and_Schwarzmueller_production_3 %>% 
+  filter(is.na(Schwarzmueller_production))
 table(nas$Item)
-# most of what are included in the FAO data but not in Kastner are from the "Crops Processed > (List)"
-# https://www.fao.org/faostat/en/#data/QCL , which Kastner did not include these items when downloading
+# most of what are included in the FAO data but not in Schwarzmueller are from the "Crops Processed > (List)"
+# https://www.fao.org/faostat/en/#data/QCL , which Schwarzmueller did not include these items when downloading
 # FAO data
 
-# check to see if Kastner included these processed crops when he downloaded FAO production data
-test <- fread("raw_data/kastner_2022/Production_Crops_E_All_Data_(Normalized).csv")
+# check to see if Schwarzmueller included these processed crops when he downloaded FAO production data
+test <- fread("raw_data/Schwarzmueller_2022/Production_Crops_E_All_Data_(Normalized).csv")
 table(test$Item)
 # NO - they did not include anything listed under "Crops Processed > (List)"
 # https://www.fao.org/faostat/en/#data/QCL
 
-# There are some additional products included in FAO production but not Kastner trade matrix:
+# There are some additional products included in FAO production but not Schwarzmueller trade matrix:
 # cashewapple (4), coir (8), fat buffaloes (26), fat camels (36), fat cattle (189), fat goats (158), 
 # fat pigs (173), fat sheep (169), meat bird nes (9), meat buffalo (28), meat mule (3),
 # meat other camelids (2), meat other rodents (2), milk whole fresh camel (28), milk whole fresh goat (110),
 # offals (multiple types), rice paddy (rice milled equivalent) (116), snails not sea (4), sugar crops nes (3) 
 
-# In the Kastner trade matrix:
+# In the Schwarzmueller trade matrix:
 # 1. All animal fats were converted to animal meat to get to primary product equivalents
 # 2. Meat bird nes, meat mule, meat other camelids, meat other rodents, and Meat buffalo were not 
-#    included in the FAO trade matrix, so they're not included in the Kastner trade matrix
-# 3. All offals were converted to "offals edible" in the Kastner trade matrix when converting
+#    included in the FAO trade matrix, so they're not included in the Schwarzmueller trade matrix
+# 3. All offals were converted to "offals edible" in the Schwarzmueller trade matrix when converting
 #    to primary products, but the conversion factor was 0, so Value was set to 0, and all rows
-#    with Value=0 were removed, so the Kastner trade matrix does not have any offals.
+#    with Value=0 were removed, so the Schwarzmueller trade matrix does not have any offals.
 # 4. Milk whole fresh camel and milk whole fresh goat are not included in the FAO trade matrix
 # 5. Snails not sea are not included in FAO trade matrix
 # 6. "rice paddy (rice milled equivalent)" was converted to rice paddy in the conversion map.

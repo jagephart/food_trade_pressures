@@ -18,7 +18,7 @@ library(tidyverse)
 ### File paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-matrix_path <- paste0(raw_data_path, "trade/aquatic_food_trade/")
+matrix_path <- paste0(raw_data_path, "aquatic_food_trade/")
 production_path <- paste0(raw_data_path, "FAO/production_data/FI_Trade_PP_2023.1.0/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01d_allocate_unknown_trade_fmfo_consumption/"
 ```

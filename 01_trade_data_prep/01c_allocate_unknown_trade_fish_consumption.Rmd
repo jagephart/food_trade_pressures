@@ -20,7 +20,7 @@ library(tidyverse)
 ### File paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/trade/aquatic_food_trade/"
+matrix_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/aquatic_food_trade/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/01c_allocate_unknown_trade_fish_consumption/"
 ```
 

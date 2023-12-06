@@ -8,7 +8,7 @@ date: "2023-05-30"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Objective: The goal of this script is to make some exploratory plots from the data generated from the step 4 in this repo `04_adjusttrade_matrix_pressures_for_feed.Rmd`.
+Objective: The goal of this script is to make some exploratory plots from the data generated from the step 4 in this repo `04c_adjusttrade_matrix_pressures_for_feed.Rmd`.
 
 Packages:
 ```{r}
@@ -20,13 +20,13 @@ library(patchwork)
 
 ## Data Paths
 ```{r}
-trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04_adjust_trade_matrix_pressures_for_feed/"
+trade_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04c_adjust_trade_matrix_pressures_for_feed/"
 ```
 
 
 ## Read in data as is
 ```{r}
-trade_data_raw <- read_csv(file.path(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
+trade_data_raw <- read_csv(paste0(trade_path, "trade_matrix_w_pressures_accounting_for_feed.csv"))
 
 list_of_items <- trade_data_raw %>% 
   distinct(item)
@@ -36,28 +36,28 @@ list_of_items <- trade_data_raw %>%
 pressure_efficiencies <- read.csv("/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/pressures_efficiencies.csv")
 ```
 
-## USA Cumulative Pressure
+## USA GHG Pressure
 ```{r}
-USA_cumulative <- trade_data_raw %>% 
-  filter(consumer_iso3 == "USA") %>% 
-  filter(producer_iso3 != "USA") %>% 
-  group_by(producer_iso3, consumer_iso3) %>% 
-  summarise(trade_cumu_pressure = sum(trade_cumu_pressure)) %>% 
+USA_ghg <- trade_data_raw %>% 
+  filter(consumer_iso3c == "USA") %>% 
+  filter(producer_iso3c != "USA") %>% 
+  group_by(producer_iso3c, consumer_iso3c) %>% 
+  summarise(ghg_traded = sum(ghg_traded)) %>% 
   ungroup() %>% 
-  mutate(percent_total_cumulative = 100*(trade_cumu_pressure/sum(trade_cumu_pressure))) %>% 
-  arrange(desc(percent_total_cumulative)) %>% 
+  mutate(percent_total_ghg = 100*(ghg_traded/sum(ghg_traded))) %>% 
+  arrange(desc(percent_total_ghg)) %>% 
   head(n = 20)
 
-ggplot(data = USA_cumulative,
-       aes(y = percent_total_cumulative,
-           x = reorder(producer_iso3, -percent_total_cumulative))) +
+ggplot(data = USA_ghg,
+       aes(y = percent_total_ghg,
+           x = reorder(producer_iso3c, -percent_total_ghg))) +
   geom_col(position = "dodge") +
-  labs(title = "Percent of Cumulative Pressure Imported to the USA - Top 20 Importers",
+  labs(title = "Percent of GHG Pressure Imported to the USA - Top 20 Importers",
        x = "Country ISO3c",
-       y = "Percent of Total Cumulative Pressure from Importers") + 
-  geom_text(aes(producer_iso3, 
-                percent_total_cumulative + 0.5, 
-                label =round(percent_total_cumulative, 1)),
+       y = "Percent of Total GHG Pressure from Importers") + 
+  geom_text(aes(producer_iso3c, 
+                percent_total_ghg + 0.5, 
+                label =round(percent_total_ghg, 1)),
             position = position_dodge(0.9),
             vjust = 0)
 ```
@@ -65,34 +65,34 @@ ggplot(data = USA_cumulative,
 ## Barbados Cow Meat Pressures
 ```{r}
 barbados_cow_meat <- trade_data_raw %>% 
-  filter(consumer_iso3 == "BRB",
+  filter(consumer_iso3c == "BRB",
          item == "cows_meat") %>% 
-  mutate(percent_total_cumulative = 100*(trade_cumu_pressure/sum(trade_cumu_pressure)),
+  mutate(percent_total_ghg = 100*(ghg_traded/sum(ghg_traded)),
          percent_total_trade = 100*(tonnes_traded/sum(tonnes_traded))) %>% 
-  arrange(desc(percent_total_cumulative)) %>% 
+  arrange(desc(percent_total_ghg)) %>% 
   head(n = 10)
 
 cow_pressure <- ggplot(barbados_cow_meat,
-       aes(y = percent_total_cumulative,
-           x = reorder(producer_iso3, -percent_total_trade))) +
+       aes(y = percent_total_ghg,
+           x = reorder(producer_iso3c, -percent_total_trade))) +
   geom_col(position = "dodge") +
-  labs(title = "Top 10 Contributors to Cumulative Pressure from Cows Meat In Barbardos",
+  labs(title = "Top 10 Contributors to GHG Pressure from Cows Meat In Barbardos",
        x = "Country ISO3c",
        y = "Percent of Total Cumulative Pressure of Cows Meat") + 
-  geom_text(aes(producer_iso3, 
-                percent_total_cumulative + 0.5, 
-                label =round(percent_total_cumulative, 1)),
+  geom_text(aes(producer_iso3c, 
+                percent_total_ghg + 0.5, 
+                label =round(percent_total_ghg, 1)),
             position = position_dodge(0.9),
             vjust = 0)
 
 cow_trade <- ggplot(barbados_cow_meat,
        aes(y = percent_total_trade,
-           x = reorder(producer_iso3, -percent_total_trade))) +
+           x = reorder(producer_iso3c, -percent_total_trade))) +
   geom_col(position = "dodge") +
   labs(title = "Top 10 Contributors to Cows Meat Trade in Barbardos",
        x = "Country ISO3c",
        y = "Percent of Cows Meat Trade") + 
-  geom_text(aes(producer_iso3, 
+  geom_text(aes(producer_iso3c, 
                 percent_total_trade + 0.5, 
                 label =round(percent_total_trade, 1)),
             position = position_dodge(0.9),
@@ -106,47 +106,45 @@ cow_pressure/cow_trade
 
 ```{r}
 top_food_pressures <- trade_data_raw %>% 
-  filter(producer_iso3 != consumer_iso3) %>% 
+  filter(producer_iso3c != consumer_iso3c) %>% 
   group_by(item) %>% 
   summarise(tonnes_traded = sum(tonnes_traded),
-            trade_cumu_pressure = sum(trade_cumu_pressure),
-            trade_ghg = sum(trade_ghg),
-            trade_water = sum(trade_water),
-            trade_disturbance = sum(trade_disturbance),
-            trade_nutrient = sum(trade_nutrient)) %>% 
+            ghg_traded = sum(ghg_traded),
+            water_traded = sum(water_traded),
+            disturbance_traded = sum(disturbance_traded),
+            nutrient_traded = sum(nutrient_traded)) %>% 
   ungroup() 
 
 top_water_pressures <- top_food_pressures %>% 
-  arrange(desc(trade_water)) %>% 
+  arrange(desc(water_traded)) %>% 
   slice(1:15)
 
 ggplot(top_water_pressures,
        aes(x = tonnes_traded,
-           y = trade_water,
+           y = water_traded,
            color = item)) +
   geom_point()
 
-top_cumulative_pressures <- top_food_pressures %>% 
-  arrange(desc(trade_cumu_pressure)) %>% 
+top_disturbance_pressures <- top_food_pressures %>% 
+  arrange(desc(disturbance_traded)) %>% 
   slice(1:15)
 
 efficient_foods <- top_food_pressures %>% 
-  mutate(trade_cumu_pressure = trade_cumu_pressure/tonnes_traded,
-         trade_ghg = trade_ghg/tonnes_traded,
-         trade_water = trade_water/tonnes_traded,
-         trade_disturbance = trade_disturbance/tonnes_traded,
-         trade_nutrient = trade_nutrient/tonnes_traded) %>% 
-  arrange(trade_cumu_pressure) %>% 
+  mutate(ghg_traded = ghg_traded/tonnes_traded,
+         water_traded = water_traded/tonnes_traded,
+         disturbance_traded = disturbance_traded/tonnes_traded,
+         nutrient_traded = nutrient_traded/tonnes_traded) %>% 
+  arrange(ghg_traded) %>% 
   filter(!str_detect(item, pattern = "palm")) %>% 
   slice(1:15)
 
 ggplot(efficient_foods,
        aes(x = tonnes_traded,
-           y = trade_cumu_pressure,
+           y = ghg_traded,
            color = item)) +
   geom_point() +
-  labs(title = "The 15 Most Environmentally Efficient Food Items") +
-  ylab("Cumulative Pressure Per Tonne Traded") +
+  labs(title = "The 15 Most Environmentally Efficient Food Items for GHG emissions") +
+  ylab("GHG Pressure Per Tonne Traded") +
   xlab("Total Tonnes Traded")
 
 ```

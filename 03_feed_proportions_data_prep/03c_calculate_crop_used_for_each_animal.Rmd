@@ -1,6 +1,5 @@
 ---
 title: "Calculate the proportion of crop and fofm used for each animal for feed in a country"
-author: "Joe DeCesaro"
 date: "2023-10-03"
 output: html_document
 ---
@@ -16,7 +15,7 @@ library(tidyverse)
 Data Paths
 ```{r}
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
-animal_consumption_data_path <- paste0(raw_path, "feed_consumption/")
+animal_consumption_data_path <- paste0(raw_path, "Halpern_feed_consumption/")
 fw_aquaculture_consumption_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_fofm_fw_aquaculture_feed/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03c_calculate_prop_crop_and_fofm_used_for_each_animal/"
 ```
@@ -223,7 +222,7 @@ This section will largely do the same as above does for crops except for Fish Oi
 ### Read in and prepare livestock and marine aquaculture tonnes of FOFM consumed per animal per country
 The FOFM consumption data (`FMFO_country_data.csv`) is downloaded from: https://github.com/OHI-Science/food_systems/blob/master/feed/data/FMFO_country_data.csv 
 
-It was provided by Mel and will require better referencing in the methods section. The tonnes column represents the tonnes of live weight consumed of the Fish that make up FOFM.
+The tonnes column represents the tonnes of live weight consumed of the Fish that make up FOFM.
 ```{r}
 FOFM_consumption_raw <- read_csv(paste0(animal_consumption_data_path, "FMFO_country_data.csv"))
 

@@ -1,6 +1,5 @@
 ---
 title: "Calculating proportion crop used as feed using 2017 FAO food balance data"
-author: "Haley Epperly"
 date: "2022-11-01"
 output: html_document
 editor_options: 
@@ -52,7 +51,7 @@ Data Paths
 raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 FAO_path <- paste0(raw_path, "FAO/")
 Schwarzmueller_path <- paste0(raw_path, "Schwarzmueller_2022/")
-fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
+fish_trade_path <- paste0(raw_path, "aquatic_food_trade/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 ```
 

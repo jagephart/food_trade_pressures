@@ -1,6 +1,5 @@
 ---
 title: "Calculating proportion crop used as feed using 2013 FAO food balance and commodity balances data"
-author: "Haley Epperly"
 date: "2022-10-26"
 output: html_document
 editor_options: 
@@ -52,13 +51,13 @@ raw_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressu
 FAO_path <- paste0(raw_path, "FAO/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 Schwarzmueller_path <- paste0(raw_path, "Schwarzmueller_2022/")
-fish_trade_path <- paste0(raw_path, "trade/aquatic_food_trade/")
+fish_trade_path <- paste0(raw_path, "aquatic_food_trade/")
 ```
 
 
 ### Read in FAO Food Balances and Commodity Balanaces data and subset to 2013
 ```{r}
-fb <- read_csv(paste0(FAO_path, "FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv")) %>% 
+fb <- read_csv(paste0(FAO_path, "food_balance_sheets/FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv")) %>% 
   filter(Year == 2013)
 
 # subset to only Unit == 1,000 tonnes

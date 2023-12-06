@@ -1,6 +1,5 @@
 ---
 title: "Combine proportion feed dfs"
-author: "Haley Epperly"
 date: "2022-11-07"
 output: html_document
 editor_options: 

@@ -295,8 +295,8 @@ cat("\n", file = log.filename, append=T)
 cat(paste("Conversion opinion:", conversion_opt, "in", select(units,conversion_opt),"\n"), file = log.filename, append = T)
 ```
 
-#### Sugar conversions data
-Read in the sugar conversion data. This is done in the original Schwarzmueller script so it has been kept in however, our pressure data does not have efficiencies for sugar beet so we will not divide the sugar aggregate.
+#### Sugar conversions data - used to track sugar cane vs sugar beet
+Read in the sugar conversion data. This is done in the original Schwarzmueller script however it should be noted that our pressure data does not have efficiencies for sugar beet so its trade will eventually be removed. This represents a < 1% of the total volume of goods traded.
 
 These data include: for each country, all elements (e.g., production, import quantity, export quantity, domestic supply quantity, waste, etc.) for every product (apples, barley, etc.) in tonnes. This is not subset to just sugar yet, we  do this later.
 ```{r}
@@ -540,8 +540,9 @@ primary.data <- trade.data %>%
 # rm(trade.data)
 ```
 
-### Sugar Conversion Setup - Not executed for our needs but in Schwarzmueller script
-This step is original to the Schwarzmueller et al 2022 script and parts are not being included in our data structure as we do not have sugar beet pressures available. These code chunks are commented out but remain here to maintain the original script. 
+### Sugar Conversion Setup 
+As noted earlier, sugar beet trade/production will eventually be removed from our data as there is not pressure efficiency data available. These steps are kept in to complete the original processing done by Schwarzmueller et al. (2022). Without this step the sugar data will be lost in the matrix operation because the primary item code for sugar aggregate is not the same as the `Item_Code`.
+
 ```{r}
 #### calculate sugar production and sugar production shares ####
 
@@ -564,7 +565,7 @@ sugar.production$Value.new <- sugar.production$Value_average * sugar.production$
 
 
 Calculate the proportion of sugar production that comes from beets vs cane in each country.
-This will be used later.
+
 ```{r}
 sugar.shares <- sugar.production %>%
   # group by area code (aka country) and year
@@ -580,8 +581,7 @@ sugar.shares <- sugar.production %>%
 ```
 
 
-Calculate the tonnes of sugar in primary product (beet and cane) equivalents that each country
-produces.
+Calculate the tonnes of sugar in primary product (beet and cane) equivalents that each country produces.
 ```{r}
 sugar.production <- sugar.production %>%
   # group data by country, primary items (sugar aggregate only), element (production), year, and unit (tonnes)
@@ -925,10 +925,8 @@ transformed.data <- rbind(transformed.data, add.data)
 ```
 
 ### Sugar Cane vs. Sugar Beet Processing
-Sugar cane vs. sugar beet processing conversions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures. The code for this processing is commented out but will remain in this section as it is part of the original script from Schwarzmueller et al. 2022.
+Sugar cane vs. sugar beet processing conversions. Create a df with proportion of beets vs cane a country produces and proportion of beets vs cane a country processes into sugar. Use the trade and production data to adjust the `transformed.data` for sugar cane and beet trade accordingly. As mentioned before, sugar beet will eventually be removed from our data as we do not have environmental pressures data.
 
-Create df with proportion of beets vs cane a country produces and proportion of 
-beets vs cane a country processes into sugar
 ```{r}
 #### calculate and add sugar data ####
 
@@ -963,8 +961,6 @@ sugar.processing <- sugar.processing %>%
 sugar.crop.share <- left_join(sugar.shares, sugar.processing, by=c("Area_Code", "Year", "Item_Code"))
 ```
 
-More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
-
 Add new column (control) that indicates whether crop is produced in a country but not processed in that country.
 If a crop is processed but not produced in a country, set control to 0 (rather than  NA)
 ```{r}
@@ -980,8 +976,6 @@ sugar.crop.share <- sugar.crop.share %>%
 sugar.crop.share[which(is.na(sugar.crop.share$processing_share) & sugar.crop.share$control==1), 5] <-0
 ```
 
-More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
-
 If country does not have sugar processing data, assume that they process beets vs cane in the same proportion they
 produce beets vs cane
 ```{r}
@@ -989,8 +983,6 @@ produce beets vs cane
 # assume they process the same proportion beets vs cane that they grow
 sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 5] <- sugar.crop.share[which(is.na(sugar.crop.share$processing_share)), 4]
 ```
-
-More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 
 Join with trade data 
 ```{r}
@@ -1015,9 +1007,8 @@ sugar.data <- mutate(sugar.data, Value.new=(Value*processing_share)/Conversion_f
 sugar.data <- select(sugar.data, Consumer_Country_Code, Producer_Country_Code, Value=Value.new, Item_Code=Sugar_Crop_Code, Year)
 ```
 
-More sugar cane vs. sugar beet processing converstions. For our purposes we are not including this step in our data product as we do not have sugar beet pressures. All sugar aggregate product will receive sugar can pressures.
 ```{r}
-# adjust domestic component (diagonal in the trade matrix)
+# adjust domestic component (diagonal in the trade matrix operation)
 
 # filter production data to only include the sugar crop codes for beets and cane (156 and 157)
 sugar.production <- filter(production.all, Item_Code %in% sugar.crop.codes) %>%

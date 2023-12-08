@@ -372,7 +372,7 @@ pressures_fish_regions_wide <- pressures_fish_regions %>%
   
 ```
 
- ## Trade matrix - crops, animals, and fish
+## Trade matrix - crops, animals, and fish
 Read in the trade data and clean if necessary. 
 
 ```{r}
@@ -421,6 +421,13 @@ fofm_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_
          method = "fofm_feed")
   
 ```
+
+Figure out the sugar issue
+```{r}
+sugar_test <- crop_trade_matrix %>% 
+  filter(item_code %in% c(156:171))
+```
+
 
 ## Connect trade and pressures
 This section will connect trade and pressures based on their broad groups. 
@@ -510,9 +517,11 @@ crop_trade_pressures <- left_join(x = crop_trade_countries,
   mutate(disturbance_total = disturbance*traded_tonnes,
          water_total = water*traded_tonnes,
          ghg_total = ghg*traded_tonnes,
-         nutrient_total = nutrient*traded_tonnes) %>% 
-  # we do not have pressure efficiency data for sugar beet so filter out
-  filter(item != "Sugar beet")
+         nutrient_total = nutrient*traded_tonnes) 
+
+crop_trade_pressures <- crop_trade_pressures %>%
+  #we do not have pressure efficiency data for sugar beet so filter out SPAM_super group
+  filter(SPAM_super != "sugb")
 
 ```
 
@@ -531,8 +540,8 @@ crop_trade_matrix_test <- crop_livestock_trade_matrix %>%
   # remove SPAM_super categories as explained above
   filter(!SPAM_super == "ofib", !SPAM_super == "othr", !SPAM_super == "teas",
          !SPAM_super == "toba", !SPAM_super == "xcof") %>% 
-  filter(item_code < 866) %>% 
-  filter(item != "Sugar beet")
+  # also remove sugar beet as we do not have pressures data so will not be included
+  filter(SPAM_super != "sugb")
 
 nrow(trade_pressures_na)/nrow(crop_trade_matrix_test)
 # about 7.6% of the original rows of data

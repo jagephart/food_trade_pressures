@@ -1046,6 +1046,10 @@ transformed.data <- rbind(filter(transformed.data, Item_Code != 2545), sugar.dat
 Due to discrepancies in production and trade data, along with variability in primary commodity conversion factors, there are cases where exports exceed production and imports. This results in negative consumption values. Across all producing to consuming country flows by food item, there are are 2.78% percent of observations with a value less than -1 t, representing 0.3% of volume, and 0.66% of observations with less than -100 t. Since negative consumption is not possible, we replace all negative values with zero. This step was not included in the orginal script from Schwarzmueller et al 2022.
 
 ```{r}
+# uncomment to view negative trade
+# test_negative <- transformed.data %>% 
+#   filter(Value<0)
+
 transformed.data <- transformed.data %>% 
   mutate(Value = if_else(condition = Value < 0,
                          true = 0,

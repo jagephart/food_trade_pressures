@@ -132,6 +132,12 @@ countries <- countries %>%
   select(country, iso3)
 ```
 
+### Read in table to make supplementary for gapfilling
+```{r}
+gapfill_df_for_supplementary <- read_csv(paste0(save_path, "gapfill_df_for_supplementary.csv"))
+```
+
+
 ## Grains
 Run through function with all relevant grains
 - Barley and products
@@ -263,7 +269,19 @@ grains_gap_filled <- left_join(grains_countries, grain_region_fb) %>%
   # gapfill when total_prop_feed is 0 or NA, otherwise use regional average
   mutate(grain_prop_feed_gf = case_when(total_prop_feed == 0 ~ region_prop_feed,
                                         is.na(total_prop_feed) ~ region_prop_feed,
-                                        TRUE ~ total_prop_feed)) %>% 
+                                        TRUE ~ total_prop_feed)) %>%
+  # add column to note gapfill YES if gapfilled, FALSE if not
+  mutate(grain_gf = case_when(total_prop_feed == 0 ~ TRUE,
+                           is.na(total_prop_feed) ~ TRUE,
+                           is.infinite(total_prop_feed) ~ TRUE,
+                           TRUE ~ FALSE)) 
+  
+gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
+  full_join(grains_gap_filled %>% 
+              filter(!is.na(iso3)) %>% 
+              select(iso3, grain_prop_feed = total_prop_feed, grain_prop_feed_gf, grain_gf)) 
+
+grains_gap_filled <- grains_gap_filled %>% 
   # select only the columns we need
   select(Area, iso3, region, grain_prop_feed_gf)
 
@@ -405,10 +423,26 @@ pulses_gap_filled <- left_join(pulses_countries, pulse_region_fb) %>%
                                          is.na(total_prop_feed) ~ region_prop_feed,
                                          total_prop_feed > 1 ~ 1,
                                          TRUE ~ total_prop_feed)) %>% 
+  # add column to note gapfill YES if gapfilled, FALSE if not
+  mutate(pulses_gf = case_when(total_prop_feed == 0 ~ TRUE,
+                               is.na(total_prop_feed) ~ TRUE,
+                               is.infinite(total_prop_feed) ~ TRUE,
+                               TRUE ~ FALSE)) 
+  
+gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
+  full_join(pulses_gap_filled %>% 
+              filter(!is.na(iso3)) %>% 
+              select(iso3, pulses_prop_feed = total_prop_feed, pulses_prop_feed_gf, pulses_gf)) 
+
+pulses_gap_filled <- pulses_gap_filled %>% 
   # select only the columns we need
   select(Area, iso3, region, pulses_prop_feed_gf)
 
+# save pulses
 write_csv(pulses_gap_filled, paste0(save_path, "perc_dsq_pulses_used_as_feed_gapfilled.csv"))
+
+# save gapfill summary table for supplementary
+write_csv(gapfill_df_for_supplementary, paste0(save_path, "gapfill_df_for_supplementary_all_categories.csv"))
 
 ```
 

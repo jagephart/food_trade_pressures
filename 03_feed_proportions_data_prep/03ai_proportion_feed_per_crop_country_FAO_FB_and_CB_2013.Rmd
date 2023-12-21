@@ -297,7 +297,19 @@ soy_gap_filled <- soy_gap_filled %>%
   mutate(soy_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
                                     true = soy_gap_filled$soy_prop_feed[soy_gap_filled$Area == "Oceania"],
                                     false = soy_prop_feed_gf)) %>% 
-  # select only the columns we need
+  # add column to note gapfill YES if gapfilled, FALSE if not
+  mutate(soy_gf = case_when(soy_prop_feed == 0 ~ TRUE,
+                                      is.na(soy_prop_feed) ~ TRUE,
+                                      is.infinite(soy_prop_feed) ~ TRUE,
+                                      TRUE ~ FALSE))
+
+# make a dataframe for supplementary materials
+gapfill_df_for_supplementary <- soy_gap_filled %>% 
+  filter(!is.na(iso3)) %>% 
+  select(Area, iso3, region, soy_prop_feed, soy_prop_feed_gf, soy_gf)
+
+soy_gap_filled <- soy_gap_filled %>% 
+  # select only the columns we need for future calculations
   select(Area, iso3, region, soy_prop_feed_gf)
 ```
 
@@ -519,7 +531,8 @@ pk_region <- pk_region %>%
 # remove extra columns and reorder
 pk_region <- pk_region %>% 
   select(-c(subregion, intermed_region)) %>% 
-  select(Area, iso3, region, pk_dsq, pk_feed, pk_cake, pk_prop_feed) # reorder
+  # reorder columns
+  select(Area, iso3, region, pk_dsq, pk_feed, pk_cake, pk_prop_feed) 
 
 # explore the regional values
 region_test <- pk_region %>% 
@@ -591,7 +604,20 @@ pk_gap_filled <- pk_gap_filled %>%
   mutate(pk_prop_feed_gf = case_when(pk_prop_feed_gf == 0 ~ pk_prop_feed_gf[Area == continent],
                                      is.na(pk_prop_feed_gf) ~ pk_prop_feed_gf[Area == continent],
                                      TRUE ~ pk_prop_feed_gf)) %>% 
+  # add column to note gapfill YES if gapfilled, FALSE if not
+  mutate(pk_gf = case_when(pk_prop_feed == 0 ~ TRUE,
+                           is.na(pk_prop_feed) ~ TRUE,
+                           is.infinite(pk_prop_feed) ~ TRUE,
+                           TRUE ~ FALSE)) %>% 
   ungroup()
+
+ 
+
+# make a dataframe for supplementary materials
+gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
+  full_join(pk_gap_filled %>% 
+              filter(!is.na(iso3)) %>% 
+              select(iso3, pk_prop_feed, pk_prop_feed_gf, pk_gf)) 
 
 # some regions have NAs (e.g., Australia and New Zealand) that's fine though because all countries
 # have been gapfilled. We'll keep the NAs for regions in. No percent feed values below 0 or above 1.
@@ -1217,6 +1243,20 @@ oil_gap_filled <- oil_gap_filled %>%
   mutate(oil_prop_feed_gf = if_else(condition = region %in% c("Melanesia", "Micronesia", "Polynesia"),
                                     true = oil_gap_filled$oil_prop_feed[oil_gap_filled$Area == "Oceania"],
                                     false = oil_prop_feed_gf)) %>% 
+  # add column to note gapfill YES if gapfilled, FALSE if not
+  mutate(oil_gf = case_when(oil_prop_feed == 0 ~ TRUE,
+                           is.na(oil_prop_feed) ~ TRUE,
+                           is.infinite(oil_prop_feed) ~ TRUE,
+                           TRUE ~ FALSE)) %>% 
+  ungroup()
+  
+# make a dataframe for supplementary materials
+gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
+  full_join(oil_gap_filled %>% 
+              filter(!is.na(iso3)) %>% 
+              select(iso3, oil_prop_feed, oil_prop_feed_gf, oil_gf)) 
+
+oil_gap_filled <- oil_gap_filled %>% 
   # select only the columns we need
   select(Area, iso3, region, oil_prop_feed_gf)
 ```
@@ -1236,8 +1276,11 @@ Below is a quick check to make sure the above gapfill worked as intended.
 # # end check
 ```
 
-Save the new data
+Save the new data and the data frame for supplementary
 ```{r}
 # save csv
 write_csv(oil_gap_filled, paste0(save_path, "perc_dsq_oilcrops_used_as_feed_gapfilled.csv"))
+
+# save csv
+write_csv(gapfill_df_for_supplementary, paste0(save_path, "gapfill_df_for_supplementary.csv"))
 ```

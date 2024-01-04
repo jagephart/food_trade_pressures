@@ -8,9 +8,9 @@ date: "2023-05-17"
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Objective: The fish trade matrix for human consumption has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
+Objective: The fish trade matrix for human consumption from ARTIS has a number of data points that are "unknown" in the source country, habitat, method, and nceas_group columns. Unknowns arise from the error term or cases where products move through more than 2 intermediate countries. We will proportionately bump up all marine flows with the marine-unknown volume, all inland flows with the inland-unknown, and then all aquatic food flows with the unknown-unknown. This will keep the total consumption constant without having to assume a global average for the pressure values when integrated.
 
-Additionally, the fish meal fish oil trade data needs to averages across years and saved so that pressures can be applied.
+Additionally, the fish oil and fish meal trade (FOFM) and jellyfish data from ARTIS is filtered out. FOFM trade is captured in step 01d.
 
 ## Setup
 ```{r}
@@ -52,6 +52,7 @@ unknown_types <- seafood_matrix %>%
            habitat == "unknown"|
            method == "unknown") %>%
   select(source_country_iso3c, nceas_group, habitat, method) %>%
+  # make labels of known vs. unknown
   mutate(
     source_country_iso3c = case_when(source_country_iso3c != "unknown" ~ "known",
                                      TRUE ~ "unknown"),
@@ -67,6 +68,7 @@ unknown_types <- seafood_matrix %>%
 
 # Add typology group to source-consumption data frame
 seafood_matrix <- seafood_matrix %>%
+  # make unknown column types/labels
   mutate(unknown_type = case_when(
     (source_country_iso3c != "unknown" &
        nceas_group == "unknown" &
@@ -93,9 +95,11 @@ seafood_unknown_shares <- seafood_matrix %>%
   group_by(consumer_iso3c, unknown_type) %>%
   summarise(consumption_live_weight_t = sum(consumption_live_weight_t)) %>%
   group_by(consumer_iso3c) %>%
+  # calculate share of known vs. unknown
   mutate(total = sum(consumption_live_weight_t),
          percent = 100*consumption_live_weight_t/total)
 
+# calculate total unknown tonnes %
 total_unknown <- seafood_unknown_shares %>% 
   filter(unknown_type == "unknown") %>% 
   group_by(unknown_type) %>% 
@@ -183,6 +187,7 @@ seafood_matrix_new <- seafood_matrix %>%
 ```
 
 ## Check consumption
+This section is used as a data check to make sure our proportional allocations actually work as intended.
 ```{r}
 seafood_check <- seafood_matrix %>%
   group_by(consumer_iso3c) %>%
@@ -213,6 +218,7 @@ seafood_matrix_new <- seafood_matrix_new %>%
   # Remove small values created by proportions
   filter(consumption_live_weight_t > 10^-9)
 
+#save file
 write_csv(seafood_matrix_new, paste0(save_path, "fish_trade_matrix_w_unknowns_allocated.csv"))
 
 ```

@@ -14,7 +14,6 @@ The purpose of this script is to calculate a global trade matrix in primary prod
 Citation:
 Schwarzmueller, F. & Kastner, T (2022), Agricultural trade and its impact on cropland use and the global loss of species' habitats. Sustainability Science, doi: 10.1007/s11625-022-01138-7
 
-
 This script has been modified from the Schwarzmueller & Kastner 2022 publication to fit our needs for this data output. Largely the structure of this script remains original from that publication with annotations included to understand what the code is doing. 
 
 Load in packages
@@ -36,7 +35,6 @@ packagelist <- list("data.table", "tidyverse", "readxl", "igraph", "pracma")
 packages(packagelist)
 ```
 
-
 Now choose your default options: import data, dry matter, and 2015-2019. We only have import data (gapfilled using export data in step 01a) only for 2015-2019, but we'll keep these options in here since they're used throughout the script.
 ```{r}
 # prefer import over export data ("import") or export over import ("export") 
@@ -56,16 +54,13 @@ if(!exists("included_years")){
 }
 ```
 
-
 Create file paths to save methods and final trade matrix output into - all grouped into a new "results_2017" folder.
 ```{r}
 filename <-paste("output_data/01b_calc_trade_matrix/TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".csv", sep="")
 log.filename <- paste("output_data/01b_calc_trade_matrixlogfile_TradeMatrix_", prefer_import, "_", conversion_opt, "_", included_years, ".txt", sep="")
 ```
 
-
-Set working directory (if not previously specified in _Execute.R).
-We'll set our working directory as the server as that is where the data are located.
+Set working directory (if not previously specified in _Execute.R). We'll set our working directory as the server as that is where the data are located.
 ```{r}
 if (!exists("directory")) { 
   directory <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures"
@@ -73,15 +68,13 @@ if (!exists("directory")) {
 setwd(directory)
 ```
 
-
 Create a new folder in the directory (on the server) called "01b_calc_trade_matrix".
 This is where we'll save methods and the final trade matrix output.
 ```{r}
 if(!dir.exists("output_data/01b_calc_trade_matrix")) dir.create("output_data/01b_calc_trade_matrix")
 ```
 
-
-Create and update text file. - commented out as it is not currently needed
+Create and update text file. 
 ```{r}
 cat(paste("log file for run at", Sys.time(), "\n",sep=" "), file = log.filename)
 cat("\n", file = log.filename, append=T)
@@ -134,8 +127,7 @@ cat(paste("Trade data file:",trade.data.file,file.info(trade.data.file)$mtime,"\
 ```
 
 #### Read in reporting data
-Read in the reporting data using `read_xls` since it is an Excel file rather than csv.
-Information on when each country started and stopped reporting trade data. This is not important for our analysis as we have filtered the data to our years of interest already
+Read in the reporting data using `read_xls` since it is an Excel file rather than csv. Information on when each country started and stopped reporting trade data. This is not important for our analysis as we have filtered the data to our years of interest already, this is just from the cited paper.
 ```{r}
 ### Reporting Data
 # specify name of file and file path you want to read in
@@ -170,10 +162,7 @@ names(item.map)<- str_replace_all(names(item.map), c(" " = "_"))
 cat(paste("Mapping to primary items using file:", item.map.file, file.info(item.map.file)$mtime,"\n"), file = log.filename, append = T)
 ```
 
-
-Read in conversions factors data.
-This dataset contains information on the conversion from primary to processed products in dry weight,
-protein, calories, and some vitamins. This dataset does not indicate which primary product each processed product comes from - that is the previous dataset (item.map).
+Read in conversions factors data. This dataset contains information on the conversion from primary to processed products in dry weight,protein, calories, and some vitamins. This dataset does not indicate which primary product each processed product comes from - that is the `item.map`.
 ```{r}
 ##Conversion factors
 # specify name of file and file path you want to read in
@@ -217,7 +206,6 @@ names(production.crops)<- str_replace_all(names(production.crops), c(" " = "_"))
 cat(paste("Production crops file:", production.crops.file, file.info(production.crops.file)$mtime,"\n"), file = log.filename, append = T)
 ```
 
-
 Read in productions livestock primary data.
 These data include: for each country, various measurements of production for livestock (e.g., egg production, camel meat yield)
 ```{r}
@@ -237,7 +225,7 @@ cat(paste("Production livestock file:", production.animals.file, file.info(produ
 ```
 
 Read in offals data.
-Offals = the entrails and internal organs of an animal used as food. Data includes production of edible offals in tons for each country. This section is included in the original Schwarzmueller script and will remain for now however, offals are not included in our final data output as we do not have any pressures data to assign it to.
+Offals = the entrails and internal organs of an animal used as food. Data includes production of edible offals in tons for each country. This section is included in the original Schwarzmueller script however, offals are not included in our final data output as we do not have any pressures data to assign it to.
 ```{r}
 ### Production data - offals
 
@@ -272,9 +260,7 @@ production.all <- rbind(production.crops, production.animals, fill=T)
 production.all <- rbind(production.all, production.offals, fill=T)
 ```
 
-Filter the production data to only include countries (area_codes < 300). Higher area codes are groups of countries (e.g., Europe).
-
-Also filter the data to only include data measured as production in tonnes (element code 5510 and 5511 for offals).
+Filter the production data to only include countries (area_codes < 300). Higher area codes are groups of countries (e.g., Europe). Also filter the data to only include data measured as production in tonnes (element code 5510 and 5511 for offals).
 ```{r}
 table(production.all$Element_Code)
 
@@ -442,7 +428,8 @@ data.import <- rename(data.import, "Consumer_Country_Code"="Reporter_Country_Cod
 
 # make sure we only have one row for each item traded between 2 countries - we do, this line does not change anything
 trade.data <- data.import %>% 
-  distinct(Consumer_Country_Code, Producer_Country_Code,  Year, Item_Code, .keep_all=T) # () variable removed because of average
+  # () variable removed because of average
+  distinct(Consumer_Country_Code, Producer_Country_Code,  Year, Item_Code, .keep_all=T) 
 ```
 
 Update the text file
@@ -513,14 +500,10 @@ trade.data <- left_join(trade.data,
                         by=c("Item_Code"="FAO_code"))
 ```
 
-
-Create a new column in the trade data called `primary.Value`, which is the value of traded product (tonnes) times the conversion factor. Offals have a conversion factor of 0, so all offals get the Value = 0.
-
-"Rice, paddy (rice milled equivalent)" is referred to as "Rice <96> total  (Rice milled equivalent)" in this dataframe.
+Create a new column in the trade data called `primary.Value`, which is the value of traded product (tonnes) times the conversion factor. Offals have a conversion factor of 0, so all offals get the Value = 0. Note, "Rice, paddy (rice milled equivalent)" is referred to as "Rice <96> total  (Rice milled equivalent)" in this dataframe.
 ```{r}
 trade.data <- mutate(trade.data, primary.Value= Value_average * Conversion_factor)
 ```
-
 
 Group the `trade.data` by the consumer country code, producer country code, year, and primary item. Then create a new column called `Value.Sum`, which is the sum of all the `primary.Value` for that grouping (sum of all processed products for 1 primary item).
 
@@ -563,9 +546,7 @@ sugar.production <- left_join(filter(production.all,
 sugar.production$Value.new <- sugar.production$Value_average * sugar.production$Conversion_factor
 ```
 
-
 Calculate the proportion of sugar production that comes from beets vs cane in each country.
-
 ```{r}
 sugar.shares <- sugar.production %>%
   # group by area code (aka country) and year
@@ -579,7 +560,6 @@ sugar.shares <- sugar.production %>%
   # remove rows where the share = 0 (no instances where share < 0, so must just be when NA or 0)
   filter(share > 0)
 ```
-
 
 Calculate the tonnes of sugar in primary product (beet and cane) equivalents that each country produces.
 ```{r}
@@ -611,7 +591,7 @@ production.all <- rbind(production.all, sugar.production)
 The above steps were conducted to set up the trade matrix operation. This section executes the matrix function.
 
 #### Matrix function setup
-For the `matrix.operation` function to work properly the year values need to be single years or possible to be numerical values. Currently our data year column is labeled 2015-2019 to denote that it is an average over that time span. The below code chunk will mutate the year column to just be 2017 so the rest of the operations can work as expected becasue it requires a number.
+For the `matrix.operation` function to work properly the year values need to be single years or possible to be numerical values. Currently our data `year` column is labeled 2015-2019 to denote that it is an average over that time span. The below code chunk will mutate the year column to just be 2017 so the rest of the operations can work as expected because it requires a number in the year column.
 ```{r}
 primary.data <- primary.data %>% 
   # Year changed to 2017 for the sake of the calculations set up by Schwarzmueller
@@ -637,9 +617,7 @@ transformed.data <- data.frame("Consumer_Country_Code" = 0,
 ```
 
 
-Create keys for primary.data and production.all.
-"setkey sorts a data.table and marks it as sorted with an attribute sorted. The sorted columns are the key. The key can be any number of columns."
-The columns are always sorted in ascending order. The table is changed by reference.
+Create keys for primary.data and production.all. "setkey sorts a data.table and marks it as sorted with an attribute sorted. The sorted columns are the key. The key can be any number of columns." The columns are always sorted in ascending order. The table is changed by reference.
 ```{r}
 # set primary data as a data table
 primary.data <- as.data.table(primary.data)
@@ -898,7 +876,7 @@ transformed.data$Producer_Country_Code <- as.numeric(as.character(transformed.da
 
 #### Identify missing products after matrix operation
 Identify items that are produced but not traded and add them to the country consumption trade df created in 
-previous code chunk.
+previous code chunk. 
 ```{r}
 #### identify primary items that are produced but not traded ####
 missing.prod.data <- production.all %>% 
@@ -961,8 +939,7 @@ sugar.processing <- sugar.processing %>%
 sugar.crop.share <- left_join(sugar.shares, sugar.processing, by=c("Area_Code", "Year", "Item_Code"))
 ```
 
-Add new column (control) that indicates whether crop is produced in a country but not processed in that country.
-If a crop is processed but not produced in a country, set control to 0 (rather than  NA)
+Add new column (control) that indicates whether sugar is produced in a country but not processed in that country. If sugar is processed but not produced in a country, set control to 0 (rather than  NA)
 ```{r}
 # check if a crop does not have any processing data
 sugar.crop.share <- sugar.crop.share %>%

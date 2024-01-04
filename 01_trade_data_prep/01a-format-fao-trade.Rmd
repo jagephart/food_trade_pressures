@@ -7,13 +7,10 @@ editor_options:
 
 Objective: Format the 2015-2019 FAO production, commodity balances, and detailed trade matrix datasets to match Schwarzmueller's data that is input into the trade matrix script.
  
-Update: Formatted data for 2015, 2016, 2017, 2018, and 2019 on June 29, 2023.
-
 ```{r}
 library(tidyverse)
 library(data.table)
 ```
-
 
 ### Setup
 ```{r}
@@ -29,7 +26,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 Bulk download of trade data from FAO was used and subset to years of interest. We need to gapfill missing trade data with trading partners (FAO does this for some, but not all).
 
-This chunk reads in the Schwarzmueller et al 2022 trade matrix as an example of how to format the trade data to propoerly feed it into the trade matrix formula.
+This chunk reads in the Schwarzmueller et al. (2022) trade matrix as an example of how to format the trade data to propoerly feed it into the trade matrix formula.
 ```{r}
 #read in Schwarzmueller detailed trade matrix data (from FAO) - This is to understand what we want the output data to look like
 k_trade_matrix <- fread(paste0(Schwarzmueller_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized).csv"))
@@ -39,7 +36,7 @@ head_k_trade_matrix <- head(k_trade_matrix)
 rm(k_trade_matrix)
 ```
 
-Trade data from FAO - Gapfill imports with export data
+Trade data from FAO - Gapfill imports with export data, as done in Schwarzmueller et al. (2022).
 ```{r}
 #read in recently downloaded FAO detailed trade matrix data
 fao_trade_matrix_raw <- fread(paste0(fao_data_path, "Trade_DetailedTradeMatrix_E_All_Data_(Normalized)_7_14_22.csv"))
@@ -201,7 +198,7 @@ Crop and livestock statistics are recorded for 278 products, covering the follow
 
 Production data units from FAO match the Schwarzmueller production data as both originate from FAO
 
-Based on the variable names, it looks like Schwarzmueller did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. We will replicate this process below and subset for our years of interest.Schwarzmueller et al. 2022 appears to exclude processed crop production from the trade matrix input, as we are using the same methods we will repeat that process here and simply separate the processed products.
+Based on the variable names, it looks like Schwarzmueller did the bulk download and then separated the data into primary crops, processed crops, and primary livestock. We will replicate this process below and subset for our years of interest. Schwarzmueller et al. (2022) appears to exclude processed crop production from the trade matrix input, as we are using the same methods we will repeat that process here and simply separate the processed products.
 
 The below chunk reads in the 2017 production data from Schwarzmueller to be able to match the FAO data columns by name for feeding into the matrix operation.
 ```{r}
@@ -234,7 +231,6 @@ k_production_livestock_primary_17 <- k_production_livestock_primary %>%
 rm(k_production_livestock_primary)
 ```
 
-#### FAO Data
 All Data Bulk Download - cleaned to match output from Schwarzmueller. Like in trade, an average of production was taken across 2015-2019.
 ```{r}
 all_production_raw <- fread(paste0(production_data_path, "Production_Crops_Livestock_E_All_Data_(Normalized)_06_29_2023.csv"))
@@ -317,7 +313,7 @@ write_csv(livestock_primary_production_average, paste0(save_path, "Production_Li
 
 Note: Schwarzmueller calls these Commodity balances, but they are definitely the FAO commodity AND food balances.
 
-Commodity and food balances are used for offal production and sugar conversions in Schwarzmueller et al 2022. We are not converting sugar to sugar cane and sugar beet as we only have sugar cane pressure efficiencies. We will assume sugar cane pressure efficiencies for sugar aggregate trade and production. We do not have offal efficiencies so those are not included in our data output.
+Commodity and food balances are used for offal production and sugar conversions in Schwarzmueller et al 2022. We will assume sugar cane pressure efficiencies for sugar aggregate trade and production. We do not have offal efficiencies so those are not included in our data output.
 
 There are differences in values for food balances between the old and new methodology. However, the data seem to be displayed in the same format with the same variables, so it should be fine to use the new methodology for our years of interest with the Schwarzmueller script.
 

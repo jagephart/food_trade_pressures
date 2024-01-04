@@ -160,6 +160,7 @@ crop_pressure_per_tonne <- pressure_efficiency_capped %>%
 
 ### Livestock 
 We are adding the fao data key to the pressure efficiency data so that we will be able to connect the trade with the pressures. For livestock items, some of the nceas_groups have multiple items associated with them (ex. chicken_eggs is for both "eggs, hen, in shell" and "eggs, other bird, in shell"). These will have the same associated pressure because of how the pressures data is aggregated. So when the final output has more rows than the original pressure_efficiency data it is because it is using the same pressure efficiency for items under the same nceas_group category.
+
 ```{r}
 livestock_pressure_per_tonne <- pressure_efficiency_capped %>% 
   # filter pressures data to meat (non-seafood) products from the organism column, buffaloes included to capture milk
@@ -176,6 +177,7 @@ na_test <- livestock_pressure_per_tonne %>%
 
 unique(na_test$nceas_group)
 
+# remove NA items
 livestock_pressure_per_tonne <- livestock_pressure_per_tonne %>% 
   filter(!is.na(item))
 ```
@@ -202,6 +204,9 @@ fisheries_pressure_per_tonne <- pressure_efficiency_capped %>%
   # add in grouping
   mutate(food_group = "fisheries and mariculture")
 
+
+# uncomment below tests to make sure the above works as intended.
+# this is not necessary for completion of script
 # marine_pressures_test <- pressure_efficiency_capped %>% 
 #   # filter for marine fisheries organism
 #   filter(organism %in% c("benthic", "demersal", "fofm", "large-pelagic", 

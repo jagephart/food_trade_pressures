@@ -5,6 +5,7 @@ output: html_document
 ---
 
 Objective: Calculate the proportion of crop and fish oil fish meal (FOFM) a country consumes that goes to each animal for feed in a country. 
+
 ## Setup
 
 Load libraries
@@ -23,7 +24,7 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 ## Crops
 
 ### Read in and prepare livestock tonnes of crop consumed per animal per country
-Read in tonnes crop consumed per animal group per country data, the data used for this step can be found at the link provided, however it has been saved in the project folder on Aurora: https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
+Read in tonnes crop consumed per animal group per country data, the data used for this step can be found at the link provided, however it has been saved in the project folder: https://github.com/OHI-Science/food_systems/blob/master/feed/data/system_country_mapspam_tonnes_consumption.csv
 ```{r}
 animal_consumption_raw <- read_csv(paste0(animal_consumption_data_path, "system_country_mapspam_tonnes_consumption.csv"))
 ```
@@ -47,7 +48,6 @@ animal_consumption <- animal_consumption_raw %>%
                                    SPAM_super == "xpul" ~ "pulse",
                                    TRUE ~ as.character(NA)))
 ```
-
 
 Match animal categories to what we're using with FAO trade data and the pressures data.
 
@@ -97,6 +97,7 @@ animal_consumption_agg <- animal_consumption %>%
                                 animal_system == "tuna_aquaculture_meat" ~ "tuna_mariculture",
                                 TRUE ~ animal_system))
 
+# use if you want to look at the groups
 #table(animal_consumption_agg$animal_agg)
 
 # remove all buffaloes meat, goats milk, and chickens_backyard_eggs&meat as we do not have trade data or pressures data for these
@@ -160,7 +161,7 @@ fw_aqua_consumption_category_totals <- fw_aqua_consumption_relabel %>%
 # combine feed dfs (livestock/fisheries/mariculture and fw aquaculture)
 tonnes_crop_feed_consumed <- rbind(animal_consumption_category_totals, fw_aqua_consumption_category_totals)
 
-# check data
+# uncomment to check data
 # tonnes_crop_feed_consumed %>%
 #   group_by(animal_group) %>%
 #   summarise(sum = sum(tonnes_feed)) %>%
@@ -178,9 +179,7 @@ tonnes_crop_feed_consumed <- rbind(animal_consumption_category_totals, fw_aqua_c
 ```
 
 ### Calculate proportion of each crop that goes to each animal system within a country
-
 ```{r}
-
 # rows where total crop = 0 means this country doesn't use any of this crop as feed
 crop_feed_animal_proportions <- tonnes_crop_feed_consumed %>% 
   group_by(iso3c, feed_category) %>% 
@@ -206,6 +205,7 @@ crop_feed_animal_proportions_wide <- crop_feed_animal_proportions %>%
               values_from = prop_crop_feed_per_animal)
 
 # Pivoting wider produced a lot of NA columns because there no data for some animals and feed_categories
+# fix this using the line below, no data is assumed 0
 crop_feed_animal_proportions_wide[is.na(crop_feed_animal_proportions_wide)] <- 0
 
 ```
@@ -217,18 +217,21 @@ write_csv(x = crop_feed_animal_proportions_wide,
 ```
 
 ## FOFM
-This section will largely do the same as above does for crops except for Fish Oil and Fish Meal. In step 03b we calculated to quantity of FOFM required for each country's production of freshwater aquaculture. We will combine this is the tonnage of FOFM used in other feed streams and calculate each country's proportion of FOFM that goes to each animal system.
+This section will largely do the same as above does for crops except for fish meal. In step 03b we calculated to quantity of FOFM required for each country's production of freshwater aquaculture. We will combine this is the tonnage of FOFM used in other feed streams and calculate each country's proportion of FOFM that goes to each animal system.
 
 ### Read in and prepare livestock and marine aquaculture tonnes of FOFM consumed per animal per country
 The FOFM consumption data (`FMFO_country_data.csv`) is downloaded from: https://github.com/OHI-Science/food_systems/blob/master/feed/data/FMFO_country_data.csv 
 
-The tonnes column represents the tonnes of live weight consumed of the Fish that make up FOFM.
+This data was generated for: 
+Kuempel, C. D., Frazier, M., Verstaen, J., Rayner, P.-E., Blanchard, J. L., Cottrell, R. S., Froehlich, H. E., Gephart, J. A., Jacobsen, N. S., McIntyre, P. B., Metian, M., Moran, D., Nash, K. L., Többen, J., Williams, D. R., & Halpern, B. S. (2023). Environmental footprints of farmed chicken and salmon bridge the land and sea. Current Biology, 33(5), 990-997.e4. https://doi.org/10.1016/j.cub.2023.01.037
+
+The tonnes column represents the tonnes of live weight consumed of the fish that make up FOFM.
 ```{r}
 FOFM_consumption_raw <- read_csv(paste0(animal_consumption_data_path, "FMFO_country_data.csv"))
 
 # the data for FOFM consumption for marine salmon aquaculture includes
 # freshwater aquaculture propduction tonnes. Below we will reduce all 
-# salmon consumption values by 25% according to Mel (chicken/salmon paper)
+# salmon consumption values by 25% according to Kuempel et al. (2022) authors
 FOFM_consumption <- FOFM_consumption_raw %>% 
   mutate(tonnes = if_else(condition = system == "salmon_aquaculture_meat",
                           # 25% reduction
@@ -323,7 +326,7 @@ fw_aqua_FOFM_consumption_totals <- fw_aqua_FOFM_consumption_relabel %>%
 # combine feed dfs (livestock/fisheries/mariculture and fw aquaculture)
 lw_tonnes_fofm_feed_consumed <- rbind(FOFM_consumption_totals, fw_aqua_FOFM_consumption_totals)
 
-# check data
+# uncomment to perform data check if desired
 # lw_tonnes_fofm_feed_consumed %>%
 #   group_by(animal_group) %>%
 #   summarise(sum = sum(lw_tonnes_fofm)) %>%
@@ -354,9 +357,7 @@ write_csv(x = lw_tonnes_fofm_feed_consumed_per_country,
 ```
 
 ### Calculate proportion of each crop that goes to each animal system within a country
-
 ```{r}
-
 # rows where total lw_tonnes_fofm = 0 means this country doesn't use any fofm as feed
 fofm_feed_animal_proportions <- lw_tonnes_fofm_feed_consumed %>% 
   group_by(iso3c) %>% 
@@ -393,4 +394,3 @@ fofm_feed_animal_proportions_wide[is.na(fofm_feed_animal_proportions_wide)] <- 0
 write_csv(x = fofm_feed_animal_proportions_wide,
           file = paste0(save_path, "fofm_feed_animal_proportions_wide.csv"))
 ```
-

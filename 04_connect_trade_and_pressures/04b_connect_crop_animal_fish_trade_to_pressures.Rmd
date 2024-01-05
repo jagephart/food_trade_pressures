@@ -31,7 +31,6 @@ save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 
 ## Pressure Efficiency Data
 Read in the pressure efficiency data. 
-
 ```{r}
 pressures_per_tonne <- read.csv(paste0(pressure_efficiency_path, "pressures_per_tonne.csv"))
 ```
@@ -66,12 +65,11 @@ pressures_crops_wide <- pressures_crops %>%
   distinct()
 
 
-
-# check for dupes
-pressures_crops_dupes <- pressures_crops %>%
-    dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
-    dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
-    dplyr::filter(n > 1L)
+# data check for dupes, uncomment if desired
+# pressures_crops_dupes <- pressures_crops %>%
+#     dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
+#     dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#     dplyr::filter(n > 1L)
 ```
 
 #### Gapfill Set Up
@@ -152,6 +150,7 @@ pressures_crops_regions_wide <- pressures_crops_regions %>%
 ```
 
 ### Livestock
+Subset the pressure efficiency data to the livestock food group. Pivot wider to make joining with trade data easier to manage.
 ```{r}
 pressures_livestock <- pressures_per_tonne %>% 
   filter(food_group == "livestock") %>% 
@@ -176,11 +175,11 @@ pressures_livestock_wide <- pressures_livestock %>%
                          true = 0,
                          false = water))
 
-# check for dupes
-pressure_livestock_dupes <- pressures_livestock %>%
-    dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
-    dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
-    dplyr::filter(n > 1L) 
+# check for dupes, uncomment if desired to check
+# pressure_livestock_dupes <- pressures_livestock %>%
+#     dplyr::group_by(iso3c, nceas_group, SPAM_super, item_code, item, food_group, pressure) %>%
+#     dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#     dplyr::filter(n > 1L) 
 
 pressure_livestock_codes <- pressures_livestock %>% 
   select(item_code, nceas_group) %>% 
@@ -257,11 +256,10 @@ pressures_livestock_regions_wide <- pressures_livestock_regions %>%
          region_disturbance = disturbance,
          region_nutrient = nutrient,
          region_water = water)
-  
 ```
 
 ### Marine Fish and Fish Oil Fish Meal (FOFM)
-
+Subset the pressure efficiency data to the fiseries and mariculture food group. Pivot wider to make joining with trade data easier to manage.
 ```{r}
 pressures_fish <- pressures_per_tonne %>% 
   filter(food_group == "fisheries and mariculture") %>% 
@@ -286,16 +284,16 @@ pressures_fish_wide <- pressures_fish %>%
                             true = 0,
                             false = nutrient))
 
-# check for dupes
-pressures_fish_dupes <- pressures_fish %>% 
-  dplyr::group_by(iso3c, nceas_group, SPAM_super, item, item_code, food_group, pressure) %>%
-    dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
-    dplyr::filter(n > 1L)
+# check for dupes, uncomment to run data check
+# pressures_fish_dupes <- pressures_fish %>% 
+#   dplyr::group_by(iso3c, nceas_group, SPAM_super, item, item_code, food_group, pressure) %>%
+#     dplyr::summarise(n = dplyr::n(), .groups = "drop") %>%
+#     dplyr::filter(n > 1L)
 ```
 
 #### Gapfill Set Up
 Set up regional gapfilling for marine fish(an inland capture) pressures. For this purpose we will use the countrycode package and the United Nations regional designations. This will be used to gapfill countries that have trade data with another country for a given product, but are missing pressures data.
-```{r}
+```{r, warning=FALSE}
 pressures_fish_regions <- pressures_fish_wide %>% 
   pivot_longer(cols = c(disturbance, ghg, nutrient),
                values_to = "pressure_per_tonne",
@@ -422,20 +420,13 @@ fofm_trade_matrix <- read.csv(paste0(fmfo_trade_matrix_path, "fmfo_trade_matrix_
   
 ```
 
-Figure out the sugar issue
-```{r}
-sugar_test <- crop_trade_matrix %>% 
-  filter(item_code %in% c(156:171))
-```
-
-
 ## Connect trade and pressures
 This section will connect trade and pressures based on their broad groups. 
 
 - Crops and livestock trade will be connected to the pressures via the producer country code and the item code
-- fish and fmfo trade will be combined and connect to the pressures via their country code and nceas_group category
+- fish and fishmeal/fishoil trade will be combined and connect to the pressures via their country code and nceas_group category
 
-Set Up country codes and FAO codes to join trade and pressures
+Set up country codes and FAO codes to join trade and pressures.
 ```{r}
 # read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
 country_codes <- read_csv(paste0(code_path, "FAOSTAT_country_codes_8-10-2022.csv"))
@@ -461,8 +452,6 @@ map_to_fao <- read_csv(paste0("/home/shares/food-systems/social_justice_projects
   select(item_code = FAO_item_code, item = product_description_FAOSTAT, SPAM_super) %>% 
   distinct()
 ```
-
-
 
 ### Crops
 The crop trade data has a number of items/categories that should be removed as they are not considered food so we do not have pressures data for them.
@@ -566,7 +555,6 @@ items_na <- trade_pressures_na_items %>%
   select(item_code, Item) %>% 
   distinct()
 ```
-
 We have a number of items that have been traded but do not have pressures associated with them. We will gapfill these pressures using regional averages.
 
 #### Gapfill Missing Pressures - Crops
@@ -660,8 +648,6 @@ crop_trade_pressures_gapfilled <- crop_trade_pressures_gapfilled %>%
   # Filter out rows with missing pressures
   filter(!is.na(ghg) | !is.na(nutrient) | !is.na(disturbance) | !is.na(water))
 ```
-
-
 
 #### Rejoin gapfilled data
 ```{r}
@@ -946,7 +932,6 @@ nrow(na_fish)/nrow(fish_trade_pressures)
 unique(pressures_fish$nceas_group)
 
 unique(fish_trade_matrix$nceas_group)
-
 ```
 
 #### Gapfill Fish
@@ -1018,7 +1003,6 @@ sum(remaining_na$consumption_live_weight_t)/sum(fish_trade_pressures$consumption
 ```
 
 We still have missing pressures for trade of fish but it is a small amount so we will just filter these out.
-
 ```{r}
 fish_trade_pressures_gapfilled <- fish_trade_pressures_gapfilled %>% 
   # Filter out rows with missing pressures
@@ -1113,5 +1097,3 @@ Note this saved file does not have pressures allocated to animals for feed yet. 
 write_csv(x = trade_pressures_final,
           file = paste0(save_path, "trade_w_pressures_no_feed.csv"))
 ```
-
-

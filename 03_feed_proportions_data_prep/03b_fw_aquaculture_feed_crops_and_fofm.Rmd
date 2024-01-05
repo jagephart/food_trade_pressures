@@ -7,13 +7,15 @@ editor_options:
 ---
 
 GOAL: Calculate crop and FOFM consumption by freshwater aquaculture by country and taxa group.
+
+
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(here)
 library(countrycode)
 ```
 
-File Paths
+## File Paths
 ```{r}
 raw_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/"
 fao_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/FAO/fao_aquaculture/"
@@ -22,7 +24,6 @@ aquatic_trade_data_path <- "/home/shares/food-systems/social_justice_projects/fo
 pressures_data_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/raw_data/pressures/"
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03b_fofm_fw_aquaculture_feed/"
 ```
-
 
 ## FAO production data - Freshwater Aquaculture
 To calculate the total amount of crops needed for freshwater aquaculture feed, we will use FAO production data for freshwater aquaculture.
@@ -84,12 +85,8 @@ production <- left_join(production_clean, country, by="UN_Code") %>%
 
 ```
 
-
 ## Assigning taxonomic categories
 
-NOTE: Considered including the "Sturgeons, paddlefishes" as "Tilapias and other cichlids", but didn't due to Jessica's comments:
-- I suspect a lot of that production is for caviar and the pressures for tilapia probably doesn't apply well.
-- It also looks like there is quite a bit of production of juveniles for stocking recreational fisheries.
 ```{r}
 # read in groupings data
 groups <- read_csv(paste0(fw_data_path, "taxa_isscaap_groupings.csv")) %>%
@@ -130,8 +127,7 @@ in_fao <- setdiff(production_update$ISSCAAP_Group_En, groups$isscaap_group)
 # see what groups are included in grouping data but not production data
 setdiff(groups$isscaap_group, production$ISSCAAP_Group_En)
 
-
-## now make some adjustments to match Jessica's groups
+## now make some adjustments to match other groups
 hypoph_carp <- unique(grep("Hypophthalmichthys", production_update$Scientific_Name, value=TRUE))
 
 production_update <- production_update %>%
@@ -318,7 +314,6 @@ sum(hypoph_carp$tonnes_lw)/(sum(hypoph_carp$tonnes_lw)+sum(oth_carp$tonnes_lw)) 
 hypoph_carp_prop <- (sum(hypoph_carp$tonnes_lw) * feed$feed_fmfo[feed$stressor_group == "hypoph_carp"] * feed$fcr[feed$stressor_group == "hypoph_carp"])/ (sum(hypoph_carp$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "hypoph_carp"] * feed$fcr[feed$stressor_group == "hypoph_carp"] + (sum(oth_carp$tonnes_lw)*feed$feed_fmfo[feed$stressor_group == "oth_carp"] * feed$fcr[feed$stressor_group == "oth_carp"])) # 4% fofm to hypoph carp
 ```
 
-
 Using the above steps, divide up the fofm consumption data based on the species makeup from our data.
 ```{r}
 divided_fofm <- data.frame(fw_aquaculture=c("milkfish", "misc_diad", "hypoph_carp", "oth_carp"),
@@ -333,7 +328,6 @@ fofm <- left_join(fofm_reference, divided_fofm, by="fw_aquaculture") %>%
 ```
 
 Distribute fofm consumption based on production by country
-
 ```{r}
 # using the tonnes_lw production data from above
 fofm_tonnes <- tonnes_lw %>%

@@ -6,7 +6,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-Objective: Use 2013 data from the FAO Food Balances and Commodity Balances data to determine the proportion of crops being used as feed for which most of the crop is going to the processing category.
+Objective: Use 2013 data from the FAO Food Balances and Commodity Balances data to determine the proportion of crops being used as feed for which most of the crop is going to the processing category. Method is inspired by Schwarzmueller et al. (2022).
 
 Crops we need to calculate proportions for using 2013 data:
 - soy
@@ -19,23 +19,14 @@ We are using 2017 Food Balances data (prop going to feed) for:
 - grains (barl, maiz, ocer, rice, sorg, whea, mil)
 - pulses (peas, beans, other pulses)
 
-
-General methods:
-- download 2013 FAO Food Balances data
-- download 2013 FAO Commodity Balances data
-
-
-Soy methods:
+Example of calculations using soy:
 - make sure all cake is going to feed (soy cake feed / soy cake production)
 - calculate proportion soy Domestic Supply Quantity (DSQ) going to processing (soy processing / soy DSQ)
 - calculate proportion soy processing going to cake (feed) (soy cake production / (soybean processing))
 - calculate proportion soy DSQ going to feed via processing (multiply previous 2 proportions)
 - calculate proportion soy DSQ directly going to feed (soy feed / soy DSQ)
 - add proportion soy directly going to feed to proportion soy DSQ going to feed via processing
-
-NOTE:
-Since we ended up doing soy cake production / soybean processing, these calculations could have been much simpler.
-Essentially all we're doing is (feed + cake)/ domestic supply quantity of soybeans. But instead I used the more complicated route with all the multiplying proportions because that made sense when I was originally doing soy cake production / (soy cake + soy oil production) and multiplying that ratio by percent of dsq of soybeans that are processed. Since this is already done, I'm not going to change it, but something to keep in mind going forward and for explaining methods. It was also helpful doing it this way to check out proportions - like how much of soy processing is going to cake + oil, etc.
+- gapfill missing countries
 
 ## Set Up
 
@@ -54,7 +45,6 @@ Schwarzmueller_path <- paste0(raw_path, "Schwarzmueller_2022/")
 fish_trade_path <- paste0(raw_path, "aquatic_food_trade/")
 ```
 
-
 ### Read in FAO Food Balances and Commodity Balanaces data and subset to 2013
 ```{r}
 fb <- read_csv(paste0(FAO_path, "food_balance_sheets/FoodBalanceSheetsHistoric_E_All_Data_(Normalized).csv")) %>% 
@@ -68,7 +58,7 @@ fb <- fb %>%
 fb <- fb %>% 
   mutate(value_tonnes = Value*1000)
 
-# remove China
+# remove China (We will use China mainland)
 fb <- fb %>% 
   filter(!Area == "China")
 ```
@@ -81,7 +71,7 @@ cb <- read_csv(paste0(FAO_path, "CommodityBalances_(non-food)_E_All_Data_(Normal
 ```
 
 ### For Gapfilling missing data
-We need to add in missing countries that are missing from FB and CB data. We will use a combination of FAO country names and additional countries from fisheries trade data. We won't need all of these countries, but it's good to include them all just in case.
+We need to add in missing countries that are missing from FB and CB data. We will use a combination of FAO country names and additional countries from fisheries trade data. Not all of these countries will have trade or feed of these animals but they will be included in case there is.
 ```{r}
 # rather than reading in the whole FAO country list, we'll just consider countries included in the Schwarzmueller trade matrices output
 # read in FAO country list
@@ -122,7 +112,6 @@ countries <- countries %>%
 ```
 
 ## Soy
-
 From the commodity balances data, all "Domestic supply quantity" (DSQ) is practically the same as "Feed" for soyabean cake of each country. Any countries where DSQ does not equal Feed is a difference of less than 1%. Therefore for our purposes, all commodity balance soyabean cake production values will be associated to feed. "Soyabean Oil" is not typically used for feed so therefore it is not included
 
 ```{r}
@@ -201,11 +190,14 @@ soy <- soy_feed_proportion
 
 # have to rename Turkey because it got a ? symbol added when saved as csv previously
 # can't use %in% or == to identify it because it isn't showing up as a string
-soy[152,1]                    # check to make sure this is Turkey
+# check to make sure this is Turkey
+soy[152,1]          
 soy[152,1] <- "Turkey"
-soy[37,1]                     # check to make sure this is Côte d'Ivoire
+# check to make sure this is Côte d'Ivoire
+soy[37,1]                     
 soy[37,1] <- "Côte d'Ivoire"
-soy[33,1]                     # check to make sure this is Taiwan
+# check to make sure this is Taiwan
+soy[33,1]                     
 soy[33,1] <- "Taiwan"
 
 # remove item column and rename prop_feed 
@@ -334,7 +326,6 @@ Save the new data
 write_csv(soy_gap_filled, paste0(save_path, "perc_dsq_soy_used_as_feed_gapfilled.csv"))
 ```
 
-
 ## Palm kernel
 - palm oil comes from the palm oil fruit, palm kernel oil comes from the palm kernel (seed inside of fruit)
 - only palm kernel cake is used as animal feed
@@ -387,6 +378,7 @@ pk_process_perc <- pk_proc %>%
 Most of the domestic supply quantity of palm kernels is going to processing.
 
 Does palm kernel oil and palm kernel cake production equal palm kernel DSQ? This next code chunk is to understand the process flow of palm kernel more and not used for the final calculations.
+
 Sum tonnes palm kernel cake production from CB with palm kernel oil production from FB and compare to palm kernel DSQ from CB (or from FB - same values, but FB is rounded to the thousands, so CB is more detailed)
 - check to see if palm kernel oil production and palm kernel cake production are about equal to the weight of palm kernel dsq
 ```{r}
@@ -633,7 +625,6 @@ pk_gap_filled <- pk_gap_filled %>%
 write_csv(pk_gap_filled, paste0(save_path, "perc_dsq_palm_kernel_used_as_feed_gapfilled.csv"))
 ```
 
-
 ## Oilcrops
 
 Includes cake related to groundnuts, sunflower seed, rape and mustardseed, sesame seed, cottonseed, and other oilcrops. Once these have all been calculated they will be combined into an oilcrops grouping.
@@ -643,8 +634,6 @@ Oilcrop methods:
 - calculate proportion DSQ going to feed via processing (cake_production / DSQ)
 - calculate proportion DSQ directly going to feed (feed / DSQ)
 - add proportion directly going to feed to proportion DSQ going to feed via processing
-
-
 
 ### Cottonseed
 
@@ -865,7 +854,6 @@ write_csv(other_oil_feed_proportion, paste0(save_path, "perc_dsq_other_oil_used_
 For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages for oil crops as a whole. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
 
 ### Rape and mustardseed
-
 Is all cake going to feed? Check in commodity balances data. - Yes
 ```{r}
 # subset cb to soy cake
@@ -930,14 +918,11 @@ mustard_feed_proportion <- mustard_seed_cake %>%
 
 # save mustard df
 write_csv(mustard_feed_proportion, paste0(save_path, "perc_dsq_rapemustard_used_as_feed.csv"))
-
 ```
 
 For countries that don't have data to calculate the proportion of DSQ going to feed we will be calculating regional averages for oil crops as a whole. This is for any countries who's `prop_feed_total` calculation is `inf`, `NaN`, `NA`, or `zero`.
 
-
 ### Sesameseed
-
 Is all cake going to feed? Check in commodity balances data. - Yes
 ```{r}
 # subset cb to soy cake
@@ -977,7 +962,6 @@ sesame_fb_wide <- sesame_fb_wide %>%
 ```
 
 Only one country reports "Sesame seed" data going to feed, Ukraine. Therefore, we will exclude any of this product going directly into feed. 
-
 
 #### Calculate Sesame Seed Feed Proportions
 - calculate proportion DSQ going to feed via processing (cake_production / DSQ), for sesameseeds this is the proportion of the product going to feed
@@ -1077,7 +1061,6 @@ sunflower_feed_proportion <- sunflower_feed_proportion %>%
 
 # save df
 write_csv(sunflower_feed_proportion, paste0(save_path, "perc_dsq_sunflower_used_as_feed.csv"))
-
 ```
 
 ### Combine Oilcrops

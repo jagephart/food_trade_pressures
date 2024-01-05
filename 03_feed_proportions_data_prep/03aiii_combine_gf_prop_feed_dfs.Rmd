@@ -6,7 +6,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-Objective: Combine gapfilled proportion feed dfs for grains, pulses, oilcrops, soy, and palm kernels
+Objective: Combine gapfilled proportion feed dfs for grains, pulses, oilcrops, soy, and palm kernels. This combines the outputs from 03ai and 03aii.
 
 Load libraries
 ```{r}
@@ -20,7 +20,6 @@ feed_3a_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pr
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 ```
 
-
 Read in dfs
 ```{r}
 grains <- read_csv(paste0(feed_3a_path, "perc_dsq_grains_used_as_feed_gapfilled.csv"))
@@ -31,11 +30,9 @@ pk <-     read_csv(paste0(feed_3a_path, "perc_dsq_palm_kernel_used_as_feed_gapfi
 
 # for pk the Area for Russia does not include federation like the other dfs so fix this below
 pk$Area[pk$Area == "Russia"] <- "Russian Federation"
-
 ```
 
 Subset to only gapfilled percent feed and country variables (Area)
-
 ```{r}
 feed <- grains %>% 
   full_join(pulses , by = c("Area", "iso3", "region")) %>% 
@@ -67,8 +64,6 @@ feed <- feed %>%
 feed$grain_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$grain_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
 feed$pulses_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$pulses_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
 feed$pk_prop_feed_gf[feed$iso3 == "BMU"] <- mean(feed$pk_prop_feed_gf[feed$region == "Northern America"], na.rm = TRUE)
-
-
 ```
 
 We are interested in the country values so we will filter out the regional proportions and save the data frame
@@ -77,6 +72,5 @@ feed_countries <- feed %>%
   filter(Area != region)
 
 write_csv(feed_countries, paste0(save_path, "all_crops_perc_feed.csv"))
-
 ```
 

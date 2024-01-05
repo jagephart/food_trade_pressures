@@ -21,7 +21,7 @@ Steps:
 7. Save grains output
 8. Repeat for pulses
 
-Grains (and name in FAO FB data [2010-]):
+Grains (SPAM_super and name in FAO FB data [2010-]):
 - barl - barley (FAO = Barley and products)
 - maiz -  maize (FAO = Maize and products)
 - sorg- sorghum (FAO = Sorghum and products)
@@ -55,7 +55,6 @@ fish_trade_path <- paste0(raw_path, "aquatic_food_trade/")
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/03a_calc_proportion_feed_per_crop_country/"
 ```
 
-
 Read in FAO FB data (2010-)
 Regions are not included in this df, only countries. To gapfill, will also need to calculate these values for regions.
 ```{r}
@@ -73,7 +72,6 @@ fb <- fb %>%
   select(-c(Unit, Value))
 ```
 
-
 Create function to calculate proportion feed for each category
 ```{r}
 calc_prop_feed <- function(FAO_name, feed_prop_col_name, dsq_col_name, feed_col_name) {
@@ -89,9 +87,7 @@ calc_prop_feed <- function(FAO_name, feed_prop_col_name, dsq_col_name, feed_col_
 }
 ```
 
-
 ### For Gapfilling
-
 We need to add in missing countries that are missing from FB and CB data. We will use a combination of FAO country names and additional countries from fisheries trade data. We won't need all of these countries, but it's good to include them all just in case.
 ```{r}
 # rather than reading in the whole FAO country list, we'll just consider countries included in the Schwarzmueller trade matrices output
@@ -121,7 +117,6 @@ fish_tm <- fish_tm_raw %>%
   mutate(country = countrycode(consumer_iso3c, 'iso3c', 'country.name')) %>% 
   # change some of the names for our needs
   filter(!is.na(country)) # remove one NA (iso3c = NEI, Netherlands East Indies, not in FAO data either)
-
 
 # combine dfs to get complete list of countries
 countries <- full_join(tm, fish_tm, by = "country")
@@ -275,7 +270,8 @@ grains_gap_filled <- left_join(grains_countries, grain_region_fb) %>%
                            is.na(total_prop_feed) ~ TRUE,
                            is.infinite(total_prop_feed) ~ TRUE,
                            TRUE ~ FALSE)) 
-  
+
+# this chunk just makes a df to track what was gapfilled and what was not
 gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
   full_join(grains_gap_filled %>% 
               filter(!is.na(iso3)) %>% 
@@ -289,11 +285,9 @@ write_csv(grains_gap_filled, paste0(save_path, "perc_dsq_grains_used_as_feed_gap
 
 ```
 
-
 ## Pulses
 
 For pulses, need to combine all tonnes and then calculate proportions to make sure it's weighted correctly since we only have one xpul category for MapSPAM.
-
 ```{r}
 # format beans
 beans <- fb %>% 
@@ -428,7 +422,8 @@ pulses_gap_filled <- left_join(pulses_countries, pulse_region_fb) %>%
                                is.na(total_prop_feed) ~ TRUE,
                                is.infinite(total_prop_feed) ~ TRUE,
                                TRUE ~ FALSE)) 
-  
+
+# this chunk just makes a df to track what was gapfilled and what was not
 gapfill_df_for_supplementary <- gapfill_df_for_supplementary %>% 
   full_join(pulses_gap_filled %>% 
               filter(!is.na(iso3)) %>% 
@@ -445,6 +440,3 @@ write_csv(pulses_gap_filled, paste0(save_path, "perc_dsq_pulses_used_as_feed_gap
 write_csv(gapfill_df_for_supplementary, paste0(save_path, "gapfill_df_for_supplementary_all_categories.csv"))
 
 ```
-
-
-

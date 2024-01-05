@@ -21,13 +21,11 @@ code_path <- "/home/shares/food-systems/social_justice_projects/food_trade_press
 save_path <- "/home/shares/food-systems/social_justice_projects/food_trade_pressures/output_data/04a_connect_fw_aquaculture_pressures/"
 ```
 
-
 Method:
 The trade data contains the source country, consumer country, habitat, fishing method, nceas group, and the live weight traded between each country. The pressures data has the environmental pressure produced per tonne live weight of a given species. The pressures data is a global average for freshwater aquaculture so we only need to match the species traded with each pressure and multiply the two to get the total environmental pressure for the consuming country.
 
 ## Read in the two data sources
-
-Trade data - from step 01c
+Trade data - prepared in step 01c
 ```{r}
 # read in all of the fish trade data, these are means of the years 2015-2019
 trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_w_unknowns_allocated.csv")) # read in the updated data
@@ -35,16 +33,14 @@ trade_matrix_raw <- read_csv(paste0(aquatic_trade_data_path, "fish_trade_matrix_
 # only want inland aquaculture to accurately allocate freshwater (inland) aquaculture pressures
 fw_trade_clean <- trade_matrix_raw %>% 
   filter(habitat == "inland" & method == "aquaculture")
-
-
 ```
 
-Read in freshwater aquaculture pressures data per tonne from Mel - calculated in step 02a
+Read in freshwater aquaculture pressures data per tonne from Mel - prepared in step 02a
 ```{r}
 pressure <- read_csv(paste0(pressures_path, "fw_aquaculture_pressures_per_tonne.csv")) 
 ```
 
-Set Up country codes to join country names
+Set up country codes to join country names
 ```{r}
 # read in country codes from FAO detailed trade matrix definitions selecting the partner country group tab (reported country group tab says data unavailable)
 country_codes <- read_csv(paste0(code_path, "FAOSTAT_country_codes_8-10-2022.csv"))
@@ -81,9 +77,9 @@ salmonid <- trade_matrix_raw %>%
 salmon <- trade_matrix_raw %>% 
   filter(nceas_group=="salmons, trouts, smelts")
 ```
-Salmonids are all marine aquaculture, so Salmons, trouts, smelts is probably just inland.
+Salmonids are all marine aquaculture, so Salmons, trouts, smelts `nceas_group` is probably just inland.
 
-Mel's key - updated data (left is trade matrix categories, right is pressures categories):
+Fish matching key - updated data (left is trade matrix categories, right is pressures categories):
 oth_carp = oth_carp 
 hypoph_carp = hypoph_carp
 miscellaneous diadromous fishes = misc_diad 
@@ -135,7 +131,7 @@ fw_trade_subset <- fw_trade_clean %>%
            nceas_group == "miscellaneous freshwater fishes"|
            nceas_group == "tilapias and other cichlids")
 
-# check to see how much of trade data is unaccounted for when subset by available pressure data
+# check to see how much of trade data is accounted for when subset by available pressure data
 nrow(fw_trade_subset)/nrow(fw_trade_clean)
 # 75% of trade by rows
 
@@ -143,7 +139,6 @@ nrow(fw_trade_subset)/nrow(fw_trade_clean)
 sum(fw_trade_subset$consumption_live_weight_t)/sum(fw_trade_clean$consumption_live_weight_t)
 # more than 92% of the trade by weight
 ```
-
 
 ## Calculate the environmental pressures from freshwater aquaculture
 Now join trade data with pressure efficiency data by the `nceas_group`. The `fw_trade_pressures` should have the same amount of rows as `fw_trade_subset`.
@@ -159,7 +154,7 @@ fw_trade_pressures <- fw_trade_pressures %>%
          water_total = water*consumption_live_weight_t) 
 ```
 
-## Set up for joining with other data and save
+## Set up for joining with trade and pressures data and save
 ```{r}
 fw_trade_pressures_clean <- fw_trade_pressures %>% 
   # filter out NEI iso3c code
@@ -200,7 +195,7 @@ fw_trade_pressures_clean <- fw_trade_pressures %>%
 
 ```
 
-Save
+## Save
 ```{r}
 write.csv(x = fw_trade_pressures_clean,
           file = paste0(save_path, "fw_aquaculture_trade_pressures.csv"))

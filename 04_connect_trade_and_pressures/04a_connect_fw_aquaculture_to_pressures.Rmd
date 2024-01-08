@@ -64,7 +64,7 @@ countries <- countries %>%
 ```
 
 ## Match up the species groupings
-Compare species groups - these are extremely different. We will need to make sure that we can join the pressures per tonne of each species to their correct species in the trade data
+Compare species groups - these are extremely different in how they are written. We will need to make sure that we can join the pressures per tonne of each species to their correct species in the trade data
 ```{r}
 table(pressure$stressor_group)
 table(fw_trade_clean$nceas_group)

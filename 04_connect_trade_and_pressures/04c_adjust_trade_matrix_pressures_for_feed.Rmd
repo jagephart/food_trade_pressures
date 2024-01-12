@@ -779,6 +779,11 @@ sum(check_trade$traded_tonnes)
 # no rounded difference
 sum(check_trade$traded_tonnes) - sum(trade_matrix_w_pressures_accounting_for_feed$tonnes_traded) # pretty much zero!
 
+
+# Some of the proportion calculations made zeros,
+# filter all trade that is zero tonnes
+trade_matrix_w_pressures_accounting_for_feed <- trade_matrix_w_pressures_accounting_for_feed %>% 
+  filter(tonnes_traded > 0)
 ```
 
 ## Save!

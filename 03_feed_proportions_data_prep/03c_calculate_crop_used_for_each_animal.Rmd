@@ -156,7 +156,11 @@ fw_aqua_consumption_category_totals <- fw_aqua_consumption_relabel %>%
   # calculate tonnes feed consumed per crop, animal system (aquaculture), and country
   group_by(iso3c, feed_category, animal_group = nceas_group) %>% 
   summarise(tonnes_feed = sum(tonnes)) %>% 
-  ungroup()
+  ungroup() %>% 
+  #fix names of soy and oil
+  mutate(feed_category = case_when(feed_category == "oil" ~ "oilcrop",
+                                   feed_category == "soy" ~ "soybean",
+                                   TRUE ~ feed_category))
 
 # combine feed dfs (livestock/fisheries/mariculture and fw aquaculture)
 tonnes_crop_feed_consumed <- rbind(animal_consumption_category_totals, fw_aqua_consumption_category_totals)
